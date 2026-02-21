@@ -421,18 +421,24 @@ fun MessageItem(
                                         
                                         Icon(if (isThoughtExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                     }
-                                    if (isThoughtExpanded) {
-                                        Spacer(modifier = Modifier.height(20.dp))
-                                        val density = androidx.compose.ui.platform.LocalDensity.current
-                                        CompositionLocalProvider(
-                                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                        ) {
-                                            Markdown(
-                                                content = debouncedThoughts, 
-                                                modifier = Modifier.fillMaxWidth(),
-                                                typography = thoughtTypography,
-                                                padding = thoughtMarkdownPadding // Use tighter padding for thoughts
-                                            )
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = isThoughtExpanded,
+                                        enter = androidx.compose.animation.fadeIn(animationSpec = tween(400)) + androidx.compose.animation.expandVertically(animationSpec = tween(400)),
+                                        exit = androidx.compose.animation.fadeOut(animationSpec = tween(200)) + androidx.compose.animation.shrinkVertically(animationSpec = tween(400))
+                                    ) {
+                                        Column {
+                                            Spacer(modifier = Modifier.height(20.dp))
+                                            val density = androidx.compose.ui.platform.LocalDensity.current
+                                            CompositionLocalProvider(
+                                                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
+                                            ) {
+                                                Markdown(
+                                                    content = debouncedThoughts, 
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    typography = thoughtTypography,
+                                                    padding = thoughtMarkdownPadding // Use tighter padding for thoughts
+                                                )
+                                            }
                                         }
                                     }
                                 }
