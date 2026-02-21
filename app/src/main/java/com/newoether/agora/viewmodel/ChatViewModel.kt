@@ -326,6 +326,8 @@ class ChatViewModel(
     }
 
     fun selectConversation(id: String) {
+        if (_currentConversationId.value == id && !_isNewChatMode.value) return
+        
         switchingJob?.cancel()
         _isSwitching.value = true
         switchingJob = viewModelScope.launch {
