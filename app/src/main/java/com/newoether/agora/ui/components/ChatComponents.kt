@@ -382,7 +382,6 @@ fun MessageItem(
                                     .padding(top = 8.dp, bottom = bottomPadding)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .animateContentSize(animationSpec = tween(400))
                                     .clickable { 
                                         if (!isThoughtExpanded) {
                                             stableCollapsedHeight = currentHeight
@@ -392,56 +391,56 @@ fun MessageItem(
                                     .padding(10.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                        Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        
-                                        // Dynamic Title: Content inside ** **
-                                        val thoughtTitle = remember(message.thoughts) {
-                                            val raw = message.thoughts ?: ""
-                                            // Find the LAST instance of **content**
-                                            val matches = Regex("\\*\\*(.*?)\\*\\*").findAll(raw).toList()
-                                            if (matches.isNotEmpty()) {
-                                                matches.last().groupValues[1]
-                                            } else if (isThinking) {
-                                                if (raw.length > 40) "..." + raw.takeLast(40) else raw.ifBlank { "Thinking..." }
-                                            } else {
-                                                "Thought"
-                                            }
+                                    Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    
+                                    // Dynamic Title: Content inside ** **
+                                    val thoughtTitle = remember(message.thoughts) {
+                                        val raw = message.thoughts ?: ""
+                                        // Find the LAST instance of **content**
+                                        val matches = Regex("\\*\\*(.*?)\\*\\*").findAll(raw).toList()
+                                        if (matches.isNotEmpty()) {
+                                            matches.last().groupValues[1]
+                                        } else if (isThinking) {
+                                            if (raw.length > 40) "..." + raw.takeLast(40) else raw.ifBlank { "Thinking..." }
+                                        } else {
+                                            "Thought"
                                         }
-
-                                        Text(
-                                            text = thoughtTitle, 
-                                            style = MaterialTheme.typography.labelMedium, 
-                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), 
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        
-                                        Icon(if (isThoughtExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                     }
-                                    androidx.compose.animation.AnimatedVisibility(
-                                        visible = isThoughtExpanded,
-                                        enter = androidx.compose.animation.fadeIn(animationSpec = tween(400)) + androidx.compose.animation.expandVertically(animationSpec = tween(400)),
-                                        exit = androidx.compose.animation.fadeOut(animationSpec = tween(200)) + androidx.compose.animation.shrinkVertically(animationSpec = tween(400))
-                                    ) {
-                                        Column {
-                                            Spacer(modifier = Modifier.height(20.dp))
-                                            val density = androidx.compose.ui.platform.LocalDensity.current
-                                            CompositionLocalProvider(
-                                                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                            ) {
-                                                Markdown(
-                                                    content = debouncedThoughts, 
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    typography = thoughtTypography,
-                                                    padding = thoughtMarkdownPadding // Use tighter padding for thoughts
-                                                )
-                                            }
+
+                                    Text(
+                                        text = thoughtTitle, 
+                                        style = MaterialTheme.typography.labelMedium, 
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), 
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    
+                                    Icon(if (isThoughtExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                }
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = isThoughtExpanded,
+                                    enter = androidx.compose.animation.fadeIn(animationSpec = tween(400)) + androidx.compose.animation.expandVertically(animationSpec = tween(400)),
+                                    exit = androidx.compose.animation.fadeOut(animationSpec = tween(400)) + androidx.compose.animation.shrinkVertically(animationSpec = tween(400))
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(20.dp))
+                                        val density = androidx.compose.ui.platform.LocalDensity.current
+                                        CompositionLocalProvider(
+                                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
+                                        ) {
+                                            Markdown(
+                                                content = debouncedThoughts, 
+                                                modifier = Modifier.fillMaxWidth(),
+                                                typography = thoughtTypography,
+                                                padding = thoughtMarkdownPadding // Use tighter padding for thoughts
+                                            )
                                         }
                                     }
                                 }
+                            }
                         }
 
                         Box(
