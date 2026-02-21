@@ -120,12 +120,12 @@ class ChatViewModel(
     val listState = LazyListState()
     val messageHeights = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
-    private val _scrollToLastMessage = MutableSharedFlow<Unit>(replay = 0)
-    val scrollToLastMessage = _scrollToLastMessage.asSharedFlow()
+    private val _scrollToMessage = MutableSharedFlow<String?>(replay = 0)
+    val scrollToMessage = _scrollToMessage.asSharedFlow()
 
-    fun triggerScrollToLastMessage() {
+    fun triggerScrollToMessage(messageId: String? = null) {
         viewModelScope.launch {
-            _scrollToLastMessage.emit(Unit)
+            _scrollToMessage.emit(messageId)
         }
     }
 
@@ -222,6 +222,9 @@ class ChatViewModel(
 
     private val _isTransitioningToNewChat = MutableStateFlow(false)
     val isTransitioningToNewChat: StateFlow<Boolean> = _isTransitioningToNewChat.asStateFlow()
+
+    private val _branchSwitchTrigger = MutableStateFlow<String?>(null)
+    val branchSwitchTrigger: StateFlow<String?> = _branchSwitchTrigger.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -325,6 +328,7 @@ class ChatViewModel(
             _currentConversationId.value = null
             _allMessages.value = emptyList()
             _selectedChildren.value = emptyMap()
+            _branchSwitchTrigger.value = null
             _isSwitching.value = false
             _isTransitioningToNewChat.value = false
         }
@@ -340,8 +344,9 @@ class ChatViewModel(
             kotlinx.coroutines.delay(200) // Allow overlay to fade in
             _isNewChatMode.value = false
             clearMessageHeights()
+            _branchSwitchTrigger.value = null
             _currentConversationId.value = id
-            triggerScrollToLastMessage()
+            triggerScrollToMessage()
         }
     }
 
@@ -378,9 +383,19 @@ class ChatViewModel(
         val currentId = _selectedChildren.value[parentId] ?: siblings.last().id
         val currentIndex = siblings.indexOfFirst { it.id == currentId }
         val newIndex = (currentIndex + direction).coerceIn(0, siblings.size - 1)
-        val newMap = _selectedChildren.value.toMutableMap()
-        newMap[parentId] = siblings[newIndex].id
-        _selectedChildren.value = newMap
+        
+        switchingJob?.cancel()
+        _isSwitching.value = true
+        switchingJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(200) // Allow overlay to fade in
+            clearMessageHeights()
+            val newMap = _selectedChildren.value.toMutableMap()
+            val targetMessageId = siblings[newIndex].id
+            newMap[parentId] = targetMessageId
+            _selectedChildren.value = newMap
+            _branchSwitchTrigger.value = targetMessageId
+            triggerScrollToMessage(targetMessageId)
+        }
     }
 
     fun editMessage(messageId: String, newText: String) {

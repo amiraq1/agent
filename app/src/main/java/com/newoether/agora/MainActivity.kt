@@ -208,12 +208,16 @@ fun ChatApp(
         showLaunchContent = true
     }
 
-    // Logic to scroll to the last user message
-    suspend fun scrollToLastUserMessage(animate: Boolean = true) {
+    // Logic to scroll to a specific message or the last user message
+    suspend fun scrollToLastUserMessage(animate: Boolean = true, targetMessageId: String? = null) {
         if (messages.isEmpty() || viewportHeightPx == 0) return
         
-        val lastUserIndex = messages.indexOfLast { it.participant == Participant.USER }
-        if (lastUserIndex == -1) return
+        val targetIndex = if (targetMessageId != null) {
+            messages.indexOfFirst { it.id == targetMessageId }
+        } else {
+            messages.indexOfLast { it.participant == Participant.USER }
+        }
+        if (targetIndex == -1) return
 
         with(density) {
             val targetTopPx = 180.dp.toPx()
@@ -221,7 +225,7 @@ fun ChatApp(
             
             // Calculate absolute pixel offset of the target position
             var totalHeightBeforePx = 0
-            for (i in 0 until lastUserIndex) {
+            for (i in 0 until targetIndex) {
                 totalHeightBeforePx += messageHeights[messages[i].id] ?: 0
             }
             
@@ -246,14 +250,21 @@ fun ChatApp(
         }
     }
 
-    // Trigger scroll when conversation changes or requested
-    LaunchedEffect(currentConversationId) {
+    val branchSwitchTrigger by viewModel.branchSwitchTrigger.collectAsState()
+
+    // Trigger scroll when conversation changes, requested, or branch switches
+    LaunchedEffect(currentConversationId, branchSwitchTrigger) {
         if (currentConversationId != null) {
             // 1. Wait for messages to populate
             snapshotFlow { messages }.filter { it.isNotEmpty() }.first()
             
-            val lastUserIndex = messages.indexOfLast { it.participant == Participant.USER }
-            if (lastUserIndex != -1) {
+            val targetIndex = if (branchSwitchTrigger != null) {
+                messages.indexOfFirst { it.id == branchSwitchTrigger }
+            } else {
+                messages.indexOfLast { it.participant == Participant.USER }
+            }
+            
+            if (targetIndex != -1) {
                 // 2. PIN the list reactively using snapshotFlow for maximum robustness
                 // collectLatest ensures that every time the state changes, we re-scroll and reset the stability delay
                 try {
@@ -265,9 +276,14 @@ fun ChatApp(
                             val currentMsgs = data.component1()
                             val vHeight = data.component3()
 
-                            val currentLastIndex = currentMsgs.indexOfLast { it.participant == Participant.USER }
-                            if (currentLastIndex != -1 && vHeight > 0) {
-                                listState.scrollToItem(currentLastIndex, 0)
+                            val currentTargetIndex = if (branchSwitchTrigger != null) {
+                                currentMsgs.indexOfFirst { it.id == branchSwitchTrigger }
+                            } else {
+                                currentMsgs.indexOfLast { it.participant == Participant.USER }
+                            }
+
+                            if (currentTargetIndex != -1 && vHeight > 0) {
+                                listState.scrollToItem(currentTargetIndex, 0)
                             }
                             
                             // Wait for 500ms of no changes to consider the layout stable
@@ -286,8 +302,8 @@ fun ChatApp(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.scrollToLastMessage.collect {
-            scrollToLastUserMessage(animate = true)
+        viewModel.scrollToMessage.collect { messageId ->
+            scrollToLastUserMessage(animate = true, targetMessageId = messageId)
         }
     }
 
