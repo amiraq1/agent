@@ -586,7 +586,7 @@ class ChatViewModel(
                                             }
                                             
                                             // 3. Status Transition
-                                            if (isPartOfThought && totalText.isEmpty() && currentStatus != MessageStatus.SENDING) {
+                                            if (isPartOfThought && totalText.isEmpty()) {
                                                 currentStatus = MessageStatus.THINKING
                                             }
                                             
@@ -616,15 +616,15 @@ class ChatViewModel(
                                                 )
                                             }
                                         }
-                                        response.usageMetadata?.let { metadata ->
-                                            metadata.totalTokenCount?.let { totalTokenCount = it }
-                                            if (totalText.isEmpty() && (metadata.thoughtsTokenCount ?: 0) > 0 && currentStatus != MessageStatus.SENDING) {
-                                                currentStatus = MessageStatus.THINKING
-                                                if (totalThoughts.isEmpty()) {
-                                                    totalThoughts = "Model is reasoning..."
+                                            response.usageMetadata?.let { metadata ->
+                                                metadata.totalTokenCount?.let { totalTokenCount = it }
+                                                if (totalText.isEmpty() && (metadata.thoughtsTokenCount ?: 0) > 0) {
+                                                    currentStatus = MessageStatus.THINKING
+                                                    if (totalThoughts.isEmpty()) {
+                                                        totalThoughts = "Model is reasoning..."
+                                                    }
                                                 }
                                             }
-                                        }
                                     } catch (e: Exception) { 
                                         android.util.Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                                     }

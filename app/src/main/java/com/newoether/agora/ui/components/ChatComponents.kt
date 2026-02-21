@@ -317,17 +317,18 @@ fun MessageItem(
                         val infiniteTransition = rememberInfiniteTransition(label = "sending")
                         val rotation by infiniteTransition.animateFloat(0f, 360f, infiniteRepeatable(tween(1000, easing = LinearEasing)), "rot")
 
-                        val statusText = when (message.status) {
-                            MessageStatus.THINKING -> "Thinking..."
-                            MessageStatus.SENDING -> if (message.text.isNotEmpty()) "Answering..." else "Sending..."
-                            MessageStatus.SUCCESS -> if (message.tokenCount > 0) "Cost ${message.tokenCount} tokens" else null
+                        val statusText = when {
+                            message.status == MessageStatus.SUCCESS -> if (message.tokenCount > 0) "Cost ${message.tokenCount} tokens" else null
+                            message.text.isNotEmpty() -> "Answering..."
+                            message.status == MessageStatus.THINKING -> "Thinking..."
+                            message.status == MessageStatus.SENDING -> "Sending..."
                             else -> null
                         }
 
                         if (statusText != null) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                                 if (isStreaming || message.status == MessageStatus.SENDING || message.status == MessageStatus.THINKING) {
-                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(12.dp).rotate(rotation), tint = if (message.status == MessageStatus.THINKING) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(12.dp).rotate(rotation), tint = if (statusText == "Thinking...") MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary)
                                 } else {
                                     val icon = when (message.status) {
                                         MessageStatus.SUCCESS -> Icons.Default.CheckCircle
