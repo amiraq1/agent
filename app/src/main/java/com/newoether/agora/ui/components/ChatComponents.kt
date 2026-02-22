@@ -23,6 +23,9 @@ import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.CheckCircle
@@ -173,13 +176,29 @@ fun MessageItem(
     LaunchedEffect(Unit) { isFirstComposition = false }
 
     var isThoughtExpanded by rememberSaveable { mutableStateOf(false) }
-    var stableCollapsedHeight by remember { mutableIntStateOf(0) }
+    var currentThoughtBlockHeight by remember { mutableIntStateOf(0) }
+    var stableCollapsedThoughtHeight by remember { mutableIntStateOf(0) }
+    
     val clipboardManager = LocalClipboardManager.current
 
-    var currentHeight by remember { mutableIntStateOf(0) }
+    var currentTotalHeight by remember { mutableIntStateOf(0) }
+
+    fun calculateReportedHeight(totalPx: Int, thoughtPx: Int): Int {
+        // When we are NOT expanded, the thought block is animating down from its large height 
+        // to its stableCollapsedThoughtHeight. We want the outer list padding to behave as if
+        // the thought block INSTANTLY hit stableCollapsedThoughtHeight, avoiding the final "jump".
+        // But we ONLY do this if the thought block is currently larger than its collapsed height 
+        // AND we know what the collapsed height is.
+        if (!isThoughtExpanded && stableCollapsedThoughtHeight > 0 && thoughtPx > stableCollapsedThoughtHeight) {
+            val excessHeight = thoughtPx - stableCollapsedThoughtHeight
+            return totalPx - excessHeight
+        }
+        return totalPx
+    }
+
     LaunchedEffect(message.text, message.status, isEditing) {
         kotlinx.coroutines.delay(50)
-        onHeightChanged(if (!isThoughtExpanded && stableCollapsedHeight > 0) stableCollapsedHeight else currentHeight)
+        onHeightChanged(calculateReportedHeight(currentTotalHeight, currentThoughtBlockHeight))
     }
 
     LaunchedEffect(isEditing) {
@@ -241,8 +260,8 @@ fun MessageItem(
         modifier = Modifier
             .fillMaxWidth()
             .onSizeChanged { 
-                currentHeight = it.height
-                onHeightChanged(if (!isThoughtExpanded && stableCollapsedHeight > 0) stableCollapsedHeight else it.height) 
+                currentTotalHeight = it.height
+                onHeightChanged(calculateReportedHeight(it.height, currentThoughtBlockHeight)) 
             }
             .padding(vertical = 8.dp)
             .then(if (visualizeContextRollout && !isInContext) Modifier.alpha(0.38f) else Modifier),
@@ -278,12 +297,30 @@ fun MessageItem(
                             }
                         }
                     } else {
-                        Text(
-                            text = message.text,
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = textColor
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            if (message.images.isNotEmpty()) {
+                                androidx.compose.foundation.lazy.LazyRow(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = if (message.text.isNotEmpty()) 8.dp else 0.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, if (message.participant == Participant.USER) Alignment.End else Alignment.Start)
+                                ) {
+                                    items(message.images) { imagePath ->
+                                        coil.compose.AsyncImage(
+                                            model = imagePath,
+                                            contentDescription = null,
+                                            modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp).clip(RoundedCornerShape(8.dp)),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                        )
+                                    }
+                                }
+                            }
+                            if (message.text.isNotEmpty()) {
+                                Text(
+                                    text = message.text,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = textColor
+                                )
+                            }
+                        }
                     }
                 }
                 
@@ -386,12 +423,18 @@ fun MessageItem(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .onSizeChanged { 
+                                        currentThoughtBlockHeight = it.height 
+                                        if (currentTotalHeight > 0) {
+                                            onHeightChanged(calculateReportedHeight(currentTotalHeight, it.height))
+                                        }
+                                    }
                                     .padding(top = 8.dp, bottom = bottomPadding)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                                     .clickable { 
                                         if (!isThoughtExpanded) {
-                                            stableCollapsedHeight = currentHeight
+                                            stableCollapsedThoughtHeight = currentThoughtBlockHeight
                                         }
                                         isThoughtExpanded = !isThoughtExpanded 
                                     }
@@ -522,7 +565,7 @@ fun Modifier.verticalScrollbar(
 
 @Composable
 fun ChatBottomBar(
-    onSendMessage: (String) -> Unit,
+    onSendMessage: (String, List<String>) -> Unit,
     onStopGeneration: () -> Unit = {},
     isLoading: Boolean,
     isSwitching: Boolean = false,
@@ -544,10 +587,45 @@ fun ChatBottomBar(
     val isModelValid = selectedModel.isNotBlank() && enabledModels.contains(selectedModel)
     val isMultiLine = textFieldState.text.contains('\n') || textFieldState.text.length > 50
 
+    var selectedImageUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris ->
+        selectedImageUris = selectedImageUris + uris.map { it.toString() }
+    }
+
     Column(modifier = modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight().statusBarsPadding() else Modifier).padding(8.dp)) {
         if (isExpanded) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = { isExpanded = false }) { Icon(Icons.Default.CloseFullscreen, "Collapse", tint = MaterialTheme.colorScheme.primary) }
+            }
+        }
+        
+        if (selectedImageUris.isNotEmpty() && !isExpanded) {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(selectedImageUris) { uriStr ->
+                    Box {
+                        coil.compose.AsyncImage(
+                            model = uriStr,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = { selectedImageUris = selectedImageUris - uriStr },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 4.dp, y = (-4).dp)
+                                .size(16.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, "Remove", tint = Color.White, modifier = Modifier.size(10.dp))
+                        }
+                    }
+                }
             }
         }
 
@@ -558,6 +636,14 @@ fun ChatBottomBar(
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(RoundedCornerShape(100)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                IconButton(
+                    onClick = { 
+                        launcher.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, 
+                    modifier = Modifier.size(32.dp)
+                ) { 
+                    Icon(Icons.Default.Add, "Add Image", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) 
+                }
                 val displayText = when {
                     isModelValid -> modelAliases[selectedModel] ?: selectedModel.removePrefix("models/")
                     enabledModels.isNotEmpty() -> "Select Model"
@@ -580,14 +666,15 @@ fun ChatBottomBar(
                     }
                 }
             }
-            val canSend = textFieldState.text.isNotBlank() && !isLoading && isModelValid && !isSwitching
+            val canSend = (textFieldState.text.isNotBlank() || selectedImageUris.isNotEmpty()) && !isLoading && isModelValid && !isSwitching
             val isActionable = (isLoading || canSend) && !isSwitching
             FloatingActionButton(
                 onClick = { 
                     if (isSwitching) return@FloatingActionButton
                     if (isLoading) onStopGeneration() 
                     else if (canSend) { 
-                        onSendMessage(textFieldState.text.toString())
+                        onSendMessage(textFieldState.text.toString(), selectedImageUris)
+                        selectedImageUris = emptyList()
                         textFieldState.edit { replace(0, length, "") }
                         isExpanded = false 
                     } 
