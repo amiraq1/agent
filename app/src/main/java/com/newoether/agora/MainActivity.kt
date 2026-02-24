@@ -9,22 +9,11 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -33,12 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,6 +38,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -76,15 +62,12 @@ import com.newoether.agora.ui.screens.SettingsScreen
 import com.newoether.agora.ui.theme.AgoraTheme
 import com.newoether.agora.viewmodel.ChatViewModel
 import com.newoether.agora.viewmodel.ChatViewModelFactory
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -204,23 +187,164 @@ fun MainNavigation(viewModel: ChatViewModel) {
             // Full screen image preview
             AnimatedVisibility(
                 visible = fullScreenImageUrl != null,
-                enter = fadeIn() + scaleIn(initialScale = 0.9f),
-                exit = fadeOut() + scaleOut(targetScale = 0.9f)
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
                 fullScreenImageUrl?.let { url ->
+                    val scope = rememberCoroutineScope()
+                    val density = LocalDensity.current
+                    
+                    var scale by remember { mutableFloatStateOf(1f) }
+                    var offsetX by remember { mutableFloatStateOf(0f) }
+                    var offsetY by remember { mutableFloatStateOf(0f) }
+                    
+                    var containerSize by remember { mutableStateOf(Size.Zero) }
+                    var imageSize by remember { mutableStateOf(Size.Zero) }
+                    var animationJob by remember { mutableStateOf<Job?>(null) }
+
+                    // Reset when image changes
+                    LaunchedEffect(url) {
+                        animationJob?.cancel()
+                        scale = 1f
+                        offsetX = 0f
+                        offsetY = 0f
+                        imageSize = Size.Zero
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.9f))
-                            .clickable { fullScreenImageUrl = null },
+                            .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
+                            .pointerInput(url) {
+                                detectTapGestures(
+                                    onTap = { 
+                                        if (scale <= 1.05f) fullScreenImageUrl = null 
+                                    },
+                                    onDoubleTap = {
+                                        animationJob?.cancel()
+                                        animationJob = scope.launch {
+                                            if (scale > 1.05f) {
+                                                val startScale = scale
+                                                val startOffsetX = offsetX
+                                                val startOffsetY = offsetY
+                                                AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
+                                                    scale = startScale + (1f - startScale) * value
+                                                    offsetX = startOffsetX + (0f - startOffsetX) * value
+                                                    offsetY = startOffsetY + (0f - startOffsetY) * value
+                                                }
+                                            } else {
+                                                AnimationState(scale).animateTo(3f, spring(stiffness = Spring.StiffnessLow)) {
+                                                    scale = value
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         coil.compose.AsyncImage(
                             model = url,
                             contentDescription = "Full screen image",
+                            onSuccess = { state ->
+                                imageSize = state.painter.intrinsicSize
+                            },
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .pointerInput(url) {
+                                    val velocityTracker = VelocityTracker()
+                                    
+                                    fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
+                                        if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
+                                        val imageAspectRatio = imageSize.width / imageSize.height
+                                        val containerAspectRatio = containerSize.width / containerSize.height
+                                        
+                                        val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
+                                        val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
+                                        
+                                        val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
+                                        val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
+                                        return maxX to maxY
+                                    }
+
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        animationJob?.cancel()
+                                        
+                                        var pastTouchSlop = false
+                                        val touchSlop = viewConfiguration.touchSlop
+
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val zoomChange = event.calculateZoom()
+                                            val panChange = event.calculatePan()
+                                            
+                                            if (!pastTouchSlop) {
+                                                val panAmount = panChange.getDistance()
+                                                if (zoomChange != 1f || panAmount > touchSlop) {
+                                                    pastTouchSlop = true
+                                                }
+                                            }
+
+                                            if (pastTouchSlop) {
+                                                val centroid = event.calculateCentroid(useCurrent = false)
+                                                if (zoomChange != 1f || panChange != Offset.Zero) {
+                                                    val oldScale = scale
+                                                    val newScale = (scale * zoomChange).coerceIn(1f, 10f)
+                                                    
+                                                    val r = if (oldScale != 0f) newScale / oldScale else 1f
+                                                    val (maxX, maxY) = getMaxOffsets(newScale)
+                                                    val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+                                                    
+                                                    // Synchronous updates: immediate, stable, no race conditions
+                                                    val targetX = offsetX * r + (centroid.x - center.x) * (1f - r) + panChange.x
+                                                    val targetY = offsetY * r + (centroid.y - center.y) * (1f - r) + panChange.y
+                                                    
+                                                    scale = newScale
+                                                    offsetX = targetX.coerceIn(-maxX, maxX)
+                                                    offsetY = targetY.coerceIn(-maxY, maxY)
+                                                    
+                                                    event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                                }
+                                            }
+
+                                            if (event.changes.size == 1) {
+                                                val change = event.changes.first()
+                                                velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                            } else {
+                                                velocityTracker.resetTracking()
+                                            }
+                                        } while (event.changes.any { it.pressed })
+
+                                        if (scale > 1f) {
+                                            val velocity = velocityTracker.calculateVelocity()
+                                            val decay = splineBasedDecay<Offset>(density)
+                                            val (maxX, maxY) = getMaxOffsets(scale)
+
+                                            animationJob = scope.launch {
+                                                AnimationState(
+                                                    typeConverter = Offset.VectorConverter,
+                                                    initialValue = Offset(offsetX, offsetY),
+                                                    initialVelocity = Offset(velocity.x, velocity.y)
+                                                ).animateDecay(decay) {
+                                                    offsetX = value.x.coerceIn(-maxX, maxX)
+                                                    offsetY = value.y.coerceIn(-maxY, maxY)
+                                                    if (value.x < -maxX || value.x > maxX || value.y < -maxY || value.y > maxY) {
+                                                        cancelAnimation()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        velocityTracker.resetTracking()
+                                    }
+                                }
+                                .graphicsLayer(
+                                    scaleX = scale,
+                                    scaleY = scale,
+                                    translationX = offsetX,
+                                    translationY = offsetY
+                                ),
                             contentScale = androidx.compose.ui.layout.ContentScale.Fit
                         )
                         
@@ -242,7 +366,21 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     }
                     
                     BackHandler {
-                        fullScreenImageUrl = null
+                        if (scale > 1.05f) {
+                            animationJob?.cancel()
+                            animationJob = scope.launch {
+                                val startScale = scale
+                                val startOffsetX = offsetX
+                                val startOffsetY = offsetY
+                                AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
+                                    scale = startScale + (1f - startScale) * value
+                                    offsetX = startOffsetX + (0f - startOffsetX) * value
+                                    offsetY = startOffsetY + (0f - startOffsetY) * value
+                                }
+                            }
+                        } else {
+                            fullScreenImageUrl = null
+                        }
                     }
                 }
             }
