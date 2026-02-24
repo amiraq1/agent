@@ -220,7 +220,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                 // Helper for rubber-band resistance
                 fun rubberBandValue(fullDelta: Float, dimension: Float): Float {
                     if (dimension <= 0f) return 0f
-                    val c = 0.55f
+                    val c = 0.75f
                     return (fullDelta * c * dimension) / (dimension + c * fullDelta)
                 }
 
@@ -378,6 +378,9 @@ fun MainNavigation(viewModel: ChatViewModel) {
                                             offsetX > boundX || offsetX < -boundX ||
                                             offsetY > boundY || offsetY < -boundY
 
+                                    // Calculate velocity before launching the coroutine to avoid race with resetTracking
+                                    val velocity = velocityTracker.calculateVelocity()
+                                    
                                     animationJob = scope.launch {
                                         if (isOutOfBounds) {
                                             val sS = scale
@@ -417,17 +420,57 @@ fun MainNavigation(viewModel: ChatViewModel) {
                                                 offsetY = pivotOffsetY + (targetY - finalPivotY) * value
                                             }
                                         } else if (scale > 1f) {
-                                            val velocity = velocityTracker.calculateVelocity()
                                             val decay = splineBasedDecay<Offset>(density)
+                                            var hitBoundary = false
+                                            var velocityAtBoundary = Offset.Zero
+                                            var positionAtBoundary = Offset.Zero
+                                            
+                                            // 1. Decay until we hit a boundary
                                             AnimationState(
                                                 typeConverter = Offset.VectorConverter,
                                                 initialValue = Offset(offsetX, offsetY),
                                                 initialVelocity = Offset(velocity.x, velocity.y)
                                             ).animateDecay(decay) {
-                                                offsetX = value.x.coerceIn(-boundX, boundX)
-                                                offsetY = value.y.coerceIn(-boundY, boundY)
-                                                if (value.x < -boundX || value.x > boundX || value.y < -boundY || value.y > boundY) {
+                                                val (maxX, maxY) = getMaxOffsets(scale)
+                                                if (value.x > maxX || value.x < -maxX || value.y > maxY || value.y < -maxY) {
+                                                    velocityAtBoundary = this.velocity
+                                                    positionAtBoundary = value
+                                                    hitBoundary = true
                                                     cancelAnimation()
+                                                } else {
+                                                    offsetX = value.x
+                                                    offsetY = value.y
+                                                }
+                                            }
+                                            
+                                            // 2. If hit, hand off to a spring animation (target is the boundary)
+                                            // A spring with initial velocity and DampingRatioNoBouncy will overshoot and pull back.
+                                            if (hitBoundary) {
+                                                val (maxX, maxY) = getMaxOffsets(scale)
+                                                val targetX = positionAtBoundary.x.coerceIn(-maxX, maxX)
+                                                val targetY = positionAtBoundary.y.coerceIn(-maxY, maxY)
+                                                
+                                                AnimationState(
+                                                    typeConverter = Offset.VectorConverter,
+                                                    initialValue = positionAtBoundary,
+                                                    initialVelocity = velocityAtBoundary
+                                                ).animateTo(
+                                                    targetValue = Offset(targetX, targetY),
+                                                    animationSpec = spring(
+                                                        stiffness = Spring.StiffnessMediumLow,
+                                                        dampingRatio = Spring.DampingRatioNoBouncy
+                                                    )
+                                                ) {
+                                                    offsetX = when {
+                                                        value.x > maxX -> maxX + rubberBandValue(value.x - maxX, containerSize.width)
+                                                        value.x < -maxX -> -maxX - rubberBandValue(-maxX - value.x, containerSize.width)
+                                                        else -> value.x
+                                                    }
+                                                    offsetY = when {
+                                                        value.y > maxY -> maxY + rubberBandValue(value.y - maxY, containerSize.height)
+                                                        value.y < -maxY -> -maxY - rubberBandValue(-maxY - value.y, containerSize.height)
+                                                        else -> value.y
+                                                    }
                                                 }
                                             }
                                         }
