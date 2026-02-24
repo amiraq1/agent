@@ -16,9 +16,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,7 +27,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -46,13 +43,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.data.local.ChatDatabase
@@ -191,234 +184,270 @@ fun MainNavigation(viewModel: ChatViewModel) {
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                fullScreenImageUrl?.let { url ->
-                    val scope = rememberCoroutineScope()
-                    val density = LocalDensity.current
-                    
-                    var scale by remember { mutableFloatStateOf(1f) }
-                    var offsetX by remember { mutableFloatStateOf(0f) }
-                    var offsetY by remember { mutableFloatStateOf(0f) }
-                    
-                    var containerSize by remember { mutableStateOf(Size.Zero) }
-                    var imageSize by remember { mutableStateOf(Size.Zero) }
-                    var animationJob by remember { mutableStateOf<Job?>(null) }
+                // Keep the last URL for the duration of the exit animation
+                var lastUrl by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(fullScreenImageUrl) {
+                    if (fullScreenImageUrl != null) lastUrl = fullScreenImageUrl
+                }
+                
+                val url = lastUrl ?: return@AnimatedVisibility
+                
+                val scope = rememberCoroutineScope()
+                val density = LocalDensity.current
+                
+                var scale by remember(url) { mutableFloatStateOf(1f) }
+                var offsetX by remember(url) { mutableFloatStateOf(0f) }
+                var offsetY by remember(url) { mutableFloatStateOf(0f) }
+                
+                var containerSize by remember { mutableStateOf(Size.Zero) }
+                var imageSize by remember { mutableStateOf(Size.Zero) }
+                var animationJob by remember { mutableStateOf<Job?>(null) }
 
-                    // Reset when image changes
-                    LaunchedEffect(url) {
-                        animationJob?.cancel()
-                        scale = 1f
-                        offsetX = 0f
-                        offsetY = 0f
-                        imageSize = Size.Zero
-                    }
-
-                    Box(
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.9f))
+                        .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
+                        .pointerInput(url) {
+                            detectTapGestures(
+                                onTap = { 
+                                    if (scale <= 1.05f) fullScreenImageUrl = null 
+                                },
+                                onDoubleTap = { tapOffset ->
+                                    animationJob?.cancel()
+                                    animationJob = scope.launch {
+                                        if (scale > 1.05f) {
+                                            val startScale = scale
+                                            val startOffsetX = offsetX
+                                            val startOffsetY = offsetY
+                                            AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
+                                                scale = startScale + (1f - startScale) * value
+                                                offsetX = startOffsetX + (0f - startOffsetX) * value
+                                                offsetY = startOffsetY + (0f - startOffsetY) * value
+                                            }
+                                        } else {
+                                            val targetScale = 3f
+                                            val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+                                            val startScale = scale
+                                            AnimationState(startScale).animateTo(targetScale, spring(stiffness = Spring.StiffnessLow)) {
+                                                val r = if (startScale != 0f) value / startScale else 1f
+                                                scale = value
+                                                offsetX = offsetX * r + (tapOffset.x - center.x) * (1f - r)
+                                                offsetY = offsetY * r + (tapOffset.y - center.y) * (1f - r)
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    coil.compose.AsyncImage(
+                        model = url,
+                        contentDescription = "Full screen image",
+                        onSuccess = { state ->
+                            imageSize = state.painter.intrinsicSize
+                        },
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.9f))
-                            .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
                             .pointerInput(url) {
-                                detectTapGestures(
-                                    onTap = { 
-                                        if (scale <= 1.05f) fullScreenImageUrl = null 
-                                    },
-                                    onDoubleTap = {
-                                        animationJob?.cancel()
-                                        animationJob = scope.launch {
-                                            if (scale > 1.05f) {
-                                                val startScale = scale
-                                                val startOffsetX = offsetX
-                                                val startOffsetY = offsetY
-                                                AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
-                                                    scale = startScale + (1f - startScale) * value
-                                                    offsetX = startOffsetX + (0f - startOffsetX) * value
-                                                    offsetY = startOffsetY + (0f - startOffsetY) * value
-                                                }
-                                            } else {
-                                                AnimationState(scale).animateTo(3f, spring(stiffness = Spring.StiffnessLow)) {
-                                                    scale = value
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        coil.compose.AsyncImage(
-                            model = url,
-                            contentDescription = "Full screen image",
-                            onSuccess = { state ->
-                                imageSize = state.painter.intrinsicSize
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(url) {
-                                    val velocityTracker = VelocityTracker()
+                                val velocityTracker = VelocityTracker()
+                                
+                                fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
+                                    if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
+                                    val imageAspectRatio = imageSize.width / imageSize.height
+                                    val containerAspectRatio = containerSize.width / containerSize.height
                                     
-                                    fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
-                                        if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
-                                        val imageAspectRatio = imageSize.width / imageSize.height
-                                        val containerAspectRatio = containerSize.width / containerSize.height
-                                        
-                                        val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
-                                        val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
-                                        
-                                        val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
-                                        val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
-                                        return maxX to maxY
-                                    }
+                                    val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
+                                    val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
+                                    
+                                    val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
+                                    val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
+                                    return maxX to maxY
+                                }
 
-                                    // Helper for rubber-band resistance
-                                    fun applyResistance(delta: Float): Float = delta * 0.4f
+                                // Helper for rubber-band resistance
+                                fun rubberBandValue(fullDelta: Float, dimension: Float): Float {
+                                    if (dimension <= 0f) return 0f
+                                    val c = 0.55f
+                                    return (fullDelta * c * dimension) / (dimension + c * fullDelta)
+                                }
 
-                                    awaitEachGesture {
-                                        awaitFirstDown(requireUnconsumed = false)
-                                        animationJob?.cancel()
-                                        
-                                        var pastTouchSlop = false
-                                        val touchSlop = viewConfiguration.touchSlop
+                                var lastCentroid = Offset.Unspecified
 
-                                        do {
-                                            val event = awaitPointerEvent()
-                                            val zoomChange = event.calculateZoom()
-                                            val panChange = event.calculatePan()
-                                            
-                                            if (!pastTouchSlop) {
-                                                val panAmount = panChange.getDistance()
-                                                if (zoomChange != 1f || panAmount > touchSlop) {
-                                                    pastTouchSlop = true
-                                                }
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    animationJob?.cancel()
+
+                                    var pastTouchSlop = false
+                                    val touchSlop = viewConfiguration.touchSlop
+
+                                    // Reset centroid for new gesture
+                                    lastCentroid = Offset.Unspecified
+
+                                    // Maintain logical state for the duration of this gesture
+                                    var logicalScale = scale
+                                    var logicalOffsetX = offsetX
+                                    var logicalOffsetY = offsetY
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val zoomChange = event.calculateZoom()
+                                        val panChange = event.calculatePan()
+
+                                        if (!pastTouchSlop) {
+                                            val panAmount = panChange.getDistance()
+                                            if (zoomChange != 1f || panAmount > touchSlop) {
+                                                pastTouchSlop = true
                                             }
-
-                                            if (pastTouchSlop) {
-                                                val centroid = event.calculateCentroid(useCurrent = false)
-                                                if (zoomChange != 1f || panChange != Offset.Zero) {
-                                                    val oldScale = scale
-                                                    
-                                                    // 1. Calculate requested scale with soft resistance (WeChat style)
-                                                    val rawScale = (scale * zoomChange).coerceIn(0.5f, 15f)
-                                                    val newScale = if (rawScale < 1f) {
-                                                        1f - (1f - rawScale) * 0.6f 
-                                                    } else if (rawScale > 10f) {
-                                                        10f + (rawScale - 10f) * 0.6f
-                                                    } else {
-                                                        rawScale
-                                                    }
-
-                                                    // 2. Use the ACTUAL visual scale change for pivot math to prevent drift
-                                                    val r = if (oldScale != 0f) newScale / oldScale else 1f
-                                                    val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
-                                                    val targetX = offsetX * r + (centroid.x - center.x) * (1f - r) + panChange.x
-                                                    val targetY = offsetY * r + (centroid.y - center.y) * (1f - r) + panChange.y
-                                                    
-                                                    val (maxX, maxY) = getMaxOffsets(newScale)
-                                                    
-                                                    // 3. Apply soft resistance for visual state (0.6f multiplier)
-                                                    scale = newScale
-                                                    offsetX = if (targetX > maxX) maxX + (targetX - maxX) * 0.6f
-                                                              else if (targetX < -maxX) -maxX - (-maxX - targetX) * 0.6f
-                                                              else targetX
-
-                                                    offsetY = if (targetY > maxY) maxY + (targetY - maxY) * 0.6f
-                                                              else if (targetY < -maxY) -maxY - (-maxY - targetY) * 0.6f
-                                                              else targetY
-                                                    
-                                                    event.changes.forEach { if (it.positionChanged()) it.consume() }
-                                                }
+                                        }
+                                        if (pastTouchSlop) {
+                                            val centroid = event.calculateCentroid(useCurrent = false)
+                                            if (zoomChange != 1f && centroid != Offset.Unspecified) {
+                                                lastCentroid = centroid
                                             }
+                                            if (zoomChange != 1f || panChange != Offset.Zero) {
+                                                val oldVisualScale = scale
 
-                                            if (event.changes.size == 1) {
-                                                val change = event.changes.first()
-                                                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                                            } else {
-                                                velocityTracker.resetTracking()
-                                            }
-                                        } while (event.changes.any { it.pressed })
-
-                                        // Release handler: Snap-back or Fling
-                                        val (boundX, boundY) = getMaxOffsets(scale)
-                                        val isOutOfBounds = scale < 1f || scale > 10f || 
-                                                           offsetX > boundX || offsetX < -boundX || 
-                                                           offsetY > boundY || offsetY < -boundY
-
-                                        animationJob = scope.launch {
-                                            if (isOutOfBounds) {
-                                                val targetS = scale.coerceIn(1f, 10f)
-                                                val (targetMaxX, targetMaxY) = getMaxOffsets(targetS)
-                                                val targetX = offsetX.coerceIn(-targetMaxX, targetMaxX)
-                                                val targetY = offsetY.coerceIn(-targetMaxY, targetMaxY)
-
-                                                val sS = scale
-                                                val sX = offsetX
-                                                val sY = offsetY
-                                                
-                                                AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioLowBouncy)) {
-                                                    scale = sS + (targetS - sS) * value
-                                                    offsetX = sX + (targetX - sX) * value
-                                                    offsetY = sY + (targetY - sY) * value
+                                                // 1. Update logical scale and map to visual scale
+                                                logicalScale = (logicalScale * zoomChange).coerceIn(0.1f, 30f)
+                                                val newVisualScale = if (logicalScale < 1f) {
+                                                    1f - rubberBandValue(1f - logicalScale, 1f)
+                                                } else if (logicalScale > 10f) {
+                                                    10f + rubberBandValue(logicalScale - 10f, 5f)
+                                                } else {
+                                                    logicalScale
                                                 }
-                                            } else if (scale > 1f) {
-                                                val velocity = velocityTracker.calculateVelocity()
-                                                val decay = splineBasedDecay<Offset>(density)
-                                                AnimationState(
-                                                    typeConverter = Offset.VectorConverter,
-                                                    initialValue = Offset(offsetX, offsetY),
-                                                    initialVelocity = Offset(velocity.x, velocity.y)
-                                                ).animateDecay(decay) {
-                                                    offsetX = value.x.coerceIn(-boundX, boundX)
-                                                    offsetY = value.y.coerceIn(-boundY, boundY)
-                                                    if (value.x < -boundX || value.x > boundX || value.y < -boundY || value.y > boundY) {
-                                                        cancelAnimation()
-                                                    }
+                                                // 2. Use the visual scale ratio to transform offsets (keeps centroid stable)
+                                                val r = if (oldVisualScale != 0f) newVisualScale / oldVisualScale else 1f
+                                                val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+
+                                                // Update logical offsets (used for rubber-band calculation)
+                                                logicalOffsetX = logicalOffsetX * r + (centroid.x - center.x) * (1f - r) + panChange.x
+                                                logicalOffsetY = logicalOffsetY * r + (centroid.y - center.y) * (1f - r) + panChange.y
+                                                val (maxX, maxY) = getMaxOffsets(newVisualScale)
+
+                                                scale = newVisualScale
+                                                offsetX = if (logicalOffsetX > maxX) maxX + rubberBandValue(logicalOffsetX - maxX, containerSize.width)
+                                                else if (logicalOffsetX < -maxX) -maxX - rubberBandValue(-maxX - logicalOffsetX, containerSize.width)
+                                                else logicalOffsetX
+                                                offsetY = if (logicalOffsetY > maxY) maxY + rubberBandValue(logicalOffsetY - maxY, containerSize.height)
+                                                else if (logicalOffsetY < -maxY) -maxY - rubberBandValue(-maxY - logicalOffsetY, containerSize.height)
+                                                else logicalOffsetY
+
+                                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                            }
+                                        }
+                                        if (event.changes.size == 1) {
+                                            val change = event.changes.first()
+                                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                        } else {
+                                            velocityTracker.resetTracking()
+                                        }
+                                    } while (event.changes.any { it.pressed })
+                                    // Release handler: Snap-back or Fling
+                                    val (boundX, boundY) = getMaxOffsets(scale)
+                                    val isOutOfBounds = scale < 1f || scale > 10f ||
+                                            offsetX > boundX || offsetX < -boundX ||
+                                            offsetY > boundY || offsetY < -boundY
+
+                                    animationJob = scope.launch {
+                                        if (isOutOfBounds) {
+                                            val sS = scale
+                                            val sX = offsetX
+                                            val sY = offsetY
+
+                                            val targetS = scale.coerceIn(1f, 10f)
+                                            val (targetMaxX, targetMaxY) = getMaxOffsets(targetS)
+
+                                            // If we have a pivot from the gesture, use it to make the zoom feel natural
+                                            val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+                                            val pivot = if (lastCentroid != Offset.Unspecified) lastCentroid else center
+
+                                            // Calculate where the offset SHOULD be at the target scale to keep the pivot stationary
+                                            val targetR = if (sS != 0f) targetS / sS else 1f
+                                            val finalPivotX = sX * targetR + (pivot.x - center.x) * (1f - targetR)
+                                            val finalPivotY = sY * targetR + (pivot.y - center.y) * (1f - targetR)
+                                            // The actual target is the pivot-based destination, clamped to valid boundaries
+                                            val targetX = finalPivotX.coerceIn(-targetMaxX, targetMaxX)
+                                            val targetY = finalPivotY.coerceIn(-targetMaxY, targetMaxY)
+
+                                            AnimationState(0f).animateTo(
+                                                1f,
+                                                spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                                            ) {
+                                                val currentScale = sS + (targetS - sS) * value
+                                                scale = currentScale
+
+                                                val r = if (sS != 0f) currentScale / sS else 1f
+                                                // Calculate the "ideal" offset at this point in the animation if we were strictly pivoting
+                                                val pivotOffsetX = sX * r + (pivot.x - center.x) * (1f - r)
+                                                val pivotOffsetY = sY * r + (pivot.y - center.y) * (1f - r)
+
+                                                // Interpolate from the ideal pivot path to the actual (clamped) target
+                                                // This adds a smooth "slide" correction if the pivot target was out of bounds
+                                                offsetX = pivotOffsetX + (targetX - finalPivotX) * value
+                                                offsetY = pivotOffsetY + (targetY - finalPivotY) * value
+                                            }
+                                        } else if (scale > 1f) {
+                                            val velocity = velocityTracker.calculateVelocity()
+                                            val decay = splineBasedDecay<Offset>(density)
+                                            AnimationState(
+                                                typeConverter = Offset.VectorConverter,
+                                                initialValue = Offset(offsetX, offsetY),
+                                                initialVelocity = Offset(velocity.x, velocity.y)
+                                            ).animateDecay(decay) {
+                                                offsetX = value.x.coerceIn(-boundX, boundX)
+                                                offsetY = value.y.coerceIn(-boundY, boundY)
+                                                if (value.x < -boundX || value.x > boundX || value.y < -boundY || value.y > boundY) {
+                                                    cancelAnimation()
                                                 }
                                             }
                                         }
-                                        velocityTracker.resetTracking()
                                     }
-                                }
-                                .graphicsLayer(
-                                    scaleX = scale,
-                                    scaleY = scale,
-                                    translationX = offsetX,
-                                    translationY = offsetY
-                                ),
-                            contentScale = ContentScale.Fit
-                        )
-                        
-                        // Close button
-                        IconButton(
-                            onClick = { fullScreenImageUrl = null },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .statusBarsPadding()
-                                .padding(16.dp)
-                                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                    
-                    BackHandler {
-                        if (scale > 1.05f) {
-                            animationJob?.cancel()
-                            animationJob = scope.launch {
-                                val startScale = scale
-                                val startOffsetX = offsetX
-                                val startOffsetY = offsetY
-                                AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
-                                    scale = startScale + (1f - startScale) * value
-                                    offsetX = startOffsetX + (0f - startOffsetX) * value
-                                    offsetY = startOffsetY + (0f - startOffsetY) * value
+                                    velocityTracker.resetTracking()
                                 }
                             }
-                        } else {
-                            fullScreenImageUrl = null
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offsetX,
+                                translationY = offsetY
+                            ),
+                        contentScale = ContentScale.Fit
+                    )
+                    
+                    // Close button
+                    IconButton(
+                        onClick = { fullScreenImageUrl = null },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White
+                        )
+                    }
+                }
+                
+                BackHandler {
+                    if (scale > 1.05f) {
+                        animationJob?.cancel()
+                        animationJob = scope.launch {
+                            val startScale = scale
+                            val startOffsetX = offsetX
+                            val startOffsetY = offsetY
+                            AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
+                                scale = startScale + (1f - startScale) * value
+                                offsetX = startOffsetX + (0f - startOffsetX) * value
+                                offsetY = startOffsetY + (0f - startOffsetY) * value
+                            }
                         }
+                    } else {
+                        fullScreenImageUrl = null
                     }
                 }
             }
