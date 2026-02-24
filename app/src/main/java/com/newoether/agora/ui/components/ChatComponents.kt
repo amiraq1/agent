@@ -49,6 +49,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
@@ -184,6 +188,14 @@ fun MessageItem(
     val clipboardManager = LocalClipboardManager.current
 
     var currentTotalHeight by remember { mutableIntStateOf(0) }
+    
+    // Create a responder that ignores bring-into-view requests to prevent auto-scrolling on focus/selection
+    val noOpResponder = remember {
+        object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect = localRect
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) { /* Do nothing */ }
+        }
+    }
 
     fun calculateReportedHeight(totalPx: Int, thoughtPx: Int): Int {
         // When we are NOT expanded, the thought block is animating down from its large height 
@@ -320,7 +332,8 @@ fun MessageItem(
                                     Text(
                                         text = message.text,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = textColor
+                                        color = textColor,
+                                        modifier = Modifier.bringIntoViewResponder(noOpResponder)
                                     )
                                 }
                             }
@@ -444,6 +457,7 @@ fun MessageItem(
                                         }
                                         isThoughtExpanded = !isThoughtExpanded 
                                     }
+                                    .bringIntoViewResponder(noOpResponder)
                                     .padding(10.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -505,7 +519,9 @@ fun MessageItem(
                                             SelectionContainer {
                                                 Markdown(
                                                     content = debouncedThoughts,
-                                                    modifier = Modifier.fillMaxWidth(),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .bringIntoViewResponder(noOpResponder),
                                                     typography = thoughtTypography,
                                                     padding = thoughtMarkdownPadding // Use tighter padding for thoughts
                                                 )
@@ -527,7 +543,12 @@ fun MessageItem(
                                                                 Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.error)
                                                                 Spacer(modifier = Modifier.width(12.dp))
                                                                 SelectionContainer {
-                                                                    Text(debouncedText.ifEmpty { "Failed to generate." }, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, lineHeight = 18.sp), color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                                                                    Text(
+                                                                        debouncedText.ifEmpty { "Failed to generate." },
+                                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, lineHeight = 18.sp),
+                                                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                                                                        modifier = Modifier.bringIntoViewResponder(noOpResponder)
+                                                                    )
                                                                 }
                                                             }
                                                         }
@@ -535,7 +556,9 @@ fun MessageItem(
                                                         SelectionContainer {
                                                             Markdown(
                                                                 content = debouncedText,
-                                                                modifier = Modifier.fillMaxWidth(),
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .bringIntoViewResponder(noOpResponder),
                                                                 typography = customTypography,
                                                                 padding = customMarkdownPadding
                                                             )
