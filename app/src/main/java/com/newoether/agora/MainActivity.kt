@@ -202,6 +202,27 @@ fun MainNavigation(viewModel: ChatViewModel) {
                 var containerSize by remember { mutableStateOf(Size.Zero) }
                 var imageSize by remember { mutableStateOf(Size.Zero) }
                 var animationJob by remember { mutableStateOf<Job?>(null) }
+                var lastCentroid by remember { mutableStateOf(Offset.Unspecified) }
+
+                fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
+                    if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
+                    val imageAspectRatio = imageSize.width / imageSize.height
+                    val containerAspectRatio = containerSize.width / containerSize.height
+                    
+                    val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
+                    val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
+                    
+                    val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
+                    val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
+                    return maxX to maxY
+                }
+
+                // Helper for rubber-band resistance
+                fun rubberBandValue(fullDelta: Float, dimension: Float): Float {
+                    if (dimension <= 0f) return 0f
+                    val c = 0.55f
+                    return (fullDelta * c * dimension) / (dimension + c * fullDelta)
+                }
 
                 Box(
                     modifier = Modifier
@@ -216,24 +237,53 @@ fun MainNavigation(viewModel: ChatViewModel) {
                                 onDoubleTap = { tapOffset ->
                                     animationJob?.cancel()
                                     animationJob = scope.launch {
-                                        if (scale > 1.05f) {
-                                            val startScale = scale
-                                            val startOffsetX = offsetX
-                                            val startOffsetY = offsetY
-                                            AnimationState(0f).animateTo(1f, spring(stiffness = Spring.StiffnessLow)) {
-                                                scale = startScale + (1f - startScale) * value
-                                                offsetX = startOffsetX + (0f - startOffsetX) * value
-                                                offsetY = startOffsetY + (0f - startOffsetY) * value
+                                        val startScale = scale
+                                        val startOffsetX = offsetX
+                                        val startOffsetY = offsetY
+                                        
+                                        if (startScale > 1.05f) {
+                                            // Zoom Out to 1x
+                                            val targetScale = 1f
+                                            val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+                                            
+                                            AnimationState(startScale).animateTo(
+                                                targetScale,
+                                                spring(
+                                                    stiffness = Spring.StiffnessMediumLow,
+                                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                                    visibilityThreshold = 0.001f
+                                                )
+                                            ) {
+                                                scale = value
+                                                // Pivot zoom out: shrink towards the tapped point
+                                                val r = if (startScale != 0f) value / startScale else 1f
+                                                val unconstrainedX = startOffsetX * r + (tapOffset.x - center.x) * (1f - r)
+                                                val unconstrainedY = startOffsetY * r + (tapOffset.y - center.y) * (1f - r)
+                                                
+                                                // Clamp to valid boundaries for the CURRENT scale
+                                                val (maxX, maxY) = getMaxOffsets(value)
+                                                offsetX = unconstrainedX.coerceIn(-maxX, maxX)
+                                                offsetY = unconstrainedY.coerceIn(-maxY, maxY)
                                             }
                                         } else {
+                                            // Zoom In to 3x
                                             val targetScale = 3f
                                             val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
-                                            val startScale = scale
-                                            AnimationState(startScale).animateTo(targetScale, spring(stiffness = Spring.StiffnessLow)) {
-                                                val r = if (startScale != 0f) value / startScale else 1f
+                                            
+                                            AnimationState(startScale).animateTo(
+                                                targetScale,
+                                                spring(
+                                                    stiffness = Spring.StiffnessMediumLow,
+                                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                                    visibilityThreshold = 0.001f
+                                                )
+                                            ) {
                                                 scale = value
-                                                offsetX = offsetX * r + (tapOffset.x - center.x) * (1f - r)
-                                                offsetY = offsetY * r + (tapOffset.y - center.y) * (1f - r)
+                                                val r = if (startScale != 0f) value / startScale else 1f
+                                                
+                                                // Pivot zoom: maintain the tapped point visually stationary
+                                                offsetX = startOffsetX * r + (tapOffset.x - center.x) * (1f - r)
+                                                offsetY = startOffsetY * r + (tapOffset.y - center.y) * (1f - r)
                                             }
                                         }
                                     }
@@ -252,28 +302,6 @@ fun MainNavigation(viewModel: ChatViewModel) {
                             .fillMaxSize()
                             .pointerInput(url) {
                                 val velocityTracker = VelocityTracker()
-                                
-                                fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
-                                    if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
-                                    val imageAspectRatio = imageSize.width / imageSize.height
-                                    val containerAspectRatio = containerSize.width / containerSize.height
-                                    
-                                    val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
-                                    val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
-                                    
-                                    val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
-                                    val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
-                                    return maxX to maxY
-                                }
-
-                                // Helper for rubber-band resistance
-                                fun rubberBandValue(fullDelta: Float, dimension: Float): Float {
-                                    if (dimension <= 0f) return 0f
-                                    val c = 0.55f
-                                    return (fullDelta * c * dimension) / (dimension + c * fullDelta)
-                                }
-
-                                var lastCentroid = Offset.Unspecified
 
                                 awaitEachGesture {
                                     awaitFirstDown(requireUnconsumed = false)
