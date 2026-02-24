@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.*
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.ContentCopy
@@ -315,11 +316,13 @@ fun MessageItem(
                                 }
                             }
                             if (message.text.isNotEmpty()) {
-                                Text(
-                                    text = message.text,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = textColor
-                                )
+                                SelectionContainer {
+                                    Text(
+                                        text = message.text,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = textColor
+                                    )
+                                }
                             }
                         }
                     }
@@ -499,12 +502,14 @@ fun MessageItem(
                                         CompositionLocalProvider(
                                             androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
                                         ) {
-                                            Markdown(
-                                                content = debouncedThoughts, 
-                                                modifier = Modifier.fillMaxWidth(),
-                                                typography = thoughtTypography,
-                                                padding = thoughtMarkdownPadding // Use tighter padding for thoughts
-                                            )
+                                            SelectionContainer {
+                                                Markdown(
+                                                    content = debouncedThoughts,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    typography = thoughtTypography,
+                                                    padding = thoughtMarkdownPadding // Use tighter padding for thoughts
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -521,16 +526,20 @@ fun MessageItem(
                                                             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
                                                                 Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.error)
                                                                 Spacer(modifier = Modifier.width(12.dp))
-                                                                Text(debouncedText.ifEmpty { "Failed to generate." }, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, lineHeight = 18.sp), color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                                                                SelectionContainer {
+                                                                    Text(debouncedText.ifEmpty { "Failed to generate." }, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, lineHeight = 18.sp), color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                                                                }
                                                             }
                                                         }
                                                     } else if (debouncedText.isNotEmpty()) {
-                                                        Markdown(
-                                                            content = debouncedText,
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            typography = customTypography,
-                                                            padding = customMarkdownPadding
-                                                        )
+                                                        SelectionContainer {
+                                                            Markdown(
+                                                                content = debouncedText,
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                typography = customTypography,
+                                                                padding = customMarkdownPadding
+                                                            )
+                                                        }
                                                     }
                                                 }
                         if (!isStreaming && message.status == MessageStatus.STOPPED) {
