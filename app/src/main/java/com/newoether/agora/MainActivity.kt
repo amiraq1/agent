@@ -94,12 +94,18 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE conversations ADD COLUMN modelId TEXT")
+            }
+        }
+
         val database = Room.databaseBuilder(
             applicationContext,
             ChatDatabase::class.java,
             "agora_db"
         )
-        .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
         .fallbackToDestructiveMigration()
         .build()
         val settingsManager = SettingsManager(applicationContext)
@@ -556,7 +562,7 @@ fun ChatApp(
     val allMessages by viewModel.allMessages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val currentConversationId by viewModel.currentConversationId.collectAsState()
-    val selectedModel by viewModel.selectedModel.collectAsState()
+    val selectedModel by viewModel.currentActiveModel.collectAsState()
     val enabledModels by viewModel.enabledModels.collectAsState()
     val modelAliases by viewModel.modelAliases.collectAsState()
     val isNewChatMode by viewModel.isNewChatMode.collectAsState()
@@ -1189,7 +1195,7 @@ fun ChatApp(
                         googleSearchEnabled = googleSearchEnabled,
                         onCodeExecutionToggle = { viewModel.setCodeExecutionEnabled(it) },
                         onGoogleSearchToggle = { viewModel.setGoogleSearchEnabled(it) },
-                        onModelSelect = { viewModel.setSelectedModel(it) },
+                        onModelSelect = { viewModel.setActiveModel(it) },
                         onOpenSettings = onOpenSettings,
                         onImageClick = onImageClick,
                         modifier = Modifier,

@@ -105,7 +105,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("General", "Models")
     
-    val providers = listOf("Google", "OpenAI (Soon)", "Anthropic (Soon)")
+    val providers = listOf("Google", "OpenAI", "Anthropic")
 
     val pagerState = rememberPagerState(pageCount = { tabs.size })
 
@@ -231,7 +231,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                     SettingsGroup(title = "PROMPT") {
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { Text("System Instructions") },
+                            headlineContent = { Text("Default System Instructions") },
                             supportingContent = { Text("Define global personas or rules") },
                             leadingContent = {
                                 Icon(Icons.Default.Psychology, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -318,7 +318,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     .verticalScroll(rememberScrollState())
                                     .padding(horizontal = 16.dp, vertical = 16.dp)
                             ) {
-                                                                SettingsGroup(title = "ACTIVE MODEL") {
+                                                                SettingsGroup(title = "DEFAULT MODEL") {
                                                                     val activeAlias = modelAliases[selectedModel]
                                                                     val activeDisplayName = activeAlias ?: selectedModel.removePrefix("models/")
                                                                     
@@ -386,7 +386,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showActiveModelDialog) {
         AlertDialog(
             onDismissRequest = { showActiveModelDialog = false },
-            title = { Text("Select Active Model") },
+            title = { Text("Select Default Model") },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(enabledModels.toList()) { model ->

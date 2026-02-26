@@ -143,27 +143,31 @@ class ChatViewModel(
         }
     }
 
-    val provider = settingsManager.provider.stateIn(viewModelScope, SharingStarted.Eagerly, "Google")
-    val selectedModel = settingsManager.selectedModel.stateIn(viewModelScope, SharingStarted.Eagerly, "models/gemini-1.5-flash")
-    val availableModels = settingsManager.availableModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val enabledModels = settingsManager.enabledModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
-    val modelAliases = settingsManager.modelAliases.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-
-    val apiKeys = settingsManager.apiKeys.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val activeApiKeyId = settingsManager.activeApiKeyId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        val provider = settingsManager.provider.stateIn(viewModelScope, SharingStarted.Eagerly, "Google")
+        val selectedModel = settingsManager.selectedModel.stateIn(viewModelScope, SharingStarted.Eagerly, "models/gemini-1.5-flash")
+        private val _currentActiveModel = MutableStateFlow<String?>(null)
+        val currentActiveModel = kotlinx.coroutines.flow.combine(_currentActiveModel, selectedModel) { active, default ->
+            active ?: default
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, "models/gemini-1.5-flash")
     
-    val systemPrompts = settingsManager.systemPrompts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val activeSystemPromptId = settingsManager.activeSystemPromptId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
-    val maxContextWindow = settingsManager.maxContextWindow.stateIn(viewModelScope, SharingStarted.Eagerly, 20)
-    val visualizeContextRollout = settingsManager.visualizeContextRollout.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val codeExecutionEnabled = settingsManager.codeExecutionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val googleSearchEnabled = settingsManager.googleSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    val conversations: StateFlow<List<ChatConversation>> = chatDao.getAllConversations()
-        .map { entities -> 
-            entities.map { ChatConversation(id = it.id, title = it.title, systemPromptId = it.systemPromptId) }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
+        val availableModels = settingsManager.availableModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val enabledModels = settingsManager.enabledModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+        val modelAliases = settingsManager.modelAliases.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    
+        val apiKeys = settingsManager.apiKeys.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val activeApiKeyId = settingsManager.activeApiKeyId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    
+        val systemPrompts = settingsManager.systemPrompts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val activeSystemPromptId = settingsManager.activeSystemPromptId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        val maxContextWindow = settingsManager.maxContextWindow.stateIn(viewModelScope, SharingStarted.Eagerly, 20)
+        val visualizeContextRollout = settingsManager.visualizeContextRollout.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        val codeExecutionEnabled = settingsManager.codeExecutionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        val googleSearchEnabled = settingsManager.googleSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    
+        val conversations: StateFlow<List<ChatConversation>> = chatDao.getAllConversations()
+            .map { entities ->
+                entities.map { ChatConversation(id = it.id, title = it.title, systemPromptId = it.systemPromptId, modelId = it.modelId) }
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val _currentConversationId = MutableStateFlow<String?>(null)
     val currentConversationId: StateFlow<String?> = _currentConversationId.asStateFlow()
 
@@ -310,7 +314,14 @@ class ChatViewModel(
     // Settings logic
     fun setProvider(p: String) { viewModelScope.launch { settingsManager.saveProvider(p) } }
     fun setSelectedModel(model: String) { viewModelScope.launch { settingsManager.saveSelectedModel(model) } }
-    fun setEnabledModels(models: Set<String>) { viewModelScope.launch { settingsManager.saveEnabledModels(models) } }
+    fun setEnabledModels(models: Set<String>) { 
+        viewModelScope.launch { 
+            settingsManager.saveEnabledModels(models) 
+            if (!models.contains(selectedModel.value)) {
+                settingsManager.saveSelectedModel(models.firstOrNull() ?: "")
+            }
+        } 
+    }
 
     fun updateModelAlias(model: String, alias: String) {
         viewModelScope.launch {
@@ -381,6 +392,7 @@ class ChatViewModel(
             kotlinx.coroutines.delay(200) // Allow overlay to fade in
             clearMessageHeights()
             _currentConversationId.value = null
+            _currentActiveModel.value = null
             _allMessages.value = emptyList()
             _selectedChildren.value = emptyMap()
             _branchSwitchTrigger.value = null
@@ -401,6 +413,8 @@ class ChatViewModel(
             clearMessageHeights()
             _branchSwitchTrigger.value = null
             _currentConversationId.value = id
+            val conversation = chatDao.getConversation(id)
+            _currentActiveModel.value = conversation?.modelId
             triggerScrollToMessage()
         }
     }
@@ -419,6 +433,18 @@ class ChatViewModel(
             val existing = chatDao.getConversation(id)
             if (existing != null) {
                 chatDao.upsertConversation(existing.copy(systemPromptId = promptId, lastUpdated = System.currentTimeMillis()))
+            }
+        }
+    }
+
+    fun setActiveModel(model: String) {
+        _currentActiveModel.value = model
+        _currentConversationId.value?.let { id ->
+            viewModelScope.launch {
+                val existing = chatDao.getConversation(id)
+                if (existing != null) {
+                    chatDao.upsertConversation(existing.copy(modelId = model, lastUpdated = System.currentTimeMillis()))
+                }
             }
         }
     }
@@ -461,27 +487,27 @@ class ChatViewModel(
             val modelMessageId: String
             val startTime = System.currentTimeMillis() + 1
             
-            if (isErrorOrStopped && isLatest) {
-                modelMessageId = messageId
-                chatDao.upsertMessage(MessageEntity(
-                    id = modelMessageId, conversationId = currentId, parentId = parentId,
-                    text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
-                    modelName = selectedModel.value
-                ))
-                val newMap = _selectedChildren.value.toMutableMap()
-                newMap[parentId] = modelMessageId
-                _selectedChildren.value = newMap
-            } else {
-                modelMessageId = UUID.randomUUID().toString()
-                chatDao.upsertMessage(MessageEntity(
-                    id = modelMessageId, conversationId = currentId, parentId = parentId,
-                    text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
-                    modelName = selectedModel.value
-                ))
-                
-                val newMap = _selectedChildren.value.toMutableMap()
-                newMap[parentId] = modelMessageId
-                _selectedChildren.value = newMap
+                        if (isErrorOrStopped && isLatest) {
+                            modelMessageId = messageId
+                            chatDao.upsertMessage(MessageEntity(
+                                id = modelMessageId, conversationId = currentId, parentId = parentId,
+                                text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
+                                modelName = currentActiveModel.value
+                            ))
+                            val newMap = _selectedChildren.value.toMutableMap()
+                            newMap[parentId] = modelMessageId
+                            _selectedChildren.value = newMap
+                        } else {
+                            modelMessageId = UUID.randomUUID().toString()
+                            chatDao.upsertMessage(MessageEntity(
+                                id = modelMessageId, conversationId = currentId, parentId = parentId,
+                                text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
+                                modelName = currentActiveModel.value
+                            ))
+            
+                            val newMap = _selectedChildren.value.toMutableMap()
+                            newMap[parentId] = modelMessageId
+                            _selectedChildren.value = newMap
             }
             
             generateResponse(currentId, userMessage.text, modelMessageId, startTime)
@@ -531,7 +557,7 @@ class ChatViewModel(
             chatDao.upsertMessage(MessageEntity(
                 id = modelMessageId, conversationId = currentId, parentId = newUserMessageId,
                 text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
-                modelName = selectedModel.value
+                modelName = currentActiveModel.value
             ))
             generateResponse(currentId, newText, modelMessageId, startTime)
         }
@@ -584,7 +610,7 @@ class ChatViewModel(
             if (_isNewChatMode.value) {
                 val newId = UUID.randomUUID().toString()
                 val title = if (text.length > 20) text.take(20) + "..." else text.ifBlank { "New Chat" }
-                chatDao.upsertConversation(ChatEntity(id = newId, title = title))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = title, modelId = currentActiveModel.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId
@@ -601,7 +627,7 @@ class ChatViewModel(
             chatDao.upsertMessage(MessageEntity(
                 id = modelMessageId, conversationId = currentId, parentId = userMessageId,
                 text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
-                modelName = selectedModel.value
+                modelName = currentActiveModel.value
             ))
             triggerScrollToMessage(userMessageId)
             generateResponse(currentId, text, modelMessageId, startTime)
@@ -622,7 +648,7 @@ class ChatViewModel(
 
         try {
             if (provider.value == "Google") {
-                val cleanModelName = selectedModel.value.removePrefix("models/")
+                val cleanModelName = currentActiveModel.value.removePrefix("models/")
                 val dbMessages = chatDao.getMessagesForConversation(currentId).first()
                 val pathEntities = mutableListOf<MessageEntity>()
                 var currId: String? = parentId
@@ -794,13 +820,12 @@ class ChatViewModel(
                                                     thoughts = totalThoughts.ifBlank { null }, 
                                                     tokenCount = totalTokenCount, 
                                                     status = currentStatus, 
-                                                    participant = Participant.MODEL, 
-                                                    timestamp = startTime,
-                                                    thoughtTimeMs = totalThoughtTimeMs,
-                                                    modelName = selectedModel.value
-                                                )
-                                            }
-                                        }
+                                                                                                        participant = Participant.MODEL,
+                                                                                                        timestamp = startTime,
+                                                                                                        thoughtTimeMs = totalThoughtTimeMs,
+                                                                                                        modelName = currentActiveModel.value
+                                                                                                    )
+                                                                                                }                                        }
                                             response.usageMetadata?.let { metadata ->
                                                 metadata.totalTokenCount?.let { totalTokenCount = it }
                                                 if (totalText.isEmpty() && (metadata.thoughtsTokenCount ?: 0) > 0) {
@@ -862,7 +887,7 @@ class ChatViewModel(
                     if (finalStreamingMsg != null) {
                         chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = finalStreamingMsg.parentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName))
                     } else {
-                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = selectedModel.value))
+                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = currentActiveModel.value))
                     }
                 }
                 _isLoading.value = false

@@ -34,7 +34,8 @@ data class ChatEntity(
     val title: String,
     val lastUpdated: Long = System.currentTimeMillis(),
     val selectedBranchesJson: String? = null,
-    val systemPromptId: String? = null
+    val systemPromptId: String? = null,
+    val modelId: String? = null
 )
 
 @Entity(
@@ -86,11 +87,10 @@ interface ChatDao {
 }
 
 @Database(
-    entities = [ChatEntity::class, MessageEntity::class], 
-    version = 6,
+    entities = [ChatEntity::class, MessageEntity::class],
+    version = 7,
     exportSchema = true
-)
-@TypeConverters(MessageConverters::class)
+)@TypeConverters(MessageConverters::class)
 abstract class ChatDatabase : RoomDatabase() {
     abstract fun chatDao(): ChatDao
 }
