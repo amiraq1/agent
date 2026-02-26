@@ -187,28 +187,36 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         val providerInstance = viewModel.getProviderInstance(provider)
-                        val baseUrlState = rememberTextFieldState(
-                            providerBaseUrls[provider] ?: if (provider != "Ollama") providerInstance.defaultBaseUrl else ""
-                        )
+                        val baseUrlState = remember(provider) {
+                            TextFieldState(
+                                providerBaseUrls[provider] ?: if (provider != "Ollama") providerInstance.defaultBaseUrl else ""
+                            )
+                        }
                         
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = { Text("Base URL") },
                             supportingContent = {
-                                Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
-                                    TextField(
-                                        state = baseUrlState,
-                                        placeholder = { 
-                                            Text(providerInstance.defaultBaseUrl) 
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = MaterialTheme.shapes.large,
-                                        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
-                                    )
+                                Column {
+                                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                        TextField(
+                                            state = baseUrlState,
+                                            placeholder = { 
+                                                Text(providerInstance.defaultBaseUrl) 
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = MaterialTheme.shapes.large,
+                                            colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
                                 }
                             },
                             leadingContent = {
-                                Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.link_24), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.link_24), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.height(64.dp))
+                                }
                             }
                         )
 
@@ -322,12 +330,13 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         steps = 19,
                                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                                     )
+                                    Spacer(modifier = Modifier.height(12.dp))
                                 }
                             },
                             leadingContent = {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.Memory, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    Spacer(modifier = Modifier.height(48.dp))
+                                    Spacer(modifier = Modifier.height(64.dp))
                                 }
                             }
                         )

@@ -43,9 +43,9 @@ class ChatViewModel(
         "OpenAI" to OpenAiProvider(),
         "Anthropic" to AnthropicProvider(),
         "DeepSeek" to DeepSeekProvider(),
-        "Qwen" to OpenAiProvider(), // Qwen is OpenAI compatible
+        "Qwen" to QwenProvider(),
         "Ollama" to OllamaProvider(),
-        "Open Router" to OpenAiProvider() // Open Router is OpenAI compatible
+        "Open Router" to OpenRouterProvider()
     )
 
     fun getProviderInstance(name: String): LlmProvider {
