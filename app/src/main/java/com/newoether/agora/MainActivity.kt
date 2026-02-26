@@ -1282,7 +1282,8 @@ fun ChatApp(
                                 onClick = { selectedPromptId = null }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Global Default")
+                            val globalDefaultTitle = systemPrompts.find { it.id == activeSystemPromptId }?.title ?: "None"
+                            Text("Global Default ($globalDefaultTitle)")
                         }
                     }
                     items(systemPrompts) { prompt ->
