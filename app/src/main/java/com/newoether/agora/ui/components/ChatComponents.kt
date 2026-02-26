@@ -505,7 +505,7 @@ fun MessageItem(
                                     .padding(10.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     
                                     // Dynamic Title: Content inside ** ** or # Heading
@@ -919,7 +919,7 @@ fun ChatBottomBar(
                         DropdownMenuItem(
                             text = { 
                                 Row(verticalAlignment = Alignment.CenterVertically) { 
-                                    Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp))
+                                    Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text("Thinking") 
                                 } 

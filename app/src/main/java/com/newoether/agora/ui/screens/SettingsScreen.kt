@@ -328,7 +328,10 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 }
                             },
                             leadingContent = {
-                                Icon(Icons.Default.Memory, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Memory, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.height(48.dp))
+                                }
                             }
                         )
 
