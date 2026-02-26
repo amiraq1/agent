@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Edit
@@ -689,8 +690,10 @@ fun ChatBottomBar(
     modelAliases: Map<String, String> = emptyMap(),
     codeExecutionEnabled: Boolean = false,
     googleSearchEnabled: Boolean = false,
+    thinkingEnabled: Boolean = true,
     onCodeExecutionToggle: (Boolean) -> Unit = {},
     onGoogleSearchToggle: (Boolean) -> Unit = {},
+    onThinkingToggle: (Boolean) -> Unit = {},
     onModelSelect: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onImageClick: (String) -> Unit = {},
@@ -912,6 +915,23 @@ fun ChatBottomBar(
                                 ) 
                             }, 
                             onClick = { onGoogleSearchToggle(!googleSearchEnabled) }
+                        )
+                        DropdownMenuItem(
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) { 
+                                    Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Thinking") 
+                                } 
+                            }, 
+                            trailingIcon = { 
+                                Switch(
+                                    checked = thinkingEnabled, 
+                                    onCheckedChange = { onThinkingToggle(it) }, 
+                                    modifier = Modifier.scale(0.7f)
+                                ) 
+                            }, 
+                            onClick = { onThinkingToggle(!thinkingEnabled) }
                         )
                     }
                 }

@@ -155,11 +155,11 @@ class GeminiProvider : LlmProvider {
 
         val thinkingConfig = when {
             cleanModelName.contains("gemini-3", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = true, thinkingLevel = "HIGH")
+                ApiThinkingConfig(includeThoughts = config.thinkingEnabled, thinkingLevel = "HIGH")
             cleanModelName.contains("gemini-2.5", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = true, thinkingBudget = -1)
+                ApiThinkingConfig(includeThoughts = config.thinkingEnabled, thinkingBudget = -1)
             cleanModelName.contains("thinking-exp", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = true)
+                ApiThinkingConfig(includeThoughts = config.thinkingEnabled)
             else -> null
         }
 
@@ -270,7 +270,7 @@ class GeminiProvider : LlmProvider {
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun fetchModels(apiKey: String): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
+    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
             val url = URL("https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey")
             val connection = url.openConnection() as HttpURLConnection

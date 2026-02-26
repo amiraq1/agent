@@ -39,7 +39,13 @@ class ChatViewModel(
     val messageHeights = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
     private val providers = mapOf(
-        "Google" to GeminiProvider()
+        "Google" to GeminiProvider(),
+        "OpenAI" to OpenAiProvider(),
+        "Anthropic" to AnthropicProvider(),
+        "DeepSeek" to DeepSeekProvider(),
+        "Qwen" to OpenAiProvider(), // Qwen is OpenAI compatible
+        "Ollama" to OllamaProvider(),
+        "Open Router" to OpenAiProvider() // Open Router is OpenAI compatible
     )
 
     private fun getActiveProvider(): LlmProvider {
@@ -75,6 +81,8 @@ class ChatViewModel(
         val visualizeContextRollout = settingsManager.visualizeContextRollout.stateIn(viewModelScope, SharingStarted.Eagerly, false)
         val codeExecutionEnabled = settingsManager.codeExecutionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
         val googleSearchEnabled = settingsManager.googleSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        val thinkingEnabled = settingsManager.thinkingEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        val providerBaseUrls = settingsManager.providerBaseUrls.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
     
         val conversations: StateFlow<List<ChatConversation>> = chatDao.getAllConversations()
             .map { entities ->
@@ -293,6 +301,8 @@ class ChatViewModel(
     fun setVisualizeContextRollout(enabled: Boolean) { viewModelScope.launch { settingsManager.saveVisualizeContextRollout(enabled) } }
     fun setCodeExecutionEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveCodeExecutionEnabled(enabled) } }
     fun setGoogleSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveGoogleSearchEnabled(enabled) } }
+    fun setThinkingEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveThinkingEnabled(enabled) } }
+    fun setProviderBaseUrl(provider: String, url: String) { viewModelScope.launch { settingsManager.saveProviderBaseUrl(provider, url) } }
 
     fun createNewChat() {
         switchingJob?.cancel()
@@ -576,7 +586,9 @@ class ChatViewModel(
                 systemPrompt = activePrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
-                googleSearchEnabled = googleSearchEnabled.value
+                googleSearchEnabled = googleSearchEnabled.value,
+                thinkingEnabled = thinkingEnabled.value,
+                baseUrl = providerBaseUrls.value[provider.value]
             )
 
             getActiveProvider().generateResponse(currentPath, config).collect { event ->
@@ -664,9 +676,11 @@ class ChatViewModel(
     fun fetchAvailableModels() {
         val activeKey = apiKeys.value.find { it.id == activeApiKeyId.value }?.key
         if (activeKey.isNullOrBlank()) return
+        val currentProvider = provider.value
+        val currentBaseUrl = providerBaseUrls.value[currentProvider]
         viewModelScope.launch {
             try {
-                val newModels = getActiveProvider().fetchModels(activeKey)
+                val newModels = getActiveProvider().fetchModels(activeKey, currentBaseUrl)
                 if (newModels.isNotEmpty()) {
                     settingsManager.saveAvailableModels(newModels)
                     val newEnabled = enabledModels.value.intersect(newModels.toSet())

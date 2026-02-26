@@ -573,6 +573,7 @@ fun ChatApp(
     val maxContextWindow by viewModel.maxContextWindow.collectAsState()
     val codeExecutionEnabled by viewModel.codeExecutionEnabled.collectAsState()
     val googleSearchEnabled by viewModel.googleSearchEnabled.collectAsState()
+    val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
     
     val systemPrompts by viewModel.systemPrompts.collectAsState()
     val activeSystemPromptId by viewModel.activeSystemPromptId.collectAsState()
@@ -1193,8 +1194,10 @@ fun ChatApp(
                         modelAliases = modelAliases,
                         codeExecutionEnabled = codeExecutionEnabled,
                         googleSearchEnabled = googleSearchEnabled,
+                        thinkingEnabled = thinkingEnabled,
                         onCodeExecutionToggle = { viewModel.setCodeExecutionEnabled(it) },
                         onGoogleSearchToggle = { viewModel.setGoogleSearchEnabled(it) },
+                        onThinkingToggle = { viewModel.setThinkingEnabled(it) },
                         onModelSelect = { viewModel.setActiveModel(it) },
                         onOpenSettings = onOpenSettings,
                         onImageClick = onImageClick,

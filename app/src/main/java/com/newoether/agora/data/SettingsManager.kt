@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -48,11 +49,18 @@ class SettingsManager(private val context: Context) {
         val VISUALIZE_CONTEXT_ROLLOUT = booleanPreferencesKey("visualize_context_rollout")
         val CODE_EXECUTION_ENABLED = booleanPreferencesKey("code_execution_enabled")
         val GOOGLE_SEARCH_ENABLED = booleanPreferencesKey("google_search_enabled")
+        val THINKING_ENABLED = booleanPreferencesKey("thinking_enabled")
+        val PROVIDER_BASE_URLS = stringPreferencesKey("provider_base_urls")
     }
 
     val provider: Flow<String> = context.dataStore.data.map { it[PROVIDER] ?: "Google" }
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "models/gemini-1.5-flash" }
     
+    val providerBaseUrls: Flow<Map<String, String>> = context.dataStore.data.map { pref ->
+        val jsonStr = pref[PROVIDER_BASE_URLS] ?: "{}"
+        try { json.decodeFromString<Map<String, String>>(jsonStr) } catch (e: Exception) { emptyMap() }
+    }
+
     val availableModels: Flow<List<String>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[AVAILABLE_MODELS_JSON] ?: "[]"
         try { json.decodeFromString<List<String>>(jsonStr) } catch (e: Exception) { emptyList() }
@@ -83,9 +91,17 @@ class SettingsManager(private val context: Context) {
     val visualizeContextRollout: Flow<Boolean> = context.dataStore.data.map { it[VISUALIZE_CONTEXT_ROLLOUT] ?: false }
     val codeExecutionEnabled: Flow<Boolean> = context.dataStore.data.map { it[CODE_EXECUTION_ENABLED] ?: false }
     val googleSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[GOOGLE_SEARCH_ENABLED] ?: false }
+    val thinkingEnabled: Flow<Boolean> = context.dataStore.data.map { it[THINKING_ENABLED] ?: true }
 
     suspend fun saveProvider(provider: String) {
         context.dataStore.edit { it[PROVIDER] = provider }
+    }
+
+    suspend fun saveProviderBaseUrl(provider: String, url: String) {
+        val current = context.dataStore.data.map { it[PROVIDER_BASE_URLS] ?: "{}" }.first()
+        val map = try { json.decodeFromString<MutableMap<String, String>>(current) } catch (e: Exception) { mutableMapOf() }
+        map[provider] = url
+        context.dataStore.edit { it[PROVIDER_BASE_URLS] = json.encodeToString(map) }
     }
 
     suspend fun saveSelectedModel(model: String) {
@@ -138,5 +154,9 @@ class SettingsManager(private val context: Context) {
 
     suspend fun saveGoogleSearchEnabled(enabled: Boolean) {
         context.dataStore.edit { it[GOOGLE_SEARCH_ENABLED] = enabled }
+    }
+
+    suspend fun saveThinkingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[THINKING_ENABLED] = enabled }
     }
 }

@@ -102,10 +102,12 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showProviderDialog by remember { mutableStateOf(false) }
     var showActiveModelDialog by remember { mutableStateOf(false) }
     
+    val providerBaseUrls by viewModel.providerBaseUrls.collectAsState()
+    
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("General", "Models")
     
-    val providers = listOf("Google", "OpenAI", "Anthropic")
+    val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router")
 
     val pagerState = rememberPagerState(pageCount = { tabs.size })
 
@@ -181,6 +183,42 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             },
                             modifier = Modifier.clickable { showProviderDialog = true }
                         )
+
+                        if (provider != "Google") {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            
+                            val baseUrlState = rememberTextFieldState(providerBaseUrls[provider] ?: "")
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = { Text("Base URL") },
+                                supportingContent = {
+                                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                        TextField(
+                                            state = baseUrlState,
+                                            placeholder = { 
+                                                Text(
+                                                    when(provider) {
+                                                        "OpenAI" -> "https://api.openai.com/v1"
+                                                        "Ollama" -> "http://localhost:11434/v1"
+                                                        else -> "https://api.example.com/v1"
+                                                    }
+                                                ) 
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = MaterialTheme.shapes.large,
+                                            colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
+                                        )
+                                    }
+                                },
+                                leadingContent = {
+                                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            )
+                            
+                            LaunchedEffect(baseUrlState.text) {
+                                viewModel.setProviderBaseUrl(provider, baseUrlState.text.toString())
+                            }
+                        }
 
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
@@ -434,13 +472,13 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 Column {
                     providers.forEach { p ->
                         val isSelected = p == provider
-                        val isSupported = p == "Google"
+                        val isSupported = true // All are supported now
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = { 
                                 Text(
                                     p, 
-                                    color = if (isSupported) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 ) 
                             },
                             leadingContent = {
