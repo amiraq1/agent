@@ -552,6 +552,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
 
     // Provider Selection Dialog
     if (showProviderDialog) {
+        val providerBaseUrls by viewModel.providerBaseUrls.collectAsState()
+        
         AlertDialog(
             onDismissRequest = { showProviderDialog = false },
             title = { Text("Select AI Provider") },
@@ -559,14 +561,29 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 Column {
                     providers.forEach { p ->
                         val isSelected = p == provider
-                        val isSupported = true // All are supported now
+                        val isConfigured = if (p == "Ollama") {
+                            !providerBaseUrls[p].isNullOrBlank()
+                        } else {
+                            apiKeys.any { it.provider == p }
+                        }
+                        
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = { 
-                                Text(
-                                    p, 
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ) 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isConfigured) {
+                                        Text(
+                                            "• ", 
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
+                                    Text(
+                                        p, 
+                                        color = if (isConfigured) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
                             },
                             leadingContent = {
                                 if (isSelected) {
@@ -575,11 +592,9 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     Spacer(modifier = Modifier.size(24.dp))
                                 }
                             },
-                            modifier = Modifier.clickable(enabled = isSupported) {
-                                if (isSupported) {
-                                    viewModel.setProvider(p)
-                                    showProviderDialog = false
-                                }
+                            modifier = Modifier.clickable {
+                                viewModel.setProvider(p)
+                                showProviderDialog = false
                             }
                         )
                     }
