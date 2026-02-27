@@ -169,5 +169,20 @@ class DeepSeekProvider : LlmProvider {
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = emptyList() // DeepSeek has static models usually
+    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        try {
+            val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: defaultBaseUrl
+            val url = URL("$effectiveBaseUrl/models")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("Authorization", "Bearer $apiKey")
+            
+            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+            val json = Json { ignoreUnknownKeys = true }
+            json.decodeFromString<OpenAiModelListResponse>(responseText).data.map { it.id }.sorted()
+        } catch (e: Exception) {
+            Log.e("AgoraAPI", "Failed to fetch DeepSeek models", e)
+            emptyList()
+        }
+    }
 }
