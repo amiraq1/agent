@@ -221,7 +221,15 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
 
                         LaunchedEffect(baseUrlState.text) {
-                            viewModel.setProviderBaseUrl(provider, baseUrlState.text.toString())
+                            val currentText = baseUrlState.text.toString()
+                            if (currentText.isBlank() && provider != "Ollama") {
+                                baseUrlState.edit { 
+                                    replace(0, length, providerInstance.defaultBaseUrl)
+                                }
+                                viewModel.setProviderBaseUrl(provider, providerInstance.defaultBaseUrl)
+                            } else {
+                                viewModel.setProviderBaseUrl(provider, currentText)
+                            }
                         }
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         
