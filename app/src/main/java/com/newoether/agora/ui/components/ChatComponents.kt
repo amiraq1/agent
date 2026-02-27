@@ -202,7 +202,9 @@ fun MessageItem(
         val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
         val dateString = sdf.format(Date(message.timestamp))
         val modelDisplay = if (message.modelName != null) {
-            modelAliases[message.modelName] ?: message.modelName.removePrefix("models/")
+            val modelId = message.modelName.removePrefix("models/").substringAfter(":")
+            val provider = message.modelName.removePrefix("models/").substringBefore(":")
+            modelAliases[message.modelName] ?: ("$modelId ($provider)")
         } else "Unknown"
 
         AlertDialog(
@@ -523,7 +525,7 @@ fun MessageItem(
                                                     "Thought for ${seconds}s"
                                                 }
                                             } else {
-                                                "Thought"
+                                                "Thinking complete"
                                             }
                                         } else {
                                             "Thinking..."

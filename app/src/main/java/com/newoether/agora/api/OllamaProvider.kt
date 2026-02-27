@@ -28,7 +28,8 @@ internal data class OllamaChatRequest(
 @Serializable
 internal data class OllamaMessage(
     val role: String,
-    val content: String,
+    val content: String = "",
+    val thinking: String? = null,
     val images: List<String>? = null
 )
 
@@ -115,45 +116,85 @@ class OllamaProvider : LlmProvider {
                 val reader = connection.inputStream.bufferedReader()
                 var line = reader.readLine()
                 var inThinkingBlock = false
+                var pendingContent = "" // Buffer for handling split tags
                 
                 while (line != null && currentCoroutineContext().isActive) {
                     try {
                         val response = json.decodeFromString<OllamaStreamResponse>(line)
-                        response.message?.content?.let { content ->
-                            if (content.isNotEmpty()) {
-                                var remaining = content
-                                while (remaining.isNotEmpty() && currentCoroutineContext().isActive) {
+                        response.message?.let { msg ->
+                            // 1. Handle explicit thinking field (Ollama 0.5.4+)
+                            msg.thinking?.let { thinking ->
+                                if (thinking.isNotEmpty() && config.thinkingEnabled) {
+                                    emit(StreamEvent.ThoughtChunk(thinking, null))
+                                }
+                            }
+
+                            // 2. Handle content and potential <think> tags in content
+                            if (msg.content.isNotEmpty()) {
+                                pendingContent += msg.content
+                                
+                                while (pendingContent.isNotEmpty() && currentCoroutineContext().isActive) {
                                     if (!inThinkingBlock) {
-                                        val startIdx = remaining.indexOf("<think>")
+                                        val startIdx = pendingContent.indexOf("<think>")
                                         if (startIdx != -1) {
-                                            val before = remaining.substring(0, startIdx)
+                                            val before = pendingContent.substring(0, startIdx)
                                             if (before.isNotEmpty()) emit(StreamEvent.TextChunk(before))
                                             inThinkingBlock = true
-                                            remaining = remaining.substring(startIdx + 7)
+                                            pendingContent = pendingContent.substring(startIdx + 7)
                                         } else {
-                                            emit(StreamEvent.TextChunk(remaining))
-                                            remaining = ""
+                                            // Look for partial tag at the end
+                                            val lastOpenBracket = pendingContent.lastIndexOf('<')
+                                            if (lastOpenBracket != -1 && "<think>".startsWith(pendingContent.substring(lastOpenBracket))) {
+                                                // We might have a split tag, emit everything before it
+                                                val before = pendingContent.substring(0, lastOpenBracket)
+                                                if (before.isNotEmpty()) emit(StreamEvent.TextChunk(before))
+                                                pendingContent = pendingContent.substring(lastOpenBracket)
+                                                break // Wait for more data
+                                            } else {
+                                                emit(StreamEvent.TextChunk(pendingContent))
+                                                pendingContent = ""
+                                            }
                                         }
                                     } else {
-                                        val endIdx = remaining.indexOf("</think>")
+                                        val endIdx = pendingContent.indexOf("</think>")
                                         if (endIdx != -1) {
-                                            val thought = remaining.substring(0, endIdx)
+                                            val thought = pendingContent.substring(0, endIdx)
                                             if (thought.isNotEmpty() && config.thinkingEnabled) {
                                                 emit(StreamEvent.ThoughtChunk(thought, null))
                                             }
                                             inThinkingBlock = false
-                                            remaining = remaining.substring(endIdx + 8)
+                                            pendingContent = pendingContent.substring(endIdx + 8)
                                         } else {
-                                            if (config.thinkingEnabled) {
-                                                emit(StreamEvent.ThoughtChunk(remaining, null))
+                                            // Look for partial closing tag at the end
+                                            val lastOpenBracket = pendingContent.lastIndexOf('<')
+                                            if (lastOpenBracket != -1 && "</think>".startsWith(pendingContent.substring(lastOpenBracket))) {
+                                                val before = pendingContent.substring(0, lastOpenBracket)
+                                                if (before.isNotEmpty() && config.thinkingEnabled) {
+                                                    emit(StreamEvent.ThoughtChunk(before, null))
+                                                }
+                                                pendingContent = pendingContent.substring(lastOpenBracket)
+                                                break // Wait for more data
+                                            } else {
+                                                if (config.thinkingEnabled) {
+                                                    emit(StreamEvent.ThoughtChunk(pendingContent, null))
+                                                }
+                                                pendingContent = ""
                                             }
-                                            remaining = ""
                                         }
                                     }
                                 }
                             }
                         }
                         if (response.done) {
+                            // Flush any remaining content
+                            if (pendingContent.isNotEmpty()) {
+                                if (inThinkingBlock) {
+                                    if (config.thinkingEnabled) emit(StreamEvent.ThoughtChunk(pendingContent, null))
+                                } else {
+                                    emit(StreamEvent.TextChunk(pendingContent))
+                                }
+                                pendingContent = ""
+                            }
                             val total = (response.promptEvalCount ?: 0) + (response.evalCount ?: 0)
                             emit(StreamEvent.UsageUpdate(total))
                         }
