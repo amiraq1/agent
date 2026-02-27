@@ -35,7 +35,6 @@ class SettingsManager(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     companion object {
-        val PROVIDER = stringPreferencesKey("provider")
         val SELECTED_MODEL = stringPreferencesKey("selected_model")
         val AVAILABLE_MODELS_JSON = stringPreferencesKey("available_models_json")
         val ENABLED_MODELS = stringSetPreferencesKey("enabled_models")
@@ -54,8 +53,7 @@ class SettingsManager(private val context: Context) {
         val PROVIDER_BASE_URLS = stringPreferencesKey("provider_base_urls")
     }
 
-    val provider: Flow<String> = context.dataStore.data.map { it[PROVIDER] ?: "Google" }
-    val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "models/gemini-1.5-flash" }
+    val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
     
     val providerBaseUrls: Flow<Map<String, String>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[PROVIDER_BASE_URLS] ?: "{}"
@@ -96,10 +94,6 @@ class SettingsManager(private val context: Context) {
     val codeExecutionEnabled: Flow<Boolean> = context.dataStore.data.map { it[CODE_EXECUTION_ENABLED] ?: false }
     val googleSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[GOOGLE_SEARCH_ENABLED] ?: false }
     val thinkingEnabled: Flow<Boolean> = context.dataStore.data.map { it[THINKING_ENABLED] ?: true }
-
-    suspend fun saveProvider(provider: String) {
-        context.dataStore.edit { it[PROVIDER] = provider }
-    }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         val current = context.dataStore.data.map { it[PROVIDER_BASE_URLS] ?: "{}" }.first()

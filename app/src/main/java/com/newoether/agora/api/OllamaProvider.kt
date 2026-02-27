@@ -139,13 +139,13 @@ class OllamaProvider : LlmProvider {
                                         if (endIdx != -1) {
                                             val thought = remaining.substring(0, endIdx)
                                             if (thought.isNotEmpty() && config.thinkingEnabled) {
-                                                emit(StreamEvent.ThoughtChunk(thought))
+                                                emit(StreamEvent.ThoughtChunk(thought, null))
                                             }
                                             inThinkingBlock = false
                                             remaining = remaining.substring(endIdx + 8)
                                         } else {
                                             if (config.thinkingEnabled) {
-                                                emit(StreamEvent.ThoughtChunk(remaining))
+                                                emit(StreamEvent.ThoughtChunk(remaining, null))
                                             }
                                             remaining = ""
                                         }

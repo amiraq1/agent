@@ -18,6 +18,7 @@ data class ChatMessage(
     val text: String,
     val images: List<String> = emptyList(),
     val thoughts: String? = null,
+    val thoughtTitle: String? = null,
     val tokenCount: Int = 0,
     val status: MessageStatus = MessageStatus.SUCCESS, // Default to SUCCESS for old messages
     val participant: Participant,

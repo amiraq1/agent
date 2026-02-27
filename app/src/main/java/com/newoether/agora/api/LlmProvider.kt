@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonObject
 
 sealed class StreamEvent {
     data class TextChunk(val text: String) : StreamEvent()
-    data class ThoughtChunk(val thought: String) : StreamEvent()
+    data class ThoughtChunk(val thought: String, val title: String? = null) : StreamEvent()
     data class UsageUpdate(val tokenCount: Int, val thoughtsTokenCount: Int = 0) : StreamEvent()
     data class Error(val message: String) : StreamEvent()
 }

@@ -508,10 +508,11 @@ fun MessageItem(
                                     Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     
-                                    // Dynamic Title: Content inside ** ** or # Heading
-                                    val thoughtTitle = remember(message.thoughts, isThinking, message.thoughtTimeMs) {
-                                        val raw = message.thoughts ?: ""
-                                        if (!isThinking) {
+                                    // Dynamic Title: Use API provided title, or fallback to default labels
+                                    val thoughtTitle = remember(message.thoughts, message.thoughtTitle, isThinking, message.thoughtTimeMs, message.modelName) {
+                                        if (message.thoughtTitle != null) {
+                                            message.thoughtTitle
+                                        } else if (!isThinking) {
                                             if (message.thoughtTimeMs != null && message.thoughtTimeMs > 0) {
                                                 val seconds = message.thoughtTimeMs / 1000
                                                 if (seconds >= 60) {
@@ -525,15 +526,7 @@ fun MessageItem(
                                                 "Thought"
                                             }
                                         } else {
-                                            val boldMatches = Regex("\\*\\*(.*?)\\*\\*").findAll(raw).map { it.groupValues[1] }.toList()
-                                            val headingMatches = Regex("(?m)^#+\\s*(.*)$").findAll(raw).map { it.groupValues[1] }.toList()
-                                            
-                                            val allMatches = (boldMatches + headingMatches).filter { it.isNotBlank() }
-                                            if (allMatches.isNotEmpty()) {
-                                                allMatches.last()
-                                            } else {
-                                                if (raw.length > 40) "..." + raw.takeLast(40) else raw.ifBlank { "Thinking..." }
-                                            }
+                                            "Thinking..."
                                         }
                                     }
 

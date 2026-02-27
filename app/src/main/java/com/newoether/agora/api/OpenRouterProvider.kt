@@ -66,7 +66,7 @@ class OpenRouterProvider : LlmProvider {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
                             response.choices?.firstOrNull()?.delta?.let { delta ->
                                 delta.content?.let { if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it)) }
-                                delta.reasoningContent?.let { if (it.isNotEmpty() && config.thinkingEnabled) emit(StreamEvent.ThoughtChunk(it)) }
+                                delta.reasoningContent?.let { if (it.isNotEmpty() && config.thinkingEnabled) emit(StreamEvent.ThoughtChunk(it, null)) }
                             }
                             response.usage?.let { emit(StreamEvent.UsageUpdate(it.totalTokens)) }
                     }

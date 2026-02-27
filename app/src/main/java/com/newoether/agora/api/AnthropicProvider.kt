@@ -161,7 +161,7 @@ class AnthropicProvider : LlmProvider {
                             when (event.type) {
                                 "content_block_delta" -> {
                                     event.delta?.text?.let { emit(StreamEvent.TextChunk(it)) }
-                                    event.delta?.thinking?.let { emit(StreamEvent.ThoughtChunk(it)) }
+                                    event.delta?.thinking?.let { emit(StreamEvent.ThoughtChunk(it, null)) }
                                 }
                                 "message_delta" -> {
                                     event.usage?.let { u ->

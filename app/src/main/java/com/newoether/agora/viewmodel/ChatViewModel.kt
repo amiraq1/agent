@@ -53,7 +53,9 @@ class ChatViewModel(
     }
 
     private fun getActiveProvider(): LlmProvider {
-        return providers[provider.value] ?: GeminiProvider()
+        val modelId = currentActiveModel.value
+        val providerName = getProviderForModel(modelId)
+        return providers[providerName] ?: GeminiProvider()
     }
 
     private val _scrollToMessage = MutableSharedFlow<String?>(replay = 0)
@@ -65,21 +67,41 @@ class ChatViewModel(
         }
     }
 
-        val provider = settingsManager.provider.stateIn(viewModelScope, SharingStarted.Eagerly, "Google")
-        val selectedModel = settingsManager.selectedModel.stateIn(viewModelScope, SharingStarted.Eagerly, "models/gemini-1.5-flash")
-        private val _currentActiveModel = MutableStateFlow<String?>(null)
-        val currentActiveModel = kotlinx.coroutines.flow.combine(_currentActiveModel, selectedModel) { active, default ->
-            active ?: default
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, "models/gemini-1.5-flash")
+    val selectedModel = settingsManager.selectedModel.stateIn(viewModelScope, SharingStarted.Eagerly, "gemini-1.5-flash")
+    private val _currentActiveModel = MutableStateFlow<String?>(null)
+    val currentActiveModel = kotlinx.coroutines.flow.combine(_currentActiveModel, selectedModel) { active, default ->
+        active ?: default
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, "gemini-1.5-flash")
+
+    fun getProviderForModel(modelId: String): String {
+        // If the modelId already has a prefix (e.g., "OpenAI:gpt-4"), extract it.
+        if (modelId.contains(":")) {
+            return modelId.substringBefore(":")
+        }
+        
+        // Fallback for existing or unprefixed models
+        availableModels.value.forEach { (providerName, models) ->
+            if (models.contains(modelId)) return providerName
+        }
+        
+        return when {
+            modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") -> "OpenAI"
+            modelId.startsWith("claude-") -> "Anthropic"
+            modelId.contains("deepseek") -> "DeepSeek"
+            modelId.contains("qwen") -> "Qwen"
+            modelId.contains("models/") || modelId.startsWith("gemini") -> "Google"
+            else -> "Google"
+        }
+    }
     
-        val availableModels = settingsManager.availableModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-        val enabledModels = settingsManager.enabledModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
-        val modelAliases = settingsManager.modelAliases.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-    
-            val apiKeys = settingsManager.apiKeys.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-            val activeApiKeyIds = settingsManager.activeApiKeyIds.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-            val systemPrompts = settingsManager.systemPrompts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-            val activeSystemPromptId = settingsManager.activeSystemPromptId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val availableModels = settingsManager.availableModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val enabledModels = settingsManager.enabledModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val modelAliases = settingsManager.modelAliases.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    val apiKeys = settingsManager.apiKeys.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val activeApiKeyIds = settingsManager.activeApiKeyIds.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val systemPrompts = settingsManager.systemPrompts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val activeSystemPromptId = settingsManager.activeSystemPromptId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
         
         val maxContextWindow = settingsManager.maxContextWindow.stateIn(viewModelScope, SharingStarted.Eagerly, 20)
         val visualizeContextRollout = settingsManager.visualizeContextRollout.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -241,8 +263,10 @@ class ChatViewModel(
     }
 
     // Settings logic
-    fun setProvider(p: String) { viewModelScope.launch { settingsManager.saveProvider(p) } }
-    fun setSelectedModel(model: String) { viewModelScope.launch { settingsManager.saveSelectedModel(model) } }
+        fun setSelectedModel(model: String) {
+            viewModelScope.launch { settingsManager.saveSelectedModel(model) }
+        }
+    
     fun setEnabledModels(models: Set<String>) { 
         viewModelScope.launch { 
             settingsManager.saveEnabledModels(models) 
@@ -403,10 +427,12 @@ class ChatViewModel(
 
     fun regenerate(messageId: String) {
         val currentId = _currentConversationId.value ?: return
-        val currentProvider = provider.value
-        val activeKeyId = activeApiKeyIds.value[currentProvider]
-        val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key
-        if (activeKey.isNullOrBlank()) return
+        val modelId = currentActiveModel.value
+        val providerName = getProviderForModel(modelId)
+        val activeKeyId = activeApiKeyIds.value[providerName]
+        val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
+        // Ollama doesn't need a key to be "ready"
+        if (activeKey.isBlank() && providerName != "Ollama") return
 
         stopGeneration()
         generationJob = viewModelScope.launch {
@@ -472,10 +498,11 @@ class ChatViewModel(
 
     fun editMessage(messageId: String, newText: String) {
         val currentId = _currentConversationId.value ?: return
-        val currentProvider = provider.value
-        val activeKeyId = activeApiKeyIds.value[currentProvider]
-        val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key
-        if (activeKey.isNullOrBlank()) return
+        val modelId = currentActiveModel.value
+        val providerName = getProviderForModel(modelId)
+        val activeKeyId = activeApiKeyIds.value[providerName]
+        val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
+        if (activeKey.isBlank() && providerName != "Ollama") return
 
         stopGeneration()
         generationJob = viewModelScope.launch {
@@ -533,12 +560,12 @@ class ChatViewModel(
         }
     }
 
-        fun sendMessage(text: String, images: List<String> = emptyList()) {
-            val currentProvider = provider.value
-            val activeKeyId = activeApiKeyIds.value[currentProvider]
-            val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
-            
-            stopGeneration()
+            fun sendMessage(text: String, images: List<String> = emptyList()) {
+                val modelId = currentActiveModel.value
+                val providerName = getProviderForModel(modelId)
+                val activeKeyId = activeApiKeyIds.value[providerName]
+                val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
+                    stopGeneration()
     
         generationJob = viewModelScope.launch {
             val processedImages = if (images.isNotEmpty()) processImages(images) else emptyList()
@@ -571,13 +598,17 @@ class ChatViewModel(
     }
 
     private suspend fun generateResponse(currentId: String, text: String, modelMessageId: String, startTime: Long) {
-        val currentProvider = provider.value
-        val activeKeyId = activeApiKeyIds.value[currentProvider]
+        val modelIdWithPrefix = currentActiveModel.value
+        val providerName = getProviderForModel(modelIdWithPrefix)
+        val modelId = modelIdWithPrefix.substringAfter(":")
+        
+        val activeKeyId = activeApiKeyIds.value[providerName]
         val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
         _isLoading.value = true
         _streamingMessage.value = null
         var totalText = ""
         var totalThoughts = ""
+        var totalThoughtTitle: String? = null
         var totalTokenCount = 0
         var totalThoughtTimeMs: Long? = null
         var currentStatus = MessageStatus.SENDING
@@ -594,7 +625,7 @@ class ChatViewModel(
                 currId = msg.parentId
             }
             val currentPath = pathEntities.map { 
-                ChatMessage(id = it.id, parentId = it.parentId, text = it.text, images = it.images, thoughts = it.thoughts, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs) 
+                ChatMessage(id = it.id, parentId = it.parentId, text = it.text, images = it.images, thoughts = it.thoughts, thoughtTitle = it.thoughtTitle, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs) 
             }.filter { it.participant != Participant.ERROR }
             
             val conversation = chatDao.getConversation(currentId)
@@ -603,18 +634,21 @@ class ChatViewModel(
             
             val config = ProviderConfig(
                 apiKey = activeKey,
-                modelId = currentActiveModel.value ?: "",
+                modelId = modelId,
                 systemPrompt = activePrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
-                baseUrl = providerBaseUrls.value[provider.value]
+                baseUrl = providerBaseUrls.value[providerName]
             )
 
             getActiveProvider().generateResponse(currentPath, config).collect { event ->
                 when (event) {
                     is StreamEvent.TextChunk -> {
+                        if (currentStatus == MessageStatus.THINKING) {
+                            totalThoughtTimeMs = System.currentTimeMillis() - startTime
+                        }
                         totalText += event.text
                         currentStatus = MessageStatus.SENDING
                     }
@@ -623,15 +657,18 @@ class ChatViewModel(
                             currentStatus = MessageStatus.THINKING
                             if (totalThoughtTimeMs == null) totalThoughtTimeMs = System.currentTimeMillis() - startTime
                             if (totalThoughts.isEmpty()) {
-                                totalThoughts = "Model is reasoning..."
+                                totalThoughts = "Thinking..."
                             }
                         }
                         if (event.thought.isNotEmpty()) {
-                            if (totalThoughts == "Model is reasoning...") {
+                            if (totalThoughts == "Thinking...") {
                                 totalThoughts = event.thought
                             } else {
                                 totalThoughts += event.thought
                             }
+                        }
+                        if (event.title != null) {
+                            totalThoughtTitle = event.title
                         }
                     }
                     is StreamEvent.UsageUpdate -> {
@@ -640,7 +677,7 @@ class ChatViewModel(
                             currentStatus = MessageStatus.THINKING
                             if (totalThoughtTimeMs == null) totalThoughtTimeMs = System.currentTimeMillis() - startTime
                             if (totalThoughts.isEmpty()) {
-                                totalThoughts = "Model is reasoning..."
+                                totalThoughts = "Thinking..."
                             }
                         }
                     }
@@ -655,6 +692,7 @@ class ChatViewModel(
                     parentId = parentId,
                     text = totalText,
                     thoughts = totalThoughts.ifBlank { null },
+                    thoughtTitle = totalThoughtTitle,
                     tokenCount = totalTokenCount,
                     status = currentStatus,
                     participant = Participant.MODEL,
@@ -683,9 +721,9 @@ class ChatViewModel(
                 if (conversationExists) {
                     val finalStreamingMsg = _streamingMessage.value
                     if (finalStreamingMsg != null) {
-                        chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = finalStreamingMsg.parentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName))
+                        chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = finalStreamingMsg.parentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, thoughtTitle = finalStreamingMsg.thoughtTitle, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName))
                     } else {
-                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = currentActiveModel.value))
+                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, thoughtTitle = totalThoughtTitle, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = currentActiveModel.value))
                     }
                 }
                 _isLoading.value = false
@@ -718,9 +756,10 @@ class ChatViewModel(
                 }
                 
                 try {
-                    val newModels = providerInstance.fetchModels(activeKey, currentBaseUrl)
-                    if (newModels.isNotEmpty()) {
-                        settingsManager.saveAvailableModels(name, newModels)
+                    val rawModels = providerInstance.fetchModels(activeKey, currentBaseUrl)
+                    if (rawModels.isNotEmpty()) {
+                        val prefixedModels = rawModels.map { "$name:${it.removePrefix("models/")}" }
+                        settingsManager.saveAvailableModels(name, prefixedModels)
                         successProviders.add(name)
                     } else {
                         failedProviders.add(name)

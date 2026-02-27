@@ -205,7 +205,10 @@ class GeminiProvider : LlmProvider {
                                     part.thought?.let { thoughtElement ->
                                         if (thoughtElement is JsonPrimitive) {
                                             if (thoughtElement.isString) {
-                                                emit(StreamEvent.ThoughtChunk(thoughtElement.content))
+                                                val content = thoughtElement.content
+                                                val title = Regex("\\*\\*(.*?)\\*\\*").find(content)?.groupValues?.get(1) 
+                                                          ?: Regex("(?m)^#+\\s*(.*)$").find(content)?.groupValues?.get(1)
+                                                emit(StreamEvent.ThoughtChunk(content, title))
                                                 isPartOfThought = true
                                             } else if (thoughtElement.content == "true") {
                                                 isPartOfThought = true
@@ -214,7 +217,9 @@ class GeminiProvider : LlmProvider {
                                     }
                                     
                                     part.reasoningContent?.let { 
-                                        emit(StreamEvent.ThoughtChunk(it))
+                                        val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1) 
+                                                  ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                                        emit(StreamEvent.ThoughtChunk(it, title))
                                         isPartOfThought = true
                                     }
 
@@ -225,7 +230,9 @@ class GeminiProvider : LlmProvider {
 
                                     part.text?.let { 
                                         if (isPartOfThought) {
-                                            emit(StreamEvent.ThoughtChunk(it))
+                                            val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1) 
+                                                      ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                                            emit(StreamEvent.ThoughtChunk(it, title))
                                         } else {
                                             emit(StreamEvent.TextChunk(it))
                                         }
@@ -295,7 +302,7 @@ class GeminiProvider : LlmProvider {
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<ModelListResponse>(responseText).models
                 .filter { it.supportedGenerationMethods.contains("generateContent") }
-                .map { it.name }
+                .map { it.name.removePrefix("models/") }
         } catch (e: Exception) {
             emptyList()
         }

@@ -100,7 +100,7 @@ class DeepSeekProvider : LlmProvider {
                             // 1. Handle native reasoning_content (DeepSeek R1 official API)
                             delta?.reasoningContent?.let { reasoning ->
                                 if (reasoning.isNotEmpty() && config.thinkingEnabled) {
-                                    emit(StreamEvent.ThoughtChunk(reasoning))
+                                    emit(StreamEvent.ThoughtChunk(reasoning, null))
                                 }
                             }
                             
@@ -127,13 +127,13 @@ class DeepSeekProvider : LlmProvider {
                                             if (endIdx != -1) {
                                                 val thought = remaining.substring(0, endIdx)
                                                 if (thought.isNotEmpty() && config.thinkingEnabled) {
-                                                    emit(StreamEvent.ThoughtChunk(thought))
+                                                    emit(StreamEvent.ThoughtChunk(thought, null))
                                                 }
                                                 inThinkingBlock = false
                                                 remaining = remaining.substring(endIdx + 8)
                                             } else {
                                                 if (config.thinkingEnabled) {
-                                                    emit(StreamEvent.ThoughtChunk(remaining))
+                                                    emit(StreamEvent.ThoughtChunk(remaining, null))
                                                 }
                                                 remaining = ""
                                             }

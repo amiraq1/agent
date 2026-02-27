@@ -57,6 +57,7 @@ data class MessageEntity(
     val text: String,
     val images: List<String> = emptyList(),
     val thoughts: String? = null,
+    val thoughtTitle: String? = null,
     val tokenCount: Int = 0,
     val status: MessageStatus = MessageStatus.SUCCESS,
     val participant: Participant,
@@ -88,7 +89,7 @@ interface ChatDao {
 
 @Database(
     entities = [ChatEntity::class, MessageEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = true
 )@TypeConverters(MessageConverters::class)
 abstract class ChatDatabase : RoomDatabase() {

@@ -77,7 +77,7 @@ fun SettingsGroup(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
-    val provider by viewModel.provider.collectAsState()
+    var viewingProvider by remember { mutableStateOf("Google") }
     val apiKeys by viewModel.apiKeys.collectAsState()
     val activeApiKeyIds by viewModel.activeApiKeyIds.collectAsState()
     val systemPrompts by viewModel.systemPrompts.collectAsState()
@@ -194,124 +194,125 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    // 1. API Group
-                    SettingsGroup(title = "API") {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { Text("API Provider") },
-                            supportingContent = { Text(provider) },
-                            leadingContent = {
-                                Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            },
-                            modifier = Modifier.clickable { showProviderDialog = true }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        val providerInstance = viewModel.getProviderInstance(provider)
-                        val baseUrlState = remember(provider) { 
-                            val saved = providerBaseUrls[provider]
-                            val initial = if (saved.isNullOrBlank() && provider != "Ollama") {
-                                providerInstance.defaultBaseUrl 
-                            } else {
-                                saved ?: ""
-                            }
-                            TextFieldState(initial) 
-                        }
-                        
-                        // Sync with settings whenever the text changes
-                        LaunchedEffect(baseUrlState.text) {
-                            viewModel.setProviderBaseUrl(provider, baseUrlState.text.toString())
-                        }
-                        
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp, bottom = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.link_24),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Base URL",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
-                                        TextField(
-                                            state = baseUrlState,
-                                            placeholder = { 
-                                                Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) 
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = MaterialTheme.shapes.large,
-                                            colors = TextFieldDefaults.colors(
-                                                focusedIndicatorColor = Color.Transparent, 
-                                                unfocusedIndicatorColor = Color.Transparent,
-                                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                            ),
-                                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                }
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { Text(if (provider == "Ollama") "API Keys (Optional)" else "API Keys") },
-                            supportingContent = {
-                                val providerKeys = apiKeys.filter { it.provider == provider }
-                                Text(if (providerKeys.isEmpty()) "No keys configured for $provider" else "${providerKeys.size} key(s) configured")
-                            },
-                            leadingContent = {
-                                Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        )
-
-                        apiKeys.filter { it.provider == provider }.forEach { entry ->
-                            var showMenu by remember { mutableStateOf(false) }
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                headlineContent = { Text(entry.name, fontWeight = FontWeight.Medium) },
-                                supportingContent = { Text(entry.key.take(4) + "••••••••" + entry.key.takeLast(4)) },
-                                leadingContent = {
-                                    RadioButton(selected = entry.id == activeApiKeyIds[provider], onClick = { viewModel.setActiveApiKey(provider, entry.id) })
-                                                 },
-                                trailingContent = {
-                                    Box {
-                                        IconButton(onClick = { showMenu = true }) {
-                                            Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                                        // 1. API Group
+                                        SettingsGroup(title = "API") {
+                                            ListItem(
+                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                headlineContent = { Text("API Provider") },
+                                                supportingContent = { Text(viewingProvider) },
+                                                leadingContent = {
+                                                    Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                },
+                                                modifier = Modifier.clickable { showProviderDialog = true }
+                                            )
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                            val providerInstance = viewModel.getProviderInstance(viewingProvider)
+                                            val baseUrlState = remember(viewingProvider) { 
+                                                val saved = providerBaseUrls[viewingProvider]
+                                                val initial = if (saved.isNullOrBlank() && viewingProvider != "Ollama") {
+                                                    providerInstance.defaultBaseUrl 
+                                                } else {
+                                                    saved ?: ""
+                                                }
+                                                TextFieldState(initial) 
+                                            }
+                                            
+                                            // Sync with settings whenever the text changes
+                                            LaunchedEffect(baseUrlState.text) {
+                                                viewModel.setProviderBaseUrl(viewingProvider, baseUrlState.text.toString())
+                                            }
+                                            
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 16.dp, bottom = 8.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                                    verticalAlignment = Alignment.Top
+                                                ) {
+                                                    Icon(
+                                                        painter = androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.link_24),
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.padding(top = 2.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(16.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = "Base URL",
+                                                            style = MaterialTheme.typography.bodyLarge,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                        Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                                            TextField(
+                                                                state = baseUrlState,
+                                                                placeholder = { 
+                                                                    Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) 
+                                                                },
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                shape = MaterialTheme.shapes.large,
+                                                                colors = TextFieldDefaults.colors(
+                                                                    focusedIndicatorColor = Color.Transparent, 
+                                                                    unfocusedIndicatorColor = Color.Transparent,
+                                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                                                ),
+                                                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.height(12.dp))
+                                                    }
+                                                }
+                                            }
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                            
+                                            ListItem(
+                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                headlineContent = { Text(if (viewingProvider == "Ollama") "API Keys (Optional)" else "API Keys") },   
+                                                supportingContent = {
+                                                    val providerKeys = apiKeys.filter { it.provider == viewingProvider }
+                                                    Text(if (providerKeys.isEmpty()) "No keys configured for $viewingProvider" else "${providerKeys.size} key(s) configured")
+                                                },
+                                                leadingContent = {
+                                                    Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                }
+                                            )
+                    
+                                            apiKeys.filter { it.provider == viewingProvider }.forEach { entry ->
+                                                var showMenu by remember { mutableStateOf(false) }
+                                                ListItem(
+                                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                    headlineContent = { Text(entry.name, fontWeight = FontWeight.Medium) },
+                                                    supportingContent = { Text(entry.key.take(4) + "••••••••" + entry.key.takeLast(4)) },
+                                                    leadingContent = {
+                                                        RadioButton(selected = entry.id == activeApiKeyIds[viewingProvider], onClick = { viewModel.setActiveApiKey(viewingProvider, entry.id) })
+                                                                     },
+                                                    trailingContent = {
+                                                        Box {
+                                                            IconButton(onClick = { showMenu = true }) {
+                                                                Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                                                            }
+                                                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
+                                                                DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
+                                                                DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteKeyConfirm = entry })
+                                                            }
+                                                        }
+                                                                      },
+                                                    modifier = Modifier.clickable { viewModel.setActiveApiKey(viewingProvider, entry.id) }.padding(start = 16.dp)
+                                                )
+                                            }
+                    
+                                            TextButton(
+                                                onClick = { showKeyDialog = ApiKeyEntry(name = "", key = "", provider = viewingProvider) },
+                                                modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Add New Key")
+                                            }
                                         }
-                                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
-                                            DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
-                                            DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteKeyConfirm = entry })
-                                        }
-                                    }
-                                                  },
-                                modifier = Modifier.clickable { viewModel.setActiveApiKey(provider, entry.id) }.padding(start = 16.dp)
-                            )
-                        }
-
-                        TextButton(
-                            onClick = { showKeyDialog = ApiKeyEntry(name = "", key = "", provider = provider) },
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add New Key")
-                        }
-                    }
+                    
                     // 2. Prompt Group
                     SettingsGroup(title = "PROMPT") {
                         ListItem(
@@ -476,12 +477,13 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         models.forEach { model ->
                                             val isEnabled = enabledModels.contains(model)
                                             val alias = modelAliases[model]
-                                            val displayName = alias ?: model.removePrefix("models/")
+                                            val cleanId = model.substringAfter(":")
+                                            val displayName = alias ?: cleanId.removePrefix("models/")
 
                                             ListItem(
                                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                                 headlineContent = { Text(displayName) },
-                                                supportingContent = if (alias != null) { { Text(model.removePrefix("models/")) } } else null,
+                                                supportingContent = if (alias != null) { { Text(cleanId.removePrefix("models/")) } } else null,
                                                 trailingContent = {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         IconButton(onClick = { showModelAliasDialog = model }) {
@@ -516,7 +518,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(enabledModels.toList()) { model ->
                         val alias = modelAliases[model]
-                        val displayName = alias ?: model.removePrefix("models/")
+                        val cleanId = model.substringAfter(":")
+                        val displayName = alias ?: cleanId.removePrefix("models/")
                         
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -526,7 +529,13 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     fontWeight = if (model == selectedModel) FontWeight.Bold else FontWeight.Normal
                                 ) 
                             },
-                            supportingContent = if (alias != null) { { Text(model.removePrefix("models/")) } } else null,
+                            supportingContent = { 
+                                if (alias != null) { 
+                                    Text(cleanId.removePrefix("models/")) 
+                                } else {
+                                    Text(model.substringBefore(":"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                                } 
+                            },
                             leadingContent = {
                                 RadioButton(
                                     selected = model == selectedModel,
@@ -560,7 +569,6 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
             text = {
                 Column {
                     providers.forEach { p ->
-                        val isSelected = p == provider
                         val isConfigured = if (p == "Ollama") {
                             !providerBaseUrls[p].isNullOrBlank()
                         } else {
@@ -585,15 +593,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     )
                                 }
                             },
-                            leadingContent = {
-                                if (isSelected) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                } else {
-                                    Spacer(modifier = Modifier.size(24.dp))
-                                }
-                            },
                             modifier = Modifier.clickable {
-                                viewModel.setProvider(p)
+                                viewingProvider = p
                                 showProviderDialog = false
                             }
                         )
