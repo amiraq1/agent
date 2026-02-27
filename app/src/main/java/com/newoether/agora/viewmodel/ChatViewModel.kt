@@ -192,6 +192,13 @@ class ChatViewModel(
     private val _isTransitioningToNewChat = MutableStateFlow(false)
     val isTransitioningToNewChat: StateFlow<Boolean> = _isTransitioningToNewChat.asStateFlow()
 
+    private val _pendingSystemPromptId = MutableStateFlow<String?>(null)
+    val pendingSystemPromptId: StateFlow<String?> = _pendingSystemPromptId.asStateFlow()
+
+    fun setPendingSystemPrompt(promptId: String?) {
+        _pendingSystemPromptId.value = promptId
+    }
+
     private val _branchSwitchTrigger = MutableStateFlow<String?>(null)
     val branchSwitchTrigger: StateFlow<String?> = _branchSwitchTrigger.asStateFlow()
 
@@ -345,6 +352,9 @@ class ChatViewModel(
 
     fun createNewChat() {
         switchingJob?.cancel()
+        if (!_isNewChatMode.value) {
+            _pendingSystemPromptId.value = null
+        }
         _isNewChatMode.value = true
         _isTransitioningToNewChat.value = true
         _isSwitching.value = true
@@ -573,7 +583,7 @@ class ChatViewModel(
             if (_isNewChatMode.value) {
                 val newId = UUID.randomUUID().toString()
                 val title = if (text.length > 20) text.take(20) + "..." else text.ifBlank { "New Chat" }
-                chatDao.upsertConversation(ChatEntity(id = newId, title = title, modelId = currentActiveModel.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = title, modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId

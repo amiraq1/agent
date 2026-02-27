@@ -930,10 +930,8 @@ fun ChatApp(
                                     }
                                 },
                                 actions = {
-                                    if (!isNewChatMode) {
-                                        IconButton(onClick = { showPromptDialog = true }) {
-                                            Icon(Icons.Default.Psychology, contentDescription = "System Prompt")
-                                        }
+                                    IconButton(onClick = { showPromptDialog = true }) {
+                                        Icon(Icons.Default.Psychology, contentDescription = "System Prompt")
                                     }
                                     IconButton(onClick = { viewModel.createNewChat() }) {
                                         Icon(Icons.Default.Add, contentDescription = "New Chat")
@@ -1274,7 +1272,10 @@ fun ChatApp(
 
     if (showPromptDialog) {
         val currentConversation = conversations.find { it.id == currentConversationId }
-        var selectedPromptId by remember { mutableStateOf(currentConversation?.systemPromptId) }
+        val pendingPrompt by viewModel.pendingSystemPromptId.collectAsState()
+        var selectedPromptId by remember(currentConversationId, pendingPrompt, currentConversation?.systemPromptId) { 
+            mutableStateOf(if (isNewChatMode) pendingPrompt else currentConversation?.systemPromptId) 
+        }
 
         AlertDialog(
             onDismissRequest = { showPromptDialog = false },
@@ -1312,8 +1313,12 @@ fun ChatApp(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    currentConversationId?.let { id ->
-                        viewModel.setConversationSystemPrompt(id, selectedPromptId)
+                    if (isNewChatMode) {
+                        viewModel.setPendingSystemPrompt(selectedPromptId)
+                    } else {
+                        currentConversationId?.let { id ->
+                            viewModel.setConversationSystemPrompt(id, selectedPromptId)
+                        }
                     }
                     showPromptDialog = false
                 }) {
