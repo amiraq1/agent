@@ -1,5 +1,6 @@
 package com.newoether.agora.api
 
+
 import android.util.Log
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
@@ -10,8 +11,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
 
 class OpenRouterProvider : LlmProvider {
     override val name: String = "Open Router"
@@ -23,18 +27,53 @@ class OpenRouterProvider : LlmProvider {
         config: ProviderConfig
     ): Flow<StreamEvent> = flow {
         val baseUrl = config.baseUrl?.trimEnd('/') ?: defaultBaseUrl
-        val apiMessages = messages.takeLast(config.maxContextWindow).map { msg ->
-            OpenAiMessage(
+
+        val limitedMessages = if (messages.size > config.maxContextWindow) {
+            messages.takeLast(config.maxContextWindow)
+        } else messages
+
+        val apiMessages = mutableListOf<OpenAiMessage>()
+
+        // System prompt + time injection
+        val sdf = SimpleDateFormat("MMMM d, yyyy, HH:mm", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("GMT+8")
+        }
+        val timeInfo = "Current Time: ${sdf.format(Date())} (UTC+8)\n\n"
+        val systemPrompt = timeInfo + (config.systemPrompt ?: "")
+        apiMessages.add(OpenAiMessage(role = "system", content = listOf(OpenAiContentPart(type = "text", text = systemPrompt))))
+
+        // Messages with image support
+        for (msg in limitedMessages) {
+            val parts = mutableListOf<OpenAiContentPart>()
+            if (msg.text.isNotEmpty()) {
+                parts.add(OpenAiContentPart(type = "text", text = msg.text))
+            }
+            for (imagePath in msg.images) {
+                try {
+                    val file = File(imagePath)
+                    if (file.exists()) {
+                        val bytes = file.readBytes()
+                        val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                        parts.add(OpenAiContentPart(type = "image_url", imageUrl = OpenAiImageUrl(url = "data:image/jpeg;base64,$base64")))
+                    }
+                } catch (e: Exception) {
+                    Log.e("AgoraAPI", "Failed to encode image: $imagePath", e)
+                }
+            }
+            if (parts.isEmpty()) parts.add(OpenAiContentPart(type = "text", text = ""))
+            apiMessages.add(OpenAiMessage(
                 role = if (msg.participant == Participant.USER) "user" else "assistant",
-                content = listOf(OpenAiContentPart(type = "text", text = msg.text))
-            )
+                content = parts
+            ))
         }
 
         val requestBody = OpenAiChatRequest(
             model = config.modelId,
             messages = apiMessages,
             stream = true,
-            streamOptions = OpenAiStreamOptions(includeUsage = true)
+            streamOptions = OpenAiStreamOptions(includeUsage = true),
+            reasoning = if (config.thinkingEnabled) OpenAiReasoning(effort = "high") else null,
+            plugins = if (config.googleSearchEnabled) listOf(OpenAiPlugin(id = "web")) else null
         )
 
         var connection: HttpURLConnection? = null
@@ -46,13 +85,11 @@ class OpenRouterProvider : LlmProvider {
             if (config.apiKey.isNotEmpty()) {
                 connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
             }
-            // Open Router specific headers
             connection.setRequestProperty("HTTP-Referer", "https://github.com/newo-ether/Agora")
             connection.setRequestProperty("X-Title", "Agora")
             connection.doOutput = true
-            
-            connection.outputStream.bufferedWriter().use { 
-                it.write(json.encodeToString(OpenAiChatRequest.serializer(), requestBody)) 
+            connection.outputStream.bufferedWriter().use {
+                it.write(json.encodeToString(OpenAiChatRequest.serializer(), requestBody))
             }
 
             val responseCode = connection.responseCode
@@ -63,20 +100,60 @@ class OpenRouterProvider : LlmProvider {
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
                         if (jsonStr == "[DONE]") break
+                        try {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
                             response.choices?.firstOrNull()?.delta?.let { delta ->
-                                delta.content?.let { if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it)) }
-                                delta.reasoningContent?.let { if (it.isNotEmpty() && config.thinkingEnabled) emit(StreamEvent.ThoughtChunk(it, null)) }
+                                delta.reasoningDetails?.forEach { detail ->
+                                    if (detail.type == "reasoning.text" || detail.type == "text") {
+                                        detail.text?.let {
+                                            if (it.isNotEmpty()) {
+                                                val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
+                                                    ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                                                emit(StreamEvent.ThoughtChunk(it, title))
+                                            }
+                                        }
+                                    }
+                                }
+                                delta.reasoningContent?.let {
+                                    Log.d("AgoraAPI", "reasoning_content received: $it")
+                                    if (it.isNotEmpty()) {
+                                        val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
+                                            ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                                        emit(StreamEvent.ThoughtChunk(it, title))
+                                    }
+                                }
+                                delta.content?.let {
+                                    if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it))
+                                }
                             }
-                            response.usage?.let { emit(StreamEvent.UsageUpdate(it.totalTokens)) }
+                            response.usage?.let {
+                                emit(StreamEvent.UsageUpdate(
+                                    it.totalTokens,
+                                    it.completionTokensDetails?.reasoningTokens ?: 0
+                                ))
+                            }
+                        } catch (e: Exception) {
+                            Log.e("AgoraAPI", "Parse error: ${e.message}", e)
+                        }
                     }
                     line = reader.readLine()
                 }
             } else {
-                emit(StreamEvent.Error("Error $responseCode: ${connection.errorStream?.bufferedReader()?.readText()}"))
+                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error (Code: $responseCode)"
+                emit(StreamEvent.Error("Error $responseCode: $errorRaw"))
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: java.net.SocketTimeoutException) {
+            emit(StreamEvent.Error("Request timed out. The server took too long to respond."))
+        } catch (e: java.net.ConnectException) {
+            emit(StreamEvent.Error("Connection refused. Please check your internet connection or if the service is available."))
+        } catch (e: java.net.UnknownHostException) {
+            emit(StreamEvent.Error("Network error: Unable to reach the server. Please check your internet connection."))
         } catch (e: Exception) {
-            if (currentCoroutineContext().isActive) emit(StreamEvent.Error("Error: ${e.localizedMessage}"))
+            if (currentCoroutineContext().isActive) {
+                emit(StreamEvent.Error("Error: ${e.localizedMessage ?: "An unexpected error occurred."}"))
+            }
         } finally {
             connection?.disconnect()
         }

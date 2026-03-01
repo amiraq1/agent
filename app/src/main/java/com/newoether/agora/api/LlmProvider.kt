@@ -31,7 +31,20 @@ data class OpenAiChatRequest(
     val stream: Boolean = true,
     @SerialName("stream_options") val streamOptions: OpenAiStreamOptions? = null,
     val tools: List<OpenAiTool>? = null,
-    @SerialName("reasoning_effort") val reasoningEffort: String? = null
+    @SerialName("reasoning_effort") val reasoningEffort: String? = null,
+    val reasoning: OpenAiReasoning? = null,
+    val plugins: List<OpenAiPlugin>? = null
+)
+
+@Serializable
+data class OpenAiPlugin(
+    val id: String
+)
+
+@Serializable
+data class OpenAiReasoning(
+    val effort: String? = null,
+    @SerialName("max_tokens") val maxTokens: Int? = null
 )
 
 @Serializable
@@ -89,7 +102,14 @@ data class OpenAiDelta(
     val role: String? = null,
     val content: String? = null,
     @SerialName("reasoning_content") val reasoningContent: String? = null,
+    @SerialName("reasoning_details") val reasoningDetails: List<OpenAiReasoningDetail>? = null,
     @SerialName("tool_calls") val toolCalls: List<OpenAiToolCall>? = null
+)
+
+@Serializable
+data class OpenAiReasoningDetail(
+    val type: String? = null,
+    val text: String? = null
 )
 
 @Serializable

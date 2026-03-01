@@ -1,8 +1,11 @@
 package com.newoether.agora
 
+import android.app.Activity
+import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -41,6 +44,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
@@ -49,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.data.local.ChatDatabase
 import com.newoether.agora.model.Participant
@@ -106,22 +111,62 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val database = Room.databaseBuilder(
-            applicationContext,
-            ChatDatabase::class.java,
-            "agora_db"
-        )
-        .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
-        .fallbackToDestructiveMigration()
-        .build()
+        val dbPath = getDatabasePath("agora_db")
+        val targetVersion = 8
+
+        val needsErrorDialog = if (dbPath.exists()) {
+            try {
+                val db = SQLiteDatabase.openDatabase(dbPath.path, null, SQLiteDatabase.OPEN_READONLY)
+                val version = db.version
+                db.close()
+                version > targetVersion
+            } catch (e: Exception) {
+                false
+            }
+        } else false
+
+        val database = if (!needsErrorDialog) {
+            Room.databaseBuilder(
+                applicationContext,
+                ChatDatabase::class.java,
+                "agora_db"
+            ).addMigrations(
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8
+            ).build()
+        } else null
+
         val settingsManager = SettingsManager(applicationContext)
 
         enableEdgeToEdge()
         setContent {
             AgoraTheme {
-                val factory = ChatViewModelFactory(application, settingsManager, database.chatDao())
-                val viewModel: ChatViewModel = viewModel(factory = factory)
-                MainNavigation(viewModel)
+                val activity = LocalActivity.current
+
+                if (needsErrorDialog) {
+                    AlertDialog(
+                        onDismissRequest = { activity?.finish() },
+                        title = { Text("Database Incompatible") },
+                        text = { Text("The database is incompatible with this version of Agora. Please clear the database and restart the app.") },
+                        dismissButton = {
+                            TextButton(onClick = { activity?.finish() }) { Text("Quit") }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                applicationContext.deleteDatabase("agora_db")
+                                activity?.recreate()
+                            }) { Text("Clear Database") }
+                        }
+                    )
+                } else {
+                    val factory = ChatViewModelFactory(application, settingsManager, database!!.chatDao())
+                    val viewModel: ChatViewModel = viewModel(factory = factory)
+                    MainNavigation(viewModel)
+                }
             }
         }
     }
@@ -319,7 +364,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                                     }
                                 }
                             )
-                                           },
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     coil.compose.AsyncImage(
@@ -327,7 +372,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                         contentDescription = "Full screen image",
                         onSuccess = { state ->
                             imageSize = state.painter.intrinsicSize
-                                    },
+                        },
                         modifier = Modifier
                             .fillMaxSize()
                             .pointerInput(url) {
@@ -505,13 +550,12 @@ fun MainNavigation(viewModel: ChatViewModel) {
                                     }
                                     velocityTracker.resetTracking()
                                 }
-                            }
-                                .graphicsLayer(
-                                    scaleX = scale,
-                                    scaleY = scale,
-                                    translationX = offsetX,
-                                    translationY = offsetY
-                                ),
+                            }.graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offsetX,
+                                translationY = offsetY
+                            ),
                         contentScale = ContentScale.Fit
                     )
                     // Close button
