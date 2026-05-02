@@ -51,6 +51,8 @@ class SettingsManager(private val context: Context) {
         val GOOGLE_SEARCH_ENABLED = booleanPreferencesKey("google_search_enabled")
         val THINKING_ENABLED = booleanPreferencesKey("thinking_enabled")
         val PROVIDER_BASE_URLS = stringPreferencesKey("provider_base_urls")
+        val TITLE_GENERATION_ENABLED = booleanPreferencesKey("title_generation_enabled")
+        val TITLE_GENERATION_MODEL = stringPreferencesKey("title_generation_model")
     }
 
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
@@ -94,6 +96,9 @@ class SettingsManager(private val context: Context) {
     val codeExecutionEnabled: Flow<Boolean> = context.dataStore.data.map { it[CODE_EXECUTION_ENABLED] ?: false }
     val googleSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[GOOGLE_SEARCH_ENABLED] ?: false }
     val thinkingEnabled: Flow<Boolean> = context.dataStore.data.map { it[THINKING_ENABLED] ?: true }
+
+    val titleGenerationEnabled: Flow<Boolean> = context.dataStore.data.map { it[TITLE_GENERATION_ENABLED] ?: false }
+    val titleGenerationModel: Flow<String?> = context.dataStore.data.map { it[TITLE_GENERATION_MODEL] }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         val current = context.dataStore.data.map { it[PROVIDER_BASE_URLS] ?: "{}" }.first()
@@ -160,5 +165,16 @@ class SettingsManager(private val context: Context) {
 
     suspend fun saveThinkingEnabled(enabled: Boolean) {
         context.dataStore.edit { it[THINKING_ENABLED] = enabled }
+    }
+
+    suspend fun saveTitleGenerationEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[TITLE_GENERATION_ENABLED] = enabled }
+    }
+
+    suspend fun saveTitleGenerationModel(model: String?) {
+        context.dataStore.edit {
+            if (model == null) it.remove(TITLE_GENERATION_MODEL)
+            else it[TITLE_GENERATION_MODEL] = model
+        }
     }
 }

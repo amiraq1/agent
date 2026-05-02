@@ -114,6 +114,8 @@ class ChatViewModel(
         val googleSearchEnabled = settingsManager.googleSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
         val thinkingEnabled = settingsManager.thinkingEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
         val providerBaseUrls = settingsManager.providerBaseUrls.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val titleGenerationEnabled = settingsManager.titleGenerationEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val titleGenerationModel = settingsManager.titleGenerationModel.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     
         val conversations: StateFlow<List<ChatConversation>> = chatDao.getAllConversations()
             .map { entities ->
@@ -360,6 +362,8 @@ class ChatViewModel(
     fun setGoogleSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveGoogleSearchEnabled(enabled) } }
     fun setThinkingEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveThinkingEnabled(enabled) } }
     fun setProviderBaseUrl(provider: String, url: String) { viewModelScope.launch { settingsManager.saveProviderBaseUrl(provider, url) } }
+    fun setTitleGenerationEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveTitleGenerationEnabled(enabled) } }
+    fun setTitleGenerationModel(model: String?) { viewModelScope.launch { settingsManager.saveTitleGenerationModel(model) } }
 
     fun createNewChat() {
         switchingJob?.cancel()
@@ -405,6 +409,52 @@ class ChatViewModel(
             val existing = chatDao.getConversation(id)
             if (existing != null) {
                 chatDao.upsertConversation(existing.copy(title = newTitle, lastUpdated = System.currentTimeMillis()))
+            }
+        }
+    }
+
+    fun generateTitle(conversationId: String) {
+        viewModelScope.launch {
+            val conversation = chatDao.getConversation(conversationId) ?: return@launch
+            val msgs = chatDao.getMessagesForConversation(conversationId).first()
+            val firstUserMsg = msgs.firstOrNull { it.participant == Participant.USER } ?: return@launch
+
+            val titleModelId = titleGenerationModel.value
+            val modelIdWithPrefix = if (titleModelId != null) titleModelId else (conversation.modelId ?: selectedModel.value)
+            val providerName = getProviderForModel(modelIdWithPrefix)
+            val modelId = modelIdWithPrefix.substringAfter(":")
+            val activeKeyId = activeApiKeyIds.value[providerName]
+            val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
+            if (activeKey.isBlank() && providerName != "Ollama") return@launch
+
+            val titlePrompt = listOf(
+                ChatMessage(
+                    text = "Generate a short title (5 words maximum) for a conversation that starts with this message. Respond with ONLY the title text, no quotes, no punctuation, no explanation.",
+                    participant = Participant.USER,
+                    status = MessageStatus.SUCCESS
+                )
+            )
+
+            val provider = getProviderInstance(providerName)
+            val config = ProviderConfig(
+                apiKey = activeKey,
+                modelId = modelId,
+                systemPrompt = firstUserMsg.text,
+                maxContextWindow = 1,
+                thinkingEnabled = false,
+                baseUrl = providerBaseUrls.value[providerName]
+            )
+
+            var title = ""
+            try {
+                provider.generateResponse(titlePrompt, config).collect { event ->
+                    if (event is StreamEvent.TextChunk) title += event.text
+                }
+            } catch (_: Exception) { return@launch }
+
+            title = title.trim().replace("\n", " ").take(60)
+            if (title.isNotBlank()) {
+                renameConversation(conversationId, title)
             }
         }
     }
@@ -591,10 +641,10 @@ class ChatViewModel(
         generationJob = viewModelScope.launch {
             val processedImages = if (images.isNotEmpty()) processImages(images) else emptyList()
             var currentId = _currentConversationId.value
-            if (_isNewChatMode.value) {
+            val wasNewChat = _isNewChatMode.value
+            if (wasNewChat) {
                 val newId = UUID.randomUUID().toString()
-                val title = if (text.length > 20) text.take(20) + "..." else text.ifBlank { "New Chat" }
-                chatDao.upsertConversation(ChatEntity(id = newId, title = title, modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = "New Chat", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId
@@ -615,6 +665,10 @@ class ChatViewModel(
             ))
             triggerScrollToMessage(userMessageId)
             generateResponse(currentId, text, modelMessageId, startTime)
+            // Auto-generate title after first successful response
+            if (wasNewChat && titleGenerationEnabled.value && generationJob?.isActive == true) {
+                generateTitle(currentId)
+            }
         }
     }
 

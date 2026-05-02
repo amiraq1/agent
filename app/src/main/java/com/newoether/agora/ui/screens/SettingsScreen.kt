@@ -415,6 +415,90 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             modifier = Modifier.clickable { viewModel.setVisualizeContextRollout(!visualizeContextRollout) }
                         )
                     }
+
+                    // Title Generation
+                    val titleGenEnabled by viewModel.titleGenerationEnabled.collectAsState()
+                    val titleGenModel by viewModel.titleGenerationModel.collectAsState()
+                    var showTitleModelDialog by remember { mutableStateOf(false) }
+
+                    SettingsGroup(title = "TITLE GENERATION") {
+                        ListItem(
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            headlineContent = { Text("Auto-Generate Title") },
+                            supportingContent = { Text("Generate a title after the first response") },
+                            leadingContent = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = {
+                                Switch(checked = titleGenEnabled, onCheckedChange = { viewModel.setTitleGenerationEnabled(it) })
+                            },
+                            modifier = Modifier.clickable { viewModel.setTitleGenerationEnabled(!titleGenEnabled) }
+                        )
+
+                        if (titleGenEnabled) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = { Text("Title Model") },
+                                supportingContent = {
+                                    val displayName = if (titleGenModel == null) "Use Current Model" else {
+                                        val alias = modelAliases[titleGenModel!!]
+                                        alias ?: titleGenModel!!.substringAfter(":").removePrefix("models/")
+                                    }
+                                    Text(displayName)
+                                },
+                                leadingContent = { Icon(Icons.Default.Psychology, null, tint = MaterialTheme.colorScheme.primary) },
+                                modifier = Modifier.clickable { showTitleModelDialog = true }
+                            )
+                        }
+                    }
+
+                    if (showTitleModelDialog) {
+                        val enabledModelsList = enabledModels.toList()
+                        AlertDialog(
+                            onDismissRequest = { showTitleModelDialog = false },
+                            title = { Text("Select Title Generation Model") },
+                            text = {
+                                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                    item {
+                                        ListItem(
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            headlineContent = { Text("Use Current Model", fontWeight = if (titleGenModel == null) FontWeight.Bold else FontWeight.Normal) },
+                                            leadingContent = {
+                                                RadioButton(selected = titleGenModel == null, onClick = {
+                                                    viewModel.setTitleGenerationModel(null)
+                                                    showTitleModelDialog = false
+                                                })
+                                            },
+                                            modifier = Modifier.clickable {
+                                                viewModel.setTitleGenerationModel(null)
+                                                showTitleModelDialog = false
+                                            }
+                                        )
+                                    }
+                                    items(enabledModelsList) { model ->
+                                        val alias = modelAliases[model]
+                                        val cleanId = model.substringAfter(":")
+                                        val displayName = alias ?: cleanId.removePrefix("models/")
+                                        ListItem(
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            headlineContent = { Text(displayName, fontWeight = if (titleGenModel == model) FontWeight.Bold else FontWeight.Normal) },
+                                            supportingContent = { Text(model.substringBefore(":"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
+                                            leadingContent = {
+                                                RadioButton(selected = titleGenModel == model, onClick = {
+                                                    viewModel.setTitleGenerationModel(model)
+                                                    showTitleModelDialog = false
+                                                })
+                                            },
+                                            modifier = Modifier.clickable {
+                                                viewModel.setTitleGenerationModel(model)
+                                                showTitleModelDialog = false
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = { TextButton(onClick = { showTitleModelDialog = false }) { Text("Cancel") } }
+                        )
+                    }
                 }
             } else if (page == 1) {
                 // Models Tab

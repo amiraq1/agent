@@ -897,6 +897,15 @@ fun ChatApp(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     DropdownMenuItem(
+                                        text = { Text("Generate Title") },
+                                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                                        enabled = !isSwitching,
+                                        onClick = {
+                                            showMenu = false
+                                            viewModel.generateTitle(conversation.id)
+                                        }
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text("Rename") },
                                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                                         enabled = !isSwitching,
