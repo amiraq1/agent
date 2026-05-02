@@ -22,7 +22,8 @@ internal data class OllamaChatRequest(
     val model: String,
     val messages: List<OllamaMessage>,
     val stream: Boolean = true,
-    val options: JsonObject? = null
+    val options: JsonObject? = null,
+    val tools: List<ToolDefinition>? = null
 )
 
 @Serializable
@@ -30,7 +31,8 @@ internal data class OllamaMessage(
     val role: String,
     val content: String = "",
     val thinking: String? = null,
-    val images: List<String>? = null
+    val images: List<String>? = null,
+    @SerialName("tool_calls") val toolCalls: List<OpenAiToolCall>? = null
 )
 
 @Serializable
@@ -93,7 +95,8 @@ class OllamaProvider : LlmProvider {
         val requestBody = OllamaChatRequest(
             model = config.modelId,
             messages = apiMessages,
-            stream = true
+            stream = true,
+            tools = config.tools
         )
 
         var connection: HttpURLConnection? = null
@@ -113,12 +116,20 @@ class OllamaProvider : LlmProvider {
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
+                var line: String? = null
                 var inThinkingBlock = false
                 var pendingContent = "" // Buffer for handling split tags
-                
-                while (line != null && currentCoroutineContext().isActive) {
+
+                while (currentCoroutineContext().isActive) {
+                    try {
+                        line = reader.readLine()
+                        if (line == null) break
+                    } catch (e: java.net.SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                        continue
+                    }
                     try {
                         val response = json.decodeFromString<OllamaStreamResponse>(line)
                         response.message?.let { msg ->
@@ -129,7 +140,18 @@ class OllamaProvider : LlmProvider {
                                 }
                             }
 
-                            // 2. Handle content and potential <think> tags in content
+                            // 2. Handle tool calls
+                            msg.toolCalls?.firstOrNull()?.let { tc ->
+                                val id = tc.id ?: "call_0"
+                                val name = tc.function?.name ?: ""
+                                val args = tc.function?.arguments?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() } ?: ""
+                                if (name.isNotEmpty()) {
+                                    emit(StreamEvent.ToolCallRequest(id, name, args))
+                                    return@let
+                                }
+                            }
+
+                            // 3. Handle content and potential <think> tags in content
                             if (msg.content.isNotEmpty()) {
                                 pendingContent += msg.content
                                 
@@ -201,7 +223,9 @@ class OllamaProvider : LlmProvider {
                     } catch (e: Exception) {
                         Log.e("AgoraAPI", "Parse error: ${e.message}")
                     }
-                    line = reader.readLine()
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
                 }
             } else {
                 emit(StreamEvent.Error("Error $responseCode: ${connection.errorStream?.bufferedReader()?.readText()}"))

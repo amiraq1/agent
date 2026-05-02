@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -26,7 +28,13 @@ internal data class ApiGenerateContentRequest(
     val contents: List<ApiRequestContent>,
     @SerialName("system_instruction") val systemInstruction: ApiRequestContent? = null,
     val tools: List<ApiTool>? = null,
+    @SerialName("toolConfig") val toolConfig: ApiToolConfig? = null,
     @SerialName("generationConfig") val generationConfig: ApiGenerationConfig? = null
+)
+
+@Serializable
+internal data class ApiToolConfig(
+    @SerialName("includeServerSideToolInvocations") val includeServerSideToolInvocations: Boolean = false
 )
 
 @Serializable
@@ -44,7 +52,15 @@ internal data class ApiThinkingConfig(
 @Serializable
 internal data class ApiTool(
     @SerialName("code_execution") val codeExecution: JsonObject? = null,
-    @SerialName("google_search") val googleSearch: JsonObject? = null
+    @SerialName("google_search") val googleSearch: JsonObject? = null,
+    @SerialName("function_declarations") val functionDeclarations: List<GeminiFunctionDeclaration>? = null
+)
+
+@Serializable
+internal data class GeminiFunctionDeclaration(
+    val name: String,
+    val description: String,
+    val parameters: JsonObject? = null
 )
 
 @Serializable
@@ -69,7 +85,14 @@ internal data class ApiResponsePart(
     @SerialName("thoughtSignature") val thoughtSignature: String? = null,
     @SerialName("reasoning_content") val reasoningContent: String? = null,
     @SerialName("executable_code") val executableCode: ApiExecutableCode? = null,
-    @SerialName("code_execution_result") val codeExecutionResult: ApiCodeExecutionResult? = null
+    @SerialName("code_execution_result") val codeExecutionResult: ApiCodeExecutionResult? = null,
+    @SerialName("functionCall") val functionCall: GeminiFunctionCall? = null
+)
+
+@Serializable
+internal data class GeminiFunctionCall(
+    val name: String,
+    val args: JsonObject? = null
 )
 
 @Serializable
@@ -155,6 +178,35 @@ class GeminiProvider : LlmProvider {
         if (config.codeExecutionEnabled) tools.add(ApiTool(codeExecution = JsonObject(emptyMap())))
         if (config.googleSearchEnabled) tools.add(ApiTool(googleSearch = JsonObject(emptyMap())))
 
+        // Add memory function declarations as a separate tool entry
+        val functionDeclarations = config.tools?.map { td ->
+            GeminiFunctionDeclaration(
+                name = td.function.name,
+                description = td.function.description,
+                parameters = JsonObject(
+                    mapOf(
+                        "type" to JsonPrimitive(td.function.parameters.type),
+                        "properties" to JsonObject(
+                            td.function.parameters.properties.mapValues { (_, prop) ->
+                                JsonObject(
+                                    mapOf(
+                                        "type" to JsonPrimitive(prop.type),
+                                        "description" to JsonPrimitive(prop.description)
+                                    )
+                                )
+                            }
+                        ),
+                        "required" to kotlinx.serialization.json.JsonArray(
+                            td.function.parameters.required.map { JsonPrimitive(it) }
+                        )
+                    )
+                )
+            )
+        }
+        if (!functionDeclarations.isNullOrEmpty()) {
+            tools.add(ApiTool(functionDeclarations = functionDeclarations))
+        }
+
         val thinkingConfig = when {
             cleanModelName.contains("gemini-3", ignoreCase = true) -> 
                 ApiThinkingConfig(includeThoughts = config.thinkingEnabled, thinkingLevel = "HIGH")
@@ -165,10 +217,17 @@ class GeminiProvider : LlmProvider {
             else -> null
         }
 
+        val hasBuiltInTools = tools.any { it.codeExecution != null || it.googleSearch != null }
+        val hasFunctionDeclarations = tools.any { it.functionDeclarations != null }
+        val toolConfig = if (hasBuiltInTools && hasFunctionDeclarations) {
+            ApiToolConfig(includeServerSideToolInvocations = true)
+        } else null
+
         val requestBody = ApiGenerateContentRequest(
             contents = apiContents,
             systemInstruction = systemInstruction,
             tools = if (tools.isNotEmpty()) tools else null,
+            toolConfig = toolConfig,
             generationConfig = if (thinkingConfig != null) ApiGenerationConfig(thinkingConfig = thinkingConfig) else null
         )
 
@@ -190,9 +249,17 @@ class GeminiProvider : LlmProvider {
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
-                while (line != null && currentCoroutineContext().isActive) {
+                var line: String? = null
+                while (currentCoroutineContext().isActive) {
+                    try {
+                        line = reader.readLine()
+                        if (line == null) break
+                    } catch (e: java.net.SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                        continue
+                    }
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
                         if (jsonStr != "[DONE]") {
@@ -225,7 +292,6 @@ class GeminiProvider : LlmProvider {
 
                                     part.thoughtSignature?.let {
                                         isPartOfThought = true
-                                        emit(StreamEvent.ThoughtChunk("")) // Trigger thinking status if empty
                                     }
 
                                     part.text?.let { 
@@ -242,8 +308,13 @@ class GeminiProvider : LlmProvider {
                                         emit(StreamEvent.TextChunk("\n```${it.language}\n${it.code}\n```\n"))
                                     }
                                     
-                                    part.codeExecutionResult?.let { 
+                                    part.codeExecutionResult?.let {
                                         emit(StreamEvent.TextChunk("\n> Output: ${it.output}\n"))
+                                    }
+
+                                    part.functionCall?.let { fc ->
+                                        val argsJson = fc.args?.let { Json.encodeToString(JsonObject.serializer(), it) } ?: "{}"
+                                        emit(StreamEvent.ToolCallRequest("gemini_call", fc.name, argsJson))
                                     }
                                 }
                                 response.usageMetadata?.let { metadata ->
@@ -254,7 +325,9 @@ class GeminiProvider : LlmProvider {
                             }
                         }
                     }
-                    line = reader.readLine()
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
                 }
             } else {
                 val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error (Code: $responseCode)"

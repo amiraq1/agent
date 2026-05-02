@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -126,7 +127,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     val providerBaseUrls by viewModel.providerBaseUrls.collectAsState()
     
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("General", "Models")
+    val tabs = listOf("General", "Models", "Memory")
     
     val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router")
 
@@ -138,8 +139,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (selectedTab != pagerState.currentPage) {
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        if (!pagerState.isScrollInProgress && selectedTab != pagerState.currentPage) {
             selectedTab = pagerState.currentPage
         }
     }
@@ -415,7 +416,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                     }
                 }
-            } else {
+            } else if (page == 1) {
                 // Models Tab
                 Column(
                     modifier = Modifier
@@ -509,6 +510,255 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             }
                         }
                     }
+                }
+            } else {
+                // Memory Tab
+                var activeMemoryContent by remember { mutableStateOf("") }
+                var memoryFiles by remember { mutableStateOf<List<String>>(emptyList()) }
+                var showFileEditor by remember { mutableStateOf<String?>(null) }
+                var fileEditorContent by remember { mutableStateOf("") }
+                var showNewFileDialog by remember { mutableStateOf(false) }
+                var newFileName by remember { mutableStateOf("") }
+                var newFileContent by remember { mutableStateOf("") }
+                var showDeleteFileConfirm by remember { mutableStateOf<String?>(null) }
+
+                LaunchedEffect(Unit) {
+                    activeMemoryContent = viewModel.memoryManager.getActiveMemory()
+                    memoryFiles = viewModel.memoryManager.listFiles()
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                ) {
+                    // Active Memory
+                    SettingsGroup(title = "ACTIVE MEMORY") {
+                        ListItem(
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            headlineContent = { Text("Active Memory Context") },
+                            supportingContent = {
+                                Text(
+                                    if (activeMemoryContent.isBlank()) "No active memory set. The model will remember this across all conversations."
+                                    else activeMemoryContent.take(100) + if (activeMemoryContent.length > 100) "..." else ""
+                                )
+                            },
+                            leadingContent = { Icon(Icons.Default.Memory, null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                showFileEditor = "ACTIVE_MEMORY"
+                                fileEditorContent = activeMemoryContent
+                            }
+                        )
+                    }
+
+                    // Memory Database
+                    SettingsGroup(title = "MEMORY DATABASE") {
+                        ListItem(
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            headlineContent = { Text("Create New File") },
+                            supportingContent = { Text("Add a new .md file to the memory database") },
+                            leadingContent = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable { showNewFileDialog = true }
+                        )
+
+                        if (memoryFiles.isEmpty()) {
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = { Text("No files yet", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                                supportingContent = { Text("Create a file or let the model create one via tool calling") }
+                            )
+                        } else {
+                            memoryFiles.forEach { fileName ->
+                                var showFileMenu by remember { mutableStateOf(false) }
+                                val displayName = fileName.removeSuffix(".md")
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    headlineContent = { Text(displayName, fontWeight = FontWeight.Medium) },
+                                    leadingContent = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) },
+                                    trailingContent = {
+                                        Box {
+                                            IconButton(onClick = { showFileMenu = true }) {
+                                                Icon(Icons.Default.MoreVert, "Menu", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                            }
+                                            DropdownMenu(
+                                                expanded = showFileMenu,
+                                                onDismissRequest = { showFileMenu = false },
+                                                shape = RoundedCornerShape(12.dp)
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Edit") },
+                                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                                    onClick = {
+                                                        showFileMenu = false
+                                                        try {
+                                                            showFileEditor = fileName
+                                                            fileEditorContent = viewModel.memoryManager.readFile(fileName)
+                                                        } catch (_: Exception) {}
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                                    onClick = {
+                                                        showFileMenu = false
+                                                        showDeleteFileConfirm = fileName
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Delete file confirmation
+                showDeleteFileConfirm?.let { fileName ->
+                    AlertDialog(
+                        onDismissRequest = { showDeleteFileConfirm = null },
+                        title = { Text("Delete File?") },
+                        text = { Text("Are you sure you want to delete '$fileName'? This cannot be undone.") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    viewModel.memoryManager.deleteFile(fileName)
+                                    memoryFiles = viewModel.memoryManager.listFiles()
+                                    showDeleteFileConfirm = null
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) { Text("Delete") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteFileConfirm = null }) { Text("Cancel") }
+                        }
+                    )
+                }
+
+                // File Editor Dialog
+                showFileEditor?.let { fileName ->
+                    val isActiveMemory = fileName == "ACTIVE_MEMORY"
+                    var editFileName by remember { mutableStateOf(if (isActiveMemory) "" else fileName.removeSuffix(".md")) }
+                    var editContent by remember { mutableStateOf(fileEditorContent) }
+
+                    AlertDialog(
+                        onDismissRequest = {
+                            showFileEditor = null
+                            fileEditorContent = ""
+                        },
+                        title = {
+                            Text(if (isActiveMemory) "Edit Active Memory" else "Edit File")
+                        },
+                        text = {
+                            Column {
+                                if (isActiveMemory) {
+                                    Text(
+                                        "This content is included in every API call. Write facts, preferences, or context the model should always remember.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                } else {
+                                    OutlinedTextField(
+                                        value = editFileName,
+                                        onValueChange = { editFileName = it },
+                                        label = { Text("File Name") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                OutlinedTextField(
+                                    value = editContent,
+                                    onValueChange = { editContent = it },
+                                    label = { Text("Content") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 200.dp, max = 400.dp),
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                    )
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                if (isActiveMemory) {
+                                    viewModel.memoryManager.updateActiveMemory(editContent)
+                                    activeMemoryContent = viewModel.memoryManager.getActiveMemory()
+                                } else {
+                                    if (editFileName.isNotBlank() && editFileName != fileName.removeSuffix(".md")) {
+                                        viewModel.memoryManager.deleteFile(fileName)
+                                        viewModel.memoryManager.createFile(editFileName, editContent)
+                                    } else {
+                                        viewModel.memoryManager.editFile(fileName, editContent)
+                                    }
+                                    memoryFiles = viewModel.memoryManager.listFiles()
+                                }
+                                showFileEditor = null
+                                fileEditorContent = ""
+                            }) { Text("Save") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                showFileEditor = null
+                                fileEditorContent = ""
+                            }) { Text("Cancel") }
+                        }
+                    )
+                }
+
+                // New File Dialog
+                if (showNewFileDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showNewFileDialog = false },
+                        title = { Text("Create Memory File") },
+                        text = {
+                            Column {
+                                OutlinedTextField(
+                                    value = newFileName,
+                                    onValueChange = { newFileName = it },
+                                    label = { Text("File name") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedTextField(
+                                    value = newFileContent,
+                                    onValueChange = { newFileContent = it },
+                                    label = { Text("Content") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 150.dp),
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                    )
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                if (newFileName.isNotBlank()) {
+                                    try {
+                                        viewModel.memoryManager.createFile(newFileName, newFileContent)
+                                        memoryFiles = viewModel.memoryManager.listFiles()
+                                    } catch (_: Exception) {}
+                                }
+                                showNewFileDialog = false
+                                newFileName = ""
+                                newFileContent = ""
+                            }) { Text("Create") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                showNewFileDialog = false
+                                newFileName = ""
+                                newFileContent = ""
+                            }) { Text("Cancel") }
+                        }
+                    )
                 }
             }
         }

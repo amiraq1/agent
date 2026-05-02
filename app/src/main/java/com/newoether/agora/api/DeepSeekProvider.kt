@@ -3,17 +3,18 @@ package com.newoether.agora.api
 import android.util.Log
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 
 class DeepSeekProvider : LlmProvider {
@@ -35,7 +36,6 @@ class DeepSeekProvider : LlmProvider {
         }
 
         val apiMessages = mutableListOf<OpenAiMessage>()
-        
         if (!config.systemPrompt.isNullOrBlank()) {
             apiMessages.add(OpenAiMessage(role = "system", content = listOf(OpenAiContentPart(type = "text", text = config.systemPrompt))))
         }
@@ -43,9 +43,6 @@ class DeepSeekProvider : LlmProvider {
         apiMessages.addAll(limitedPath.map { msg ->
             val parts = mutableListOf<OpenAiContentPart>()
             if (msg.text.isNotEmpty()) parts.add(OpenAiContentPart(type = "text", text = msg.text))
-            
-            // Note: DeepSeek official API currently has limited image support in some regions/models, 
-            // but we'll include it for compatibility with their future updates or proxy services.
             for (imagePath in msg.images) {
                 try {
                     val file = File(imagePath)
@@ -66,7 +63,8 @@ class DeepSeekProvider : LlmProvider {
             model = modelName,
             messages = apiMessages,
             stream = true,
-            streamOptions = OpenAiStreamOptions(includeUsage = true)
+            streamOptions = OpenAiStreamOptions(includeUsage = true),
+            tools = config.tools
         )
 
         var connection: HttpURLConnection? = null
@@ -77,34 +75,37 @@ class DeepSeekProvider : LlmProvider {
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
             connection.doOutput = true
-            
-            connection.outputStream.bufferedWriter().use { 
-                it.write(json.encodeToString(OpenAiChatRequest.serializer(), requestBody)) 
+
+            connection.outputStream.bufferedWriter().use {
+                it.write(json.encodeToString(OpenAiChatRequest.serializer(), requestBody))
             }
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
                 var inThinkingBlock = false
-                
+                var toolCallId = ""
+                var toolCallName = ""
+                var toolCallArgs = ""
+
+                var line = reader.readLine()
                 while (line != null && currentCoroutineContext().isActive) {
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
                         if (jsonStr == "[DONE]") break
-                        
+
                         try {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
-                            val delta = response.choices?.firstOrNull()?.delta
-                            
-                            // 1. Handle native reasoning_content (DeepSeek R1 official API)
+                            val choice = response.choices?.firstOrNull()
+                            val delta = choice?.delta
+
                             delta?.reasoningContent?.let { reasoning ->
                                 if (reasoning.isNotEmpty() && config.thinkingEnabled) {
                                     emit(StreamEvent.ThoughtChunk(reasoning, null))
                                 }
                             }
-                            
-                            // 2. Handle content and potential <think> tags (Common in open-source DeepSeek deployments)
+
                             delta?.content?.let { content ->
                                 if (content.isNotEmpty()) {
                                     var remaining = content
@@ -112,10 +113,8 @@ class DeepSeekProvider : LlmProvider {
                                         if (!inThinkingBlock) {
                                             val startIdx = remaining.indexOf("<think>")
                                             if (startIdx != -1) {
-                                                // Emit text before <think>
                                                 val before = remaining.substring(0, startIdx)
                                                 if (before.isNotEmpty()) emit(StreamEvent.TextChunk(before))
-                                                
                                                 inThinkingBlock = true
                                                 remaining = remaining.substring(startIdx + 7)
                                             } else {
@@ -141,7 +140,18 @@ class DeepSeekProvider : LlmProvider {
                                     }
                                 }
                             }
-                            
+
+                            delta?.toolCalls?.forEach { tc ->
+                                if (tc.id != null) toolCallId = tc.id
+                                tc.function?.name?.let { toolCallName = it }
+                                tc.function?.arguments?.let {
+                                    toolCallArgs += if (it is JsonPrimitive) it.content else it.toString()
+                                }
+                            }
+                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
+                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
+                            }
+
                             response.usage?.let { usage ->
                                 emit(StreamEvent.UsageUpdate(
                                     tokenCount = usage.totalTokens,
@@ -152,13 +162,21 @@ class DeepSeekProvider : LlmProvider {
                             Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                         }
                     }
-                    line = reader.readLine()
+
+                    try {
+                        line = reader.readLine()
+                    } catch (e: SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                    }
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw CancellationException("Stream cancelled")
                 }
             } else {
                 val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
                 emit(StreamEvent.Error("Error $responseCode: $errorRaw"))
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             if (currentCoroutineContext().isActive) {
@@ -176,7 +194,6 @@ class DeepSeekProvider : LlmProvider {
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<OpenAiModelListResponse>(responseText).data.map { it.id }.sorted()

@@ -1,7 +1,24 @@
 package com.newoether.agora.model
 
 import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 import java.util.UUID
+
+@Serializable
+data class ToolCallData(
+    val toolName: String,
+    val arguments: String,
+    val result: String
+)
+
+@Serializable
+data class MessageSegment(
+    val type: String, // "thought" or "tool"
+    val content: String = "",
+    val toolName: String? = null,
+    val toolArgs: String? = null,
+    val toolResult: String? = null
+)
 
 enum class Participant {
     USER, MODEL, ERROR
@@ -24,7 +41,9 @@ data class ChatMessage(
     val participant: Participant,
     val timestamp: Long = System.currentTimeMillis(),
     val thoughtTimeMs: Long? = null,
-    val modelName: String? = null
+    val modelName: String? = null,
+    val toolCall: ToolCallData? = null,
+    val segments: List<MessageSegment>? = null
 )
 
 @Immutable

@@ -1,5 +1,6 @@
 package com.newoether.agora.api
 
+import android.util.Log
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -33,7 +35,8 @@ class QwenProvider : LlmProvider {
             model = config.modelId,
             messages = apiMessages,
             stream = true,
-            streamOptions = OpenAiStreamOptions(includeUsage = true)
+            streamOptions = OpenAiStreamOptions(includeUsage = true),
+            tools = config.tools
         )
 
         var connection: HttpURLConnection? = null
@@ -53,21 +56,49 @@ class QwenProvider : LlmProvider {
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
-                while (line != null && currentCoroutineContext().isActive) {
+                var line: String? = null
+                while (currentCoroutineContext().isActive) {
+                    try {
+                        line = reader.readLine()
+                        if (line == null) break
+                    } catch (e: java.net.SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                        continue
+                    }
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
                         if (jsonStr == "[DONE]") break
                         try {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
-                            response.choices?.firstOrNull()?.delta?.let { delta ->
+                            val choice = response.choices?.firstOrNull()
+
+                            var toolCallId = ""
+                            var toolCallName = ""
+                            var toolCallArgs = ""
+
+                            choice?.delta?.let { delta ->
                                 delta.content?.let { if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it)) }
+                                delta.toolCalls?.forEach { tc ->
+                                    if (tc.id != null) toolCallId = tc.id
+                                    tc.function?.name?.let { toolCallName = it }
+                                    tc.function?.arguments?.let { toolCallArgs += if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() }
+                                }
                             }
+
+                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
+                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
+                            }
+
                             response.usage?.let { emit(StreamEvent.UsageUpdate(it.totalTokens)) }
-                        } catch (e: Exception) { }
+                        } catch (e: Exception) {
+                            Log.e("AgoraAPI", "Parse error: ${e.message}", e)
+                        }
                     }
-                    line = reader.readLine()
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
                 }
             } else {
                 emit(StreamEvent.Error("Error $responseCode: ${connection.errorStream?.bufferedReader()?.readText()}"))

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.newoether.agora.data.MemoryManager
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.data.local.ChatDatabase
 import com.newoether.agora.model.Participant
@@ -111,8 +112,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN toolCallJson TEXT")
+            }
+        }
+
         val dbPath = getDatabasePath("agora_db")
-        val targetVersion = 8
+        val targetVersion = 9
 
         val needsErrorDialog = if (dbPath.exists()) {
             try {
@@ -136,10 +143,12 @@ class MainActivity : ComponentActivity() {
                 MIGRATION_4_5,
                 MIGRATION_5_6,
                 MIGRATION_6_7,
-                MIGRATION_7_8
+                MIGRATION_7_8,
+                MIGRATION_8_9
             ).build()
         } else null
 
+        val memoryManager = MemoryManager(applicationContext)
         val settingsManager = SettingsManager(applicationContext)
 
         enableEdgeToEdge()
@@ -163,7 +172,7 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 } else {
-                    val factory = ChatViewModelFactory(application, settingsManager, database!!.chatDao())
+                    val factory = ChatViewModelFactory(application, settingsManager, database!!.chatDao(), memoryManager)
                     val viewModel: ChatViewModel = viewModel(factory = factory)
                     MainNavigation(viewModel)
                 }

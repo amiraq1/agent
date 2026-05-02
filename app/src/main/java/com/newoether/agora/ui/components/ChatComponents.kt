@@ -9,8 +9,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -36,6 +41,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Language
@@ -467,9 +473,112 @@ fun MessageItem(
 
                     Column {
                         val isError = message.status == MessageStatus.ERROR || message.participant == Participant.ERROR
-                        
-                        // Thought/Reasoning Block
-                        if (!message.thoughts.isNullOrBlank()) {
+
+                        // Merged segment block: single block, newest title/icon when collapsed
+                        if (message.segments != null && message.segments!!.isNotEmpty()) {
+                            val segs = message.segments!!
+                            val lastSeg = segs.last()
+                            val isLastTool = lastSeg.type == "tool"
+                            val isThinking = message.status == MessageStatus.THINKING
+                            val collapsedTitle = if (isLastTool) {
+                                (lastSeg.toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                            } else {
+                                if (message.thoughtTitle != null) message.thoughtTitle
+                                else if (!isThinking) {
+                                    if (message.thoughtTimeMs != null && message.thoughtTimeMs > 0) {
+                                        val seconds = message.thoughtTimeMs / 1000
+                                        if (seconds >= 60) "Thought for ${seconds / 60}m ${seconds % 60}s"
+                                        else "Thought for ${seconds}s"
+                                    } else "Thinking complete"
+                                } else "Thinking..."
+                            }
+                            var isMergedExpanded by remember { mutableStateOf(false) }
+                            val mergedBottomPadding by animateDpAsState(
+                                targetValue = if (isMergedExpanded) 12.dp else 4.dp,
+                                animationSpec = tween(400), label = "mergedPad"
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = mergedBottomPadding)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .clickable { isMergedExpanded = !isMergedExpanded }
+                                    .bringIntoViewResponder(noOpResponder)
+                                    .padding(10.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                    if (isLastTool) {
+                                        Icon(Icons.Default.Build, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    } else {
+                                        Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        collapsedTitle, style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        fontWeight = FontWeight.Bold, maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        if (isMergedExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        null, modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = isMergedExpanded,
+                                    enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                                    exit = fadeOut(tween(400)) + shrinkVertically(tween(400))
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        segs.forEachIndexed { idx, seg ->
+                                            if (seg.type == "thought" && seg.content.isNotBlank()) {
+                                                Text(
+                                                    "Thinking", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                val density = androidx.compose.ui.platform.LocalDensity.current
+                                                CompositionLocalProvider(
+                                                    androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
+                                                ) {
+                                                    SelectionContainer {
+                                                        Markdown(
+                                                            seg.content, modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
+                                                            typography = thoughtTypography, padding = thoughtMarkdownPadding
+                                                        )
+                                                    }
+                                                }
+                                            } else if (seg.type == "tool") {
+                                                Text(
+                                                    (seg.toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } },
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                SelectionContainer {
+                                                    Text(
+                                                        (seg.toolResult ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                            if (idx < segs.lastIndex) {
+                                                HorizontalDivider(
+                                                    modifier = Modifier.padding(vertical = 8.dp),
+                                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Thought/Reasoning Block (fallback for messages without segments)
+                        if (message.segments == null && !message.thoughts.isNullOrBlank()) {
                             val isThinking = message.status == MessageStatus.THINKING
                             
                             // Throttle updates for thoughts to match main output behavior
@@ -565,6 +674,87 @@ fun MessageItem(
                                                     padding = thoughtMarkdownPadding // Use tighter padding for thoughts
                                                 )
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tool Call Block (fallback for messages without segments)
+                        if (message.segments == null && message.toolCall != null) {
+                            var isToolExpanded by remember { mutableStateOf(false) }
+                            val toolBottomPadding by animateDpAsState(
+                                targetValue = if (isToolExpanded) 12.dp else 4.dp,
+                                animationSpec = tween(400),
+                                label = "toolPadding"
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = toolBottomPadding)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .clickable { isToolExpanded = !isToolExpanded }
+                                    .bringIntoViewResponder(noOpResponder)
+                                    .padding(10.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(
+                                        Icons.Default.Build,
+                                        null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = message.toolCall!!.toolName.split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        if (isToolExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = isToolExpanded,
+                                    enter = androidx.compose.animation.fadeIn(animationSpec = tween(400)) + androidx.compose.animation.expandVertically(animationSpec = tween(400)),
+                                    exit = androidx.compose.animation.fadeOut(animationSpec = tween(400)) + androidx.compose.animation.shrinkVertically(animationSpec = tween(400))
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(20.dp))
+                                        Text(
+                                            "Arguments:",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        SelectionContainer {
+                                            Text(
+                                                message.toolCall!!.arguments,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "Result:",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        SelectionContainer {
+                                            Text(
+                                                message.toolCall!!.result,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }

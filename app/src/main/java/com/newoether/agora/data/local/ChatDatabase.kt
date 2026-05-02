@@ -63,7 +63,8 @@ data class MessageEntity(
     val participant: Participant,
     val timestamp: Long,
     val thoughtTimeMs: Long? = null,
-    val modelName: String? = null
+    val modelName: String? = null,
+    val toolCallJson: String? = null
 )
 
 @Dao
@@ -89,7 +90,7 @@ interface ChatDao {
 
 @Database(
     entities = [ChatEntity::class, MessageEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = true
 )@TypeConverters(MessageConverters::class)
 abstract class ChatDatabase : RoomDatabase() {

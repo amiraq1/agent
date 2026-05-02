@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.newoether.agora.api.*
 import com.newoether.agora.data.ApiKeyEntry
+import com.newoether.agora.data.MemoryManager
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.data.SystemPromptEntry
 import com.newoether.agora.data.local.ChatDao
@@ -13,9 +14,12 @@ import com.newoether.agora.data.local.ChatEntity
 import com.newoether.agora.data.local.MessageEntity
 import com.newoether.agora.model.ChatConversation
 import com.newoether.agora.model.ChatMessage
+import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
 import com.newoether.agora.model.Participant
+import com.newoether.agora.model.ToolCallData
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -32,9 +36,10 @@ import androidx.compose.foundation.lazy.LazyListState
 class ChatViewModel(
     application: Application,
     private val settingsManager: SettingsManager,
-    private val chatDao: ChatDao
+    private val chatDao: ChatDao,
+    val memoryManager: MemoryManager
 ) : AndroidViewModel(application) {
-    
+
     val listState = LazyListState()
     val messageHeights = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
@@ -241,7 +246,13 @@ class ChatViewModel(
                                 participant = it.participant, 
                                 timestamp = it.timestamp,
                                 thoughtTimeMs = it.thoughtTimeMs,
-                                modelName = it.modelName
+                                modelName = it.modelName,
+                                toolCall = it.toolCallJson?.let { json ->
+                                    try { Json.decodeFromString(ToolCallData.serializer(), json) } catch (_: Exception) { null }
+                                },
+                                segments = it.toolCallJson?.let { json ->
+                                    try { Json.decodeFromString<List<MessageSegment>>(json) } catch (_: Exception) { null }
+                                }
                             )
                         }
                     }
@@ -461,7 +472,7 @@ class ChatViewModel(
                             modelMessageId = messageId
                             chatDao.upsertMessage(MessageEntity(
                                 id = modelMessageId, conversationId = currentId, parentId = parentId,
-                                text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
+                                text = messageToRegenerate.text, thoughts = messageToRegenerate.thoughts, thoughtTitle = messageToRegenerate.thoughtTitle, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
                                 modelName = currentActiveModel.value
                             ))
                             val newMap = _selectedChildren.value.toMutableMap()
@@ -607,6 +618,94 @@ class ChatViewModel(
         }
     }
 
+    private fun buildMemoryTools(): List<ToolDefinition> = listOf(
+        ToolDefinition(function = ToolFunction(
+            name = "list_memory_files",
+            description = "List all files in the memory database.",
+            parameters = ToolParameters(
+                properties = emptyMap()
+            )
+        )),
+        ToolDefinition(function = ToolFunction(
+            name = "read_memory_file",
+            description = "Read the content of a file from the memory database.",
+            parameters = ToolParameters(
+                properties = mapOf(
+                    "name" to ToolProperty("string", "The file name to read.")
+                ),
+                required = listOf("name")
+            )
+        )),
+        ToolDefinition(function = ToolFunction(
+            name = "create_memory_file",
+            description = "Create a new file in the memory database with the given content.",
+            parameters = ToolParameters(
+                properties = mapOf(
+                    "name" to ToolProperty("string", "The file name to create (e.g., 'notes.md')."),
+                    "content" to ToolProperty("string", "The markdown content for the file.")
+                ),
+                required = listOf("name", "content")
+            )
+        )),
+        ToolDefinition(function = ToolFunction(
+            name = "edit_memory_file",
+            description = "Overwrite an existing file in the memory database.",
+            parameters = ToolParameters(
+                properties = mapOf(
+                    "name" to ToolProperty("string", "The file name to edit."),
+                    "content" to ToolProperty("string", "The new markdown content.")
+                ),
+                required = listOf("name", "content")
+            )
+        )),
+        ToolDefinition(function = ToolFunction(
+            name = "delete_memory_file",
+            description = "Delete a file from the memory database.",
+            parameters = ToolParameters(
+                properties = mapOf(
+                    "name" to ToolProperty("string", "The file name to delete.")
+                ),
+                required = listOf("name")
+            )
+        )),
+        ToolDefinition(function = ToolFunction(
+            name = "update_active_memory",
+            description = "Update the active memory context. Use 'replace' to overwrite, 'append' to add to the end, or 'prepend' to add to the beginning.",
+            parameters = ToolParameters(
+                properties = mapOf(
+                    "content" to ToolProperty("string", "The content to write."),
+                    "mode" to ToolProperty("string", "One of: replace, append, prepend. Default is replace.")
+                ),
+                required = listOf("content")
+            )
+        ))
+    )
+
+    private fun executeTool(name: String, arguments: String): String {
+        return try {
+            val args = Json.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(arguments)
+            fun arg(key: String): String = (args[key] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
+            when (name) {
+                "list_memory_files" -> {
+                    val files = memoryManager.listFiles()
+                    if (files.isEmpty()) "No memory files found."
+                    else "Memory files:\n${files.joinToString("\n") { "- $it" }}"
+                }
+                "read_memory_file" -> memoryManager.readFile(arg("name"))
+                "create_memory_file" -> memoryManager.createFile(arg("name"), arg("content"))
+                "edit_memory_file" -> memoryManager.editFile(arg("name"), arg("content"))
+                "delete_memory_file" -> memoryManager.deleteFile(arg("name"))
+                "update_active_memory" -> {
+                    val mode = arg("mode").ifBlank { "replace" }
+                    memoryManager.updateActiveMemory(arg("content"), mode)
+                }
+                else -> "Unknown tool: $name"
+            }
+        } catch (e: Exception) {
+            "Error executing tool '$name': ${e.localizedMessage ?: "Unknown error"}"
+        }
+    }
+
     private suspend fun generateResponse(currentId: String, text: String, modelMessageId: String, startTime: Long) {
         val modelIdWithPrefix = currentActiveModel.value
         val providerName = getProviderForModel(modelIdWithPrefix)
@@ -622,6 +721,8 @@ class ChatViewModel(
         var totalTokenCount = 0
         var totalThoughtTimeMs: Long? = null
         var currentStatus = MessageStatus.SENDING
+        val segments = mutableListOf<MessageSegment>()
+        var currentThoughtBuf = StringBuilder()
         val placeholder = chatDao.getMessagesForConversation(currentId).first().find { it.id == modelMessageId }
         val parentId = placeholder?.parentId
 
@@ -634,32 +735,56 @@ class ChatViewModel(
                 pathEntities.add(0, msg)
                 currId = msg.parentId
             }
-            val currentPath = pathEntities.map { 
-                ChatMessage(id = it.id, parentId = it.parentId, text = it.text, images = it.images, thoughts = it.thoughts, thoughtTitle = it.thoughtTitle, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs) 
+            val currentPath = pathEntities.map {
+                ChatMessage(id = it.id, parentId = it.parentId, text = it.text, images = it.images, thoughts = it.thoughts, thoughtTitle = it.thoughtTitle, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs, toolCall = it.toolCallJson?.let { json -> try { Json.decodeFromString(ToolCallData.serializer(), json) } catch (_: Exception) { null } }, segments = it.toolCallJson?.let { json -> try { Json.decodeFromString<List<MessageSegment>>(json) } catch (_: Exception) { null } })
             }.filter { it.participant != Participant.ERROR }
             
             val conversation = chatDao.getConversation(currentId)
             val targetPromptId = conversation?.systemPromptId ?: activeSystemPromptId.value
             val activePrompt = systemPrompts.value.find { it.id == targetPromptId }?.content
             
+            // Merge active memory into system prompt
+            val activeMemory = memoryManager.getActiveMemory()
+            val effectiveSystemPrompt = buildString {
+                if (activeMemory.isNotBlank()) {
+                    append("[Active Memory]\n")
+                    append(activeMemory)
+                    append("\n\n")
+                }
+                if (!activePrompt.isNullOrBlank()) {
+                    append(activePrompt)
+                }
+            }.ifBlank { null }
+
+            val memoryTools = buildMemoryTools()
             val config = ProviderConfig(
                 apiKey = activeKey,
                 modelId = modelId,
-                systemPrompt = activePrompt,
+                systemPrompt = effectiveSystemPrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
-                baseUrl = providerBaseUrls.value[providerName]
+                baseUrl = providerBaseUrls.value[providerName],
+                tools = memoryTools
             )
 
+            var toolCallData: ToolCallData? = null
+
             getActiveProvider().generateResponse(currentPath, config).collect { event ->
+                if (toolCallData != null) return@collect
                 when (event) {
                     is StreamEvent.TextChunk -> {
                         if (currentStatus == MessageStatus.THINKING) {
                             totalThoughtTimeMs = System.currentTimeMillis() - startTime
+                            if (currentThoughtBuf.isNotEmpty()) {
+                                segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString()))
+                                currentThoughtBuf = StringBuilder()
+                            }
+                            totalText += event.text.trimStart()
+                        } else {
+                            totalText += event.text
                         }
-                        totalText += event.text
                         currentStatus = MessageStatus.SENDING
                     }
                     is StreamEvent.ThoughtChunk -> {
@@ -671,6 +796,7 @@ class ChatViewModel(
                             }
                         }
                         if (event.thought.isNotEmpty()) {
+                            currentThoughtBuf.append(event.thought)
                             if (totalThoughts == "Thinking...") {
                                 totalThoughts = event.thought
                             } else {
@@ -695,8 +821,18 @@ class ChatViewModel(
                         totalText = event.message
                         currentStatus = MessageStatus.ERROR
                     }
+                    is StreamEvent.ToolCallRequest -> {
+                        if (currentThoughtBuf.isNotEmpty()) {
+                            segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString()))
+                            currentThoughtBuf = StringBuilder()
+                        }
+                        val result = executeTool(event.name, event.arguments)
+                        toolCallData = ToolCallData(event.name, event.arguments, result)
+                        segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result))
+                        currentStatus = MessageStatus.SENDING
+                    }
                 }
-                
+
                 _streamingMessage.value = ChatMessage(
                     id = modelMessageId,
                     parentId = parentId,
@@ -708,10 +844,105 @@ class ChatViewModel(
                     participant = Participant.MODEL,
                     timestamp = startTime,
                     thoughtTimeMs = totalThoughtTimeMs,
-                    modelName = currentActiveModel.value
+                    modelName = currentActiveModel.value,
+                    toolCall = toolCallData,
+                    segments = segments.toList().ifEmpty { null }
                 )
             }
-            
+
+            // Multi-tool loop: keep calling tools until the model responds with text
+            var toolRound = 0
+            val maxToolRounds = 5
+            var toolPath = currentPath
+
+            while (toolCallData != null && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < maxToolRounds) {
+                toolRound++
+                toolPath = toolPath.toMutableList().apply {
+                    add(ChatMessage(
+                        id = "tool_${UUID.randomUUID()}",
+                        parentId = lastOrNull()?.id,
+                        text = "",
+                        participant = Participant.MODEL,
+                        status = MessageStatus.SUCCESS,
+                        toolCall = toolCallData
+                    ))
+                    add(ChatMessage(
+                        id = "result_${UUID.randomUUID()}",
+                        parentId = lastOrNull()?.id,
+                        text = toolCallData!!.result,
+                        participant = Participant.USER,
+                        status = MessageStatus.SUCCESS
+                    ))
+                }
+
+                val nextToolCall = ToolCallData(toolCallData!!.toolName, toolCallData!!.arguments, toolCallData!!.result)
+                toolCallData = null
+
+                getActiveProvider().generateResponse(toolPath, config).collect { event ->
+                    when (event) {
+                        is StreamEvent.TextChunk -> {
+                            if (currentStatus == MessageStatus.THINKING) {
+                                totalThoughtTimeMs = System.currentTimeMillis() - startTime
+                                if (currentThoughtBuf.isNotEmpty()) {
+                                    segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString()))
+                                    currentThoughtBuf = StringBuilder()
+                                }
+                                totalText += event.text.trimStart()
+                            } else {
+                                totalText += event.text
+                            }
+                            currentStatus = MessageStatus.SENDING
+                        }
+                        is StreamEvent.ThoughtChunk -> {
+                            if (totalText.isEmpty()) {
+                                currentStatus = MessageStatus.THINKING
+                                if (totalThoughtTimeMs == null) totalThoughtTimeMs = System.currentTimeMillis() - startTime
+                                if (totalThoughts.isEmpty()) totalThoughts = "Thinking..."
+                            }
+                            if (event.thought.isNotEmpty()) {
+                                currentThoughtBuf.append(event.thought)
+                                if (totalThoughts == "Thinking...") totalThoughts = event.thought
+                                else totalThoughts += event.thought
+                            }
+                            if (event.title != null) totalThoughtTitle = event.title
+                        }
+                        is StreamEvent.UsageUpdate -> {
+                            if (event.tokenCount > 0) totalTokenCount = event.tokenCount
+                        }
+                        is StreamEvent.Error -> {
+                            totalText = event.message
+                            currentStatus = MessageStatus.ERROR
+                        }
+                        is StreamEvent.ToolCallRequest -> {
+                            if (currentThoughtBuf.isNotEmpty()) {
+                                segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString()))
+                                currentThoughtBuf = StringBuilder()
+                            }
+                            val result = executeTool(event.name, event.arguments)
+                            toolCallData = ToolCallData(event.name, event.arguments, result)
+                            segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result))
+                            currentStatus = MessageStatus.SENDING
+                        }
+                    }
+
+                    _streamingMessage.value = ChatMessage(
+                        id = modelMessageId,
+                        parentId = parentId,
+                        text = totalText,
+                        thoughts = totalThoughts.ifBlank { null },
+                        thoughtTitle = totalThoughtTitle,
+                        tokenCount = totalTokenCount,
+                        status = currentStatus,
+                        participant = Participant.MODEL,
+                        timestamp = startTime,
+                        thoughtTimeMs = totalThoughtTimeMs,
+                        modelName = currentActiveModel.value,
+                        toolCall = nextToolCall,
+                        segments = segments.toList().ifEmpty { null }
+                    )
+                }
+            }
+
             if (currentStatus != MessageStatus.ERROR) {
                 currentStatus = if (totalText.isNotEmpty() || totalThoughts.isNotEmpty()) MessageStatus.SUCCESS else MessageStatus.ERROR
             }
@@ -730,10 +961,11 @@ class ChatViewModel(
                 val conversationExists = chatDao.getConversation(currentId) != null
                 if (conversationExists) {
                     val finalStreamingMsg = _streamingMessage.value
+                    val segmentsJson = finalStreamingMsg?.segments?.let { Json.encodeToString(it) }
                     if (finalStreamingMsg != null) {
-                        chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = finalStreamingMsg.parentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, thoughtTitle = finalStreamingMsg.thoughtTitle, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName))
+                        chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = finalStreamingMsg.parentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, thoughtTitle = finalStreamingMsg.thoughtTitle, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName, toolCallJson = segmentsJson))
                     } else {
-                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, thoughtTitle = totalThoughtTitle, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = currentActiveModel.value))
+                        chatDao.upsertMessage(MessageEntity(id = modelMessageId, conversationId = currentId, parentId = parentId, text = totalText, thoughts = totalThoughts.ifBlank { null }, thoughtTitle = totalThoughtTitle, tokenCount = totalTokenCount, status = currentStatus, participant = Participant.MODEL, timestamp = startTime, thoughtTimeMs = totalThoughtTimeMs, modelName = currentActiveModel.value, toolCallJson = segmentsJson))
                     }
                 }
                 _isLoading.value = false

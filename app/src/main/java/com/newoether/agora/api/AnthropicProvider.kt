@@ -5,6 +5,7 @@ import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -12,8 +13,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -25,7 +28,15 @@ internal data class AnthropicRequest(
     val system: String? = null,
     @SerialName("max_tokens") val maxTokens: Int = 4096,
     val stream: Boolean = true,
-    val thinking: AnthropicThinking? = null
+    val thinking: AnthropicThinking? = null,
+    val tools: List<AnthropicTool>? = null
+)
+
+@Serializable
+internal data class AnthropicTool(
+    val name: String,
+    val description: String,
+    @SerialName("input_schema") val inputSchema: JsonObject
 )
 
 @Serializable
@@ -58,14 +69,26 @@ internal data class AnthropicImageSource(
 internal data class AnthropicStreamEvent(
     val type: String,
     val delta: AnthropicDelta? = null,
+    @SerialName("content_block") val contentBlock: AnthropicContentBlock? = null,
     val message: AnthropicMessageInfo? = null,
-    val usage: AnthropicUsage? = null
+    val usage: AnthropicUsage? = null,
+    val index: Int? = null
 )
 
 @Serializable
 internal data class AnthropicDelta(
     val text: String? = null,
-    @SerialName("thinking") val thinking: String? = null
+    val thinking: String? = null,
+    @SerialName("partial_json") val partialJson: String? = null,
+    val type: String? = null
+)
+
+@Serializable
+internal data class AnthropicContentBlock(
+    val type: String,
+    val id: String? = null,
+    val name: String? = null,
+    val input: JsonObject? = null
 )
 
 @Serializable
@@ -82,7 +105,7 @@ internal data class AnthropicUsage(
 class AnthropicProvider : LlmProvider {
     override val name: String = "Anthropic"
     override val defaultBaseUrl: String = "https://api.anthropic.com/v1"
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 
     override fun generateResponse(
         messages: List<ChatMessage>,
@@ -118,17 +141,47 @@ class AnthropicProvider : LlmProvider {
             AnthropicMessage(role = if (msg.participant == Participant.USER) "user" else "assistant", content = parts)
         }
 
-        // Claude thinking logic
-        val thinking = if (config.thinkingEnabled && (modelName.contains("claude-3-7") || modelName.contains("claude-3-5"))) {
+        // Claude thinking logic - all Claude models support thinking except the 3 legacy ones
+        val isLegacyClaude = modelName == "claude-3-opus-20240229" ||
+            modelName == "claude-3-sonnet-20240229" ||
+            modelName == "claude-3-haiku-20240307"
+        val thinking = if (config.thinkingEnabled && modelName.startsWith("claude") && !isLegacyClaude) {
             AnthropicThinking(budgetTokens = 1024)
         } else null
+
+        // Convert ToolDefinition to Anthropic format
+        val anthropicTools = config.tools?.map { td ->
+            AnthropicTool(
+                name = td.function.name,
+                description = td.function.description,
+                inputSchema = JsonObject(
+                    mapOf(
+                        "type" to JsonPrimitive(td.function.parameters.type),
+                        "properties" to JsonObject(
+                            td.function.parameters.properties.mapValues { (_, prop) ->
+                                JsonObject(
+                                    mapOf(
+                                        "type" to JsonPrimitive(prop.type),
+                                        "description" to JsonPrimitive(prop.description)
+                                    )
+                                )
+                            }
+                        ),
+                        "required" to kotlinx.serialization.json.JsonArray(
+                            td.function.parameters.required.map { JsonPrimitive(it) }
+                        )
+                    )
+                )
+            )
+        }
 
         val requestBody = AnthropicRequest(
             model = modelName,
             messages = apiMessages,
             system = config.systemPrompt,
             thinking = thinking,
-            maxTokens = if (thinking != null) 2048 else 4096
+            maxTokens = if (thinking != null) 2048 else 4096,
+            tools = anthropicTools
         )
 
         var connection: HttpURLConnection? = null
@@ -147,11 +200,22 @@ class AnthropicProvider : LlmProvider {
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
+                var line: String? = null
                 var currentType: String? = null
-                
-                while (line != null && currentCoroutineContext().isActive) {
+                var toolUseId: String? = null
+                var toolUseName: String? = null
+                var toolUseArgs = StringBuilder()
+
+                while (currentCoroutineContext().isActive) {
+                    try {
+                        line = reader.readLine()
+                        if (line == null) break
+                    } catch (e: java.net.SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                        continue
+                    }
                     if (line.startsWith("event: ")) {
                         currentType = line.substring(7).trim()
                     } else if (line.startsWith("data: ")) {
@@ -159,9 +223,36 @@ class AnthropicProvider : LlmProvider {
                         try {
                             val event = json.decodeFromString<AnthropicStreamEvent>(jsonStr)
                             when (event.type) {
+                                "content_block_start" -> {
+                                    event.contentBlock?.let { block ->
+                                        if (block.type == "tool_use") {
+                                            toolUseId = block.id
+                                            toolUseName = block.name
+                                            toolUseArgs = StringBuilder()
+                                        }
+                                    }
+                                }
                                 "content_block_delta" -> {
-                                    event.delta?.text?.let { emit(StreamEvent.TextChunk(it)) }
-                                    event.delta?.thinking?.let { emit(StreamEvent.ThoughtChunk(it, null)) }
+                                    event.delta?.let { delta ->
+                                        when (delta.type) {
+                                            "input_json_delta" -> {
+                                                delta.partialJson?.let { toolUseArgs.append(it) }
+                                            }
+                                            else -> {
+                                                delta.text?.let { emit(StreamEvent.TextChunk(it)) }
+                                                delta.thinking?.let { emit(StreamEvent.ThoughtChunk(it, null)) }
+                                            }
+                                        }
+                                    }
+                                }
+                                "content_block_stop" -> {
+                                    if (toolUseId != null && toolUseName != null) {
+                                        emit(StreamEvent.ToolCallRequest(
+                                            toolUseId!!, toolUseName!!, toolUseArgs.toString()
+                                        ))
+                                        toolUseId = null
+                                        toolUseName = null
+                                    }
                                 }
                                 "message_delta" -> {
                                     event.usage?.let { u ->
@@ -174,7 +265,9 @@ class AnthropicProvider : LlmProvider {
                             Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                         }
                     }
-                    line = reader.readLine()
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
                 }
             } else {
                 val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
@@ -191,12 +284,31 @@ class AnthropicProvider : LlmProvider {
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = listOf(
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307"
-    )
+    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        try {
+            val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "https://api.anthropic.com/v1"
+            val url = URL("$effectiveBaseUrl/models")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("x-api-key", apiKey)
+            connection.setRequestProperty("anthropic-version", "2023-06-01")
+            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+            json.decodeFromString<AnthropicModelsResponse>(responseText).data.map { it.id }
+        } catch (e: Exception) {
+            Log.e("AgoraAPI", "Failed to fetch Anthropic models", e)
+            emptyList()
+        }
+    }
 }
+
+@Serializable
+internal data class AnthropicModelsResponse(
+    val data: List<AnthropicModelInfo>,
+    @SerialName("has_more") val hasMore: Boolean = false
+)
+
+@Serializable
+internal data class AnthropicModelInfo(
+    val id: String,
+    @SerialName("display_name") val displayName: String = ""
+)

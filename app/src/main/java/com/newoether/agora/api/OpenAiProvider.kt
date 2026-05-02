@@ -97,8 +97,8 @@ class OpenAiProvider : LlmProvider {
             messages = apiMessages,
             stream = true,
             streamOptions = OpenAiStreamOptions(includeUsage = true),
-            // Set reasoning effort for o1/o3 models if needed, default to medium if not specified but model requires it
-            reasoningEffort = if (modelName.startsWith("o1") || modelName.startsWith("o3")) "medium" else null
+            reasoningEffort = if (modelName.startsWith("o1") || modelName.startsWith("o3")) "medium" else null,
+            tools = config.tools
         )
 
         var connection: HttpURLConnection? = null
@@ -118,52 +118,67 @@ class OpenAiProvider : LlmProvider {
 
             val responseCode = connection.responseCode
             if (responseCode == 200) {
+                connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
-                var line = reader.readLine()
-                while (line != null && currentCoroutineContext().isActive) {
+                var line: String? = null
+                while (currentCoroutineContext().isActive) {
+                    try {
+                        line = reader.readLine()
+                        if (line == null) break
+                    } catch (e: java.net.SocketTimeoutException) {
+                        if (!currentCoroutineContext().isActive) break
+                        continue
+                    }
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
                         if (jsonStr == "[DONE]") break
-                        
+
                         try {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
-                            
-                            // Process Content and Reasoning
-                            response.choices?.firstOrNull()?.delta?.let { delta ->
+                            val choice = response.choices?.firstOrNull()
+
+                            var toolCallId = ""
+                            var toolCallName = ""
+                            var toolCallArgs = ""
+
+                            choice?.delta?.let { delta ->
                                 delta.reasoningContent?.let { reasoning ->
                                     if (reasoning.isNotEmpty() && config.thinkingEnabled) {
                                         emit(StreamEvent.ThoughtChunk(reasoning))
                                     }
                                 }
-                                
+
                                 delta.content?.let { content ->
                                     if (content.isNotEmpty()) {
                                         emit(StreamEvent.TextChunk(content))
                                     }
                                 }
-                                
-                                // Basic tool call handling (printing raw JSON for now as OpenAI doesn't natively execute like Gemini)
-                                delta.toolCalls?.forEach { toolCall ->
-                                    toolCall.function?.let { func ->
-                                        func.name?.let { emit(StreamEvent.TextChunk("\\n> Calling Tool: \$it\\n")) }
-                                        func.arguments?.let { emit(StreamEvent.TextChunk(it)) }
-                                    }
+
+                                delta.toolCalls?.forEach { tc ->
+                                    if (tc.id != null) toolCallId = tc.id
+                                    tc.function?.name?.let { toolCallName = it }
+                                    tc.function?.arguments?.let { toolCallArgs += if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() }
                                 }
                             }
-                            
-                            // Process Usage
+
+                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
+                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
+                            }
+
                             response.usage?.let { usage ->
                                 emit(StreamEvent.UsageUpdate(
                                     tokenCount = usage.totalTokens,
                                     thoughtsTokenCount = usage.completionTokensDetails?.reasoningTokens ?: 0
                                 ))
                             }
-                            
+
                         } catch (e: Exception) {
                             Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                         }
                     }
-                    line = reader.readLine()
+                }
+                if (!currentCoroutineContext().isActive) {
+                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
                 }
             } else {
                 val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error (Code: $responseCode)"

@@ -4,6 +4,7 @@ import com.newoether.agora.model.ChatMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 sealed class StreamEvent {
@@ -11,6 +12,7 @@ sealed class StreamEvent {
     data class ThoughtChunk(val thought: String, val title: String? = null) : StreamEvent()
     data class UsageUpdate(val tokenCount: Int, val thoughtsTokenCount: Int = 0) : StreamEvent()
     data class Error(val message: String) : StreamEvent()
+    data class ToolCallRequest(val id: String, val name: String, val arguments: String) : StreamEvent()
 }
 
 data class ProviderConfig(
@@ -21,7 +23,34 @@ data class ProviderConfig(
     val codeExecutionEnabled: Boolean = false,
     val googleSearchEnabled: Boolean = false,
     val thinkingEnabled: Boolean = true,
-    val baseUrl: String? = null
+    val baseUrl: String? = null,
+    val tools: List<ToolDefinition>? = null
+)
+
+@Serializable
+data class ToolDefinition(
+    val type: String = "function",
+    val function: ToolFunction
+)
+
+@Serializable
+data class ToolFunction(
+    val name: String,
+    val description: String,
+    val parameters: ToolParameters
+)
+
+@Serializable
+data class ToolParameters(
+    val type: String = "object",
+    val properties: Map<String, ToolProperty>,
+    val required: List<String> = emptyList()
+)
+
+@Serializable
+data class ToolProperty(
+    val type: String,
+    val description: String
 )
 
 @Serializable
@@ -30,7 +59,7 @@ data class OpenAiChatRequest(
     val messages: List<OpenAiMessage>,
     val stream: Boolean = true,
     @SerialName("stream_options") val streamOptions: OpenAiStreamOptions? = null,
-    val tools: List<OpenAiTool>? = null,
+    val tools: List<ToolDefinition>? = null,
     @SerialName("reasoning_effort") val reasoningEffort: String? = null,
     val reasoning: OpenAiReasoning? = null,
     val plugins: List<OpenAiPlugin>? = null
@@ -114,7 +143,7 @@ data class OpenAiReasoningDetail(
 
 @Serializable
 data class OpenAiToolCall(
-    val index: Int,
+    val index: Int? = null,
     val id: String? = null,
     val type: String? = null,
     val function: OpenAiFunctionCall? = null
@@ -123,7 +152,7 @@ data class OpenAiToolCall(
 @Serializable
 data class OpenAiFunctionCall(
     val name: String? = null,
-    val arguments: String? = null
+    val arguments: JsonElement? = null
 )
 
 @Serializable
