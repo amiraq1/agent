@@ -452,7 +452,7 @@ class ChatViewModel(
             val config = ProviderConfig(
                 apiKey = activeKey,
                 modelId = modelId,
-                systemPrompt = "You are a title generator. Your only job is to output a short title.",
+                systemPrompt = "You are a title generator. Output only a short title in the same language as the conversation.",
                 maxContextWindow = 1,
                 thinkingEnabled = false,
                 baseUrl = providerBaseUrls.value[providerName]
