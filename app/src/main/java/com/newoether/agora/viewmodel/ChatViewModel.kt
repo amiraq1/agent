@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -880,9 +878,7 @@ class ChatViewModel(
 
             var toolCallData: ToolCallData? = null
 
-            try {
-                withTimeout(30000) {
-                    getActiveProvider().generateResponse(currentPath, config).collect { event ->
+            getActiveProvider().generateResponse(currentPath, config).collect { event ->
                         when (event) {
                             is StreamEvent.TextChunk -> {
                                 if (currentStatus == MessageStatus.THINKING) {
@@ -951,13 +947,6 @@ class ChatViewModel(
                             toolCall = toolCallData,
                             segments = buildLiveSegments(segments, currentThoughtBuf)
                         )
-                    }
-                }
-            } catch (e: TimeoutCancellationException) {
-                if (currentStatus < MessageStatus.SUCCESS) {
-                    totalText = "Request timed out. Please check your internet connection."
-                    currentStatus = MessageStatus.ERROR
-                }
             }
 
             // Multi-tool loop: keep calling tools until the model responds with text
@@ -989,9 +978,7 @@ class ChatViewModel(
 
                 toolCallData = null
 
-                try {
-                    withTimeout(30000) {
-                        getActiveProvider().generateResponse(toolPath, config).collect { event ->
+                getActiveProvider().generateResponse(toolPath, config).collect { event ->
                             when (event) {
                                 is StreamEvent.TextChunk -> {
                                     if (currentStatus == MessageStatus.THINKING) {
@@ -1053,13 +1040,6 @@ class ChatViewModel(
                                 toolCall = toolCallData,
                                 segments = buildLiveSegments(segments, currentThoughtBuf)
                             )
-                        }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    if (currentStatus < MessageStatus.SUCCESS) {
-                        totalText = "Request timed out. Please check your internet connection."
-                        currentStatus = MessageStatus.ERROR
-                    }
                 }
             }
 
