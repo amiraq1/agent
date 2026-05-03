@@ -18,9 +18,12 @@ import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
 import com.newoether.agora.model.Participant
 import com.newoether.agora.model.ToolCallData
+import com.newoether.agora.service.AgoraForegroundService
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -39,6 +42,9 @@ class ChatViewModel(
     private val chatDao: ChatDao,
     val memoryManager: MemoryManager
 ) : AndroidViewModel(application) {
+
+    private val generationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var generationJob: Job? = null
 
     val listState = LazyListState()
     val messageHeights = androidx.compose.runtime.mutableStateMapOf<String, Int>()
@@ -135,8 +141,6 @@ class ChatViewModel(
 
     private val _streamingMessage = MutableStateFlow<ChatMessage?>(null)
     private val _selectedChildren = MutableStateFlow<Map<String?, String>>(emptyMap())
-
-    private var generationJob: Job? = null
 
     val messages: StateFlow<List<ChatMessage>> = combine(
         _allMessages,
@@ -510,6 +514,7 @@ class ChatViewModel(
         _isLoading.value = false
         _streamingMessage.value = null
         _generatingInConversationId.value = null
+        AgoraForegroundService.stop(getApplication())
     }
 
     fun regenerate(messageId: String) {
@@ -522,7 +527,7 @@ class ChatViewModel(
         if (activeKey.isBlank() && providerName != "Ollama") return
 
         stopGeneration()
-        generationJob = viewModelScope.launch {
+        generationJob = generationScope.launch {
             val messageToRegenerate = _allMessages.value.find { it.id == messageId } ?: return@launch
             val parentId = messageToRegenerate.parentId ?: return@launch
             val userMessage = _allMessages.value.find { it.id == parentId } ?: return@launch
@@ -592,7 +597,7 @@ class ChatViewModel(
         if (activeKey.isBlank() && providerName != "Ollama") return
 
         stopGeneration()
-        generationJob = viewModelScope.launch {
+        generationJob = generationScope.launch {
             val messageToEdit = _allMessages.value.find { it.id == messageId } ?: return@launch
             val newUserMessageId = UUID.randomUUID().toString()
             chatDao.upsertMessage(MessageEntity(
@@ -654,7 +659,7 @@ class ChatViewModel(
                 val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
                     stopGeneration()
     
-        generationJob = viewModelScope.launch {
+        generationJob = generationScope.launch {
             val processedImages = if (images.isNotEmpty()) processImages(images) else emptyList()
             var currentId = _currentConversationId.value
             val wasNewChat = _isNewChatMode.value
@@ -796,6 +801,8 @@ class ChatViewModel(
         _isLoading.value = true
         _generatingInConversationId.value = currentId
         _streamingMessage.value = null
+        val app = getApplication<Application>()
+        AgoraForegroundService.start(app)
         var totalText = ""
         var totalThoughts = ""
         var totalThoughtTitle: String? = null
@@ -1064,6 +1071,7 @@ class ChatViewModel(
                 _isLoading.value = false
                 _streamingMessage.value = null
                 _generatingInConversationId.value = null
+                AgoraForegroundService.stop(getApplication())
             }
         }
     }

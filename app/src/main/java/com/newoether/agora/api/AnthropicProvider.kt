@@ -204,6 +204,7 @@ class AnthropicProvider : LlmProvider {
         try {
             val url = URL("$baseUrl/messages")
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("x-api-key", config.apiKey)
@@ -305,6 +306,8 @@ class AnthropicProvider : LlmProvider {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "https://api.anthropic.com/v1"
             val url = URL("$effectiveBaseUrl/models")
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.requestMethod = "GET"
             connection.setRequestProperty("x-api-key", apiKey)
             connection.setRequestProperty("anthropic-version", "2023-06-01")

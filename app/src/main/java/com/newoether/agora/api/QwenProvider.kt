@@ -43,6 +43,7 @@ class QwenProvider : LlmProvider {
         try {
             val url = URL("$baseUrl/chat/completions")
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             if (config.apiKey.isNotEmpty()) {
@@ -114,6 +115,8 @@ class QwenProvider : LlmProvider {
         try {
             val url = URL("${baseUrl?.trimEnd('/') ?: defaultBaseUrl}/models")
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             json.decodeFromString<OpenAiModelListResponse>(responseText).data.map { it.id }.sorted()

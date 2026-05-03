@@ -242,6 +242,7 @@ class GeminiProvider : LlmProvider {
             
             val url = URL(finalUrlString)
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
@@ -370,6 +371,8 @@ class GeminiProvider : LlmProvider {
             
             val url = URL(finalUrlString)
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.requestMethod = "GET"
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             val json = Json { ignoreUnknownKeys = true }

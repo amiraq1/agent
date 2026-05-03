@@ -71,6 +71,7 @@ class DeepSeekProvider : LlmProvider {
         try {
             val url = URL("$baseUrl/chat/completions")
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
@@ -192,6 +193,8 @@ class DeepSeekProvider : LlmProvider {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: defaultBaseUrl
             val url = URL("$effectiveBaseUrl/models")
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }

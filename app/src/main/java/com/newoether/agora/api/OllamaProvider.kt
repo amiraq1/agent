@@ -103,6 +103,7 @@ class OllamaProvider : LlmProvider {
         try {
             val url = URL("$baseUrl/api/chat")
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             if (config.apiKey.isNotEmpty()) {
@@ -246,6 +247,8 @@ class OllamaProvider : LlmProvider {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "http://localhost:11434"
             val url = URL("$effectiveBaseUrl/api/tags")
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<OllamaTagsResponse>(responseText).models.map { it.name }

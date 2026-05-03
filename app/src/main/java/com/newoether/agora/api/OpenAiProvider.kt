@@ -105,6 +105,7 @@ class OpenAiProvider : LlmProvider {
         try {
             val url = URL("$baseUrl/chat/completions")
             connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             if (config.apiKey.isNotEmpty()) {
@@ -212,6 +213,8 @@ class OpenAiProvider : LlmProvider {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "https://api.openai.com/v1"
             val url = URL("$effectiveBaseUrl/models")
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.requestMethod = "GET"
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
             

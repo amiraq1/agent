@@ -1,13 +1,17 @@
 package com.newoether.agora
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.*
 import androidx.compose.foundation.rememberScrollState
@@ -58,6 +62,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.newoether.agora.data.MemoryManager
 import com.newoether.agora.data.SettingsManager
+import com.newoether.agora.service.AgoraForegroundService
 import com.newoether.agora.data.local.ChatDatabase
 import com.newoether.agora.model.Participant
 import com.newoether.agora.ui.components.ChatBottomBar
@@ -77,7 +82,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        
+
+        AgoraForegroundService.createChannel(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+            }
+        }
+
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE conversations ADD COLUMN selectedBranchesJson TEXT")
@@ -1046,19 +1059,19 @@ fun ChatApp(
                 }
             ) { padding ->
                 Box(modifier = Modifier.fillMaxSize()) {
+                    val topBarH = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+                    val pivotY = ((LocalConfiguration.current.screenHeightDp + topBarH.value / 2f - bottomBarHeight.value) / 2f) / LocalConfiguration.current.screenHeightDp
                     AnimatedContent(
                         targetState = Pair(isNewChatMode, showLaunchContent),
                         transitionSpec = {
                             val targetNewChat = targetState.first
                             val targetShowLaunch = targetState.second
                             val initialShowLaunch = initialState.second
-                            
+
                             if (targetNewChat && (targetShowLaunch != initialShowLaunch || targetNewChat != initialState.first)) {
-                                // Transition TO New Chat (or at Launch): Fade out history, Scale in prompt
-                                // Less extreme initial velocity, smooth finish
                                 val enterSpec = tween<Float>(700, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1.0f))
                                 val fadeInSpec = tween<Float>(500)
-                                (fadeIn(animationSpec = fadeInSpec) + scaleIn(initialScale = 0.6f, transformOrigin = TransformOrigin(0.5f, 0.45f), animationSpec = enterSpec))
+                                (fadeIn(animationSpec = fadeInSpec) + scaleIn(initialScale = 0.6f, transformOrigin = TransformOrigin(0.5f, pivotY), animationSpec = enterSpec))
                                     .togetherWith(fadeOut(animationSpec = tween(300)))
                             } else {
                                 // Transition FROM New Chat (or between histories): Simple crossfade
@@ -1117,109 +1130,20 @@ fun ChatApp(
                                     .padding(bottom = bottomBarHeight), 
                                 contentAlignment = Alignment.TopCenter
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                Box(
                                     modifier = Modifier
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(horizontal = 32.dp)
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState()),
+                                    contentAlignment = Alignment.TopCenter
                                 ) {
-                                    // Padding for Top Bar
-                                    Spacer(modifier = Modifier.height(140.dp))
-
-                                    // App Logo (Transparent Large)
-                                    androidx.compose.foundation.Image(
-                                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.agora_transparent_large),
-                                        contentDescription = "Agora Logo",
-                                        modifier = Modifier
-                                            .size(100.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.height(20.dp))
-
-                                    // Brand & Mission
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            "AGORA",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 4.sp,
-                                            color = MaterialTheme.colorScheme.onBackground
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            "AN OPEN SOURCE AI CLIENT",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Medium,
-                                            letterSpacing = 4.sp,
-                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(48.dp))
-
-                                    // Slogan Section
+                                    // Welcome - positioned from top
                                     Text(
-                                        text = "Access powerful models without the guardrails of corporate silos",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        lineHeight = 24.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                        modifier = Modifier.padding(horizontal = 48.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.height(48.dp))
-
-                                    // Suggestion Chips (More organic layout)
-                                    Text(
-                                        "START A CONVERSATION",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        "Welcome to Agora.",
+                                        style = MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.padding(bottom = 12.dp)
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        modifier = Modifier.padding(top = ((LocalConfiguration.current.screenHeightDp + topBarH.value / 2f - bottomBarHeight.value) / 2).dp)
                                     )
-                                    
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        val suggestions = listOf(
-                                            "Summarize article" to "Summarize this article: ",
-                                            "Code a script" to "Write a python script for ",
-                                            "Travel plan" to "Plan a 5-day trip to Tokyo",
-                                            "Explain physics" to "Explain quantum physics to me"
-                                        )
-
-                                        suggestions.chunked(2).forEach { rowItems ->
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                rowItems.forEach { (label, prompt) ->
-                                                    SuggestionChip(
-                                                        onClick = { 
-                                                            textFieldState.edit { 
-                                                                replace(0, length, prompt)
-                                                            }
-                                                        },
-                                                        label = { 
-                                                            Text(
-                                                                text = label,
-                                                                style = MaterialTheme.typography.labelLarge,
-                                                                fontWeight = FontWeight.SemiBold,
-                                                                modifier = Modifier.padding(horizontal = 4.dp)
-                                                            ) 
-                                                        },
-                                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        ),
-                                                        border = null,
-                                                        shape = CircleShape
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         } else {
