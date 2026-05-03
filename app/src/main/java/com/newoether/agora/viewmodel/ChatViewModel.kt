@@ -562,7 +562,7 @@ class ChatViewModel(
                             _selectedChildren.value = newMap
             }
             
-            generateResponse(currentId, userMessage.text, modelMessageId, startTime)
+            generateResponse(currentId, userMessage.text, modelMessageId, startTime, isRegenerate = true)
         }
     }
 
@@ -791,7 +791,7 @@ class ChatViewModel(
         return result.ifEmpty { null }
     }
 
-    private suspend fun generateResponse(currentId: String, text: String, modelMessageId: String, startTime: Long) {
+    private suspend fun generateResponse(currentId: String, text: String, modelMessageId: String, startTime: Long, isRegenerate: Boolean = false) {
         val modelIdWithPrefix = currentActiveModel.value
         val providerName = getProviderForModel(modelIdWithPrefix)
         val modelId = modelIdWithPrefix.substringAfter(":")
@@ -937,10 +937,13 @@ class ChatViewModel(
             var toolRound = 0
             val maxToolRounds = 5
             toolPath = currentPath
+            // For regenerate, chain new tool messages from the original model's parent
+            // so model_new stays a sibling of model_original
+            val chainRootId = if (isRegenerate) parentId else null
 
             while (toolCallData != null && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < maxToolRounds) {
                 toolRound++
-                val prevLastId = toolPath.lastOrNull()?.id
+                val prevLastId = if (toolRound == 1 && chainRootId != null) chainRootId else toolPath.lastOrNull()?.id
                 val toolMsgId = "tool_${UUID.randomUUID()}"
                 val resultMsgId = "result_${UUID.randomUUID()}"
                 toolPath = toolPath.toMutableList().apply {
@@ -956,21 +959,6 @@ class ChatViewModel(
                         toolCall = toolCallData
                     ))
                 }
-                // Persist tool call + result to DB so they appear in conversation history
-                val tcSegments = listOf(MessageSegment(type = "tool", toolName = toolCallData!!.toolName, toolArgs = toolCallData!!.arguments, toolResult = toolCallData!!.result))
-                val tcJson = Json.encodeToString(tcSegments)
-                chatDao.upsertMessage(MessageEntity(
-                    id = toolMsgId, conversationId = currentId, parentId = prevLastId,
-                    text = "", thoughts = null, status = MessageStatus.SUCCESS,
-                    participant = Participant.MODEL, timestamp = System.currentTimeMillis(),
-                    toolCallJson = tcJson
-                ))
-                chatDao.upsertMessage(MessageEntity(
-                    id = resultMsgId, conversationId = currentId, parentId = toolMsgId,
-                    text = toolCallData!!.result, thoughts = null, status = MessageStatus.SUCCESS,
-                    participant = Participant.USER, timestamp = System.currentTimeMillis(),
-                    toolCallJson = tcJson
-                ))
 
                 toolCallData = null
 
@@ -1039,6 +1027,24 @@ class ChatViewModel(
                 }
             }
 
+            // Persist synthetic tool messages from toolPath to DB (batch, not during streaming)
+            // Skip for regenerate — the model response must stay a sibling of the original
+            if (!isRegenerate) for (msg in toolPath) {
+                if (msg.id.startsWith("tool_") || msg.id.startsWith("result_")) {
+                    val exists = chatDao.getMessagesForConversation(currentId).first().any { it.id == msg.id }
+                    if (!exists) {
+                        chatDao.upsertMessage(MessageEntity(
+                            id = msg.id, conversationId = currentId, parentId = msg.parentId,
+                            text = msg.text, thoughts = null, status = msg.status,
+                            participant = msg.participant, timestamp = System.currentTimeMillis(),
+                            toolCallJson = msg.toolCall?.let { Json.encodeToString(listOf(
+                                MessageSegment(type = "tool", toolName = it.toolName, toolArgs = it.arguments, toolResult = it.result)
+                            )) }
+                        ))
+                    }
+                }
+            }
+
             if (currentStatus != MessageStatus.ERROR) {
                 currentStatus = if (totalText.isNotEmpty() || totalThoughts.isNotEmpty()) MessageStatus.SUCCESS else MessageStatus.ERROR
             }
@@ -1059,8 +1065,7 @@ class ChatViewModel(
                         val finalStreamingMsg = _streamingMessage.value
                         val finalSegments = finalStreamingMsg?.segments ?: segments.toList().ifEmpty { null }
                         val segmentsJson = finalSegments?.let { Json.encodeToString(it) }
-                        // Use toolPath's last message as parentId so the chain is correct after tool calls
-                        val effectiveParentId = toolPath.lastOrNull()?.id ?: parentId
+                        val effectiveParentId = if (isRegenerate) parentId else (toolPath.lastOrNull()?.id ?: parentId)
                         if (finalStreamingMsg != null) {
                             chatDao.upsertMessage(MessageEntity(id = finalStreamingMsg.id, conversationId = currentId, parentId = effectiveParentId, text = finalStreamingMsg.text, thoughts = finalStreamingMsg.thoughts, thoughtTitle = finalStreamingMsg.thoughtTitle, tokenCount = finalStreamingMsg.tokenCount, status = currentStatus, participant = finalStreamingMsg.participant, timestamp = finalStreamingMsg.timestamp, thoughtTimeMs = finalStreamingMsg.thoughtTimeMs, modelName = finalStreamingMsg.modelName, toolCallJson = segmentsJson))
                         } else {

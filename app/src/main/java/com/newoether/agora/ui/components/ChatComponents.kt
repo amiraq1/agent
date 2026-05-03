@@ -66,6 +66,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -81,14 +84,62 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.newoether.agora.model.ChatMessage
+import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
 import com.newoether.agora.model.Participant
 import com.newoether.agora.ui.theme.MonoFamily
 import com.newoether.agora.ui.components.parseLatexSpans
+
 import com.newoether.agora.ui.components.renderLatexToBitmap
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import com.mikepenz.markdown.model.markdownPadding
+
+private fun mergeAdjacentSegments(segs: List<MessageSegment>): List<MessageSegment> {
+    val merged = mutableListOf<MessageSegment>()
+    for (seg in segs) {
+        val last = merged.lastOrNull()
+        if (last != null && last.type == seg.type && seg.type == "thought") {
+            merged[merged.lastIndex] = last.copy(content = last.content + seg.content)
+        } else {
+            merged.add(seg)
+        }
+    }
+    return merged
+}
+
+private fun toolSummary(seg: MessageSegment): String {
+    val name = seg.toolName ?: ""
+    val fileName = try {
+        val args = Json.parseToJsonElement(seg.toolArgs ?: "{}")
+        args.jsonObject["name"]?.let { (it as? JsonPrimitive)?.content?.removeSuffix(".md") }
+    } catch (_: Exception) { null }
+    return when (name) {
+        "read_memory_file" -> if (fileName != null) "Read $fileName.md." else "Read memory file."
+        "create_memory_file" -> if (fileName != null) "Created $fileName.md." else "Created memory file."
+        "edit_memory_file" -> if (fileName != null) "Edited $fileName.md." else "Edited memory file."
+        "delete_memory_file" -> if (fileName != null) "Deleted $fileName.md." else "Deleted memory file."
+        "list_memory_files" -> "Listed memory files."
+        "update_active_memory" -> "Updated active memory."
+        else -> (seg.toolResult ?: "").lines().firstOrNull()?.take(120) ?: "Tool executed."
+    }
+}
+
+private fun toolResultSummary(toolName: String, toolArgs: String): String {
+    val fileName = try {
+        val args = Json.parseToJsonElement(toolArgs.ifBlank { "{}" })
+        args.jsonObject["name"]?.let { (it as? JsonPrimitive)?.content?.removeSuffix(".md") }
+    } catch (_: Exception) { null }
+    return when (toolName) {
+        "read_memory_file" -> if (fileName != null) "Read $fileName.md." else "Read memory file."
+        "create_memory_file" -> if (fileName != null) "Created $fileName.md." else "Created memory file."
+        "edit_memory_file" -> if (fileName != null) "Edited $fileName.md." else "Edited memory file."
+        "delete_memory_file" -> if (fileName != null) "Deleted $fileName.md." else "Deleted memory file."
+        "list_memory_files" -> "Listed memory files."
+        "update_active_memory" -> "Updated active memory."
+        else -> "Tool executed."
+    }
+}
 
 @Composable
 fun MessageList(
@@ -314,13 +365,19 @@ fun MessageItem(
     
     // Dedicated compact typography for thoughts
     val thoughtTypography = markdownTypography(
-        text = currentTypography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
-        h1 = currentTypography.titleSmall.copy(fontSize = 12.sp),
-        h2 = currentTypography.titleSmall.copy(fontSize = 11.sp),
-        h3 = currentTypography.titleSmall.copy(fontSize = 10.sp),
-        h4 = currentTypography.titleSmall.copy(fontSize = 10.sp),
-        h5 = currentTypography.titleSmall.copy(fontSize = 10.sp),
-        h6 = currentTypography.titleSmall.copy(fontSize = 10.sp),
+        text = currentTypography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        paragraph = currentTypography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        ordered = currentTypography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        bullet = currentTypography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        list = currentTypography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        h1 = currentTypography.bodyMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+        h2 = currentTypography.bodyMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+        h3 = currentTypography.bodyMedium.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+        h4 = currentTypography.bodyMedium.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+        h5 = currentTypography.bodyMedium.copy(fontSize = 13.sp),
+        h6 = currentTypography.bodyMedium.copy(fontSize = 12.sp),
+        code = currentTypography.bodyMedium.copy(fontFamily = MonoFamily, fontSize = 12.sp),
+        inlineCode = currentTypography.bodyMedium.copy(fontFamily = MonoFamily, fontSize = 12.sp),
     )
 
     val customMarkdownPadding = markdownPadding(block = 12.dp)
@@ -495,12 +552,17 @@ fun MessageItem(
 
                         // Merged segment block: single block, newest title/icon when collapsed
                         if (message.segments != null && message.segments!!.isNotEmpty()) {
-                            val segs = message.segments!!
+                            val segs = mergeAdjacentSegments(message.segments!!)
                             val lastSeg = segs.last()
                             val isLastTool = lastSeg.type == "tool"
                             val isThinking = message.status == MessageStatus.THINKING
                             val collapsedTitle = if (isLastTool) {
-                                (lastSeg.toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                                val baseName = (lastSeg.toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                                val argName = try {
+                                    val args = Json.parseToJsonElement(lastSeg.toolArgs ?: "{}")
+                                    args.jsonObject["name"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.removeSuffix(".md") }
+                                } catch (_: Exception) { null }
+                                if (argName != null) "$baseName $argName" else baseName
                             } else {
                                 if (message.thoughtTitle != null) message.thoughtTitle
                                 else if (!isThinking) {
@@ -559,17 +621,12 @@ fun MessageItem(
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                     fontWeight = FontWeight.SemiBold
                                                 )
-                                                val density = androidx.compose.ui.platform.LocalDensity.current
-                                                CompositionLocalProvider(
-                                                    androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                                ) {
-                                                    SelectionContainer {
+                                                SelectionContainer {
                                                         Markdown(
                                                             seg.content, modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
                                                             typography = thoughtTypography, padding = thoughtMarkdownPadding
                                                         )
                                                     }
-                                                }
                                             } else if (seg.type == "tool") {
                                                 Text(
                                                     (seg.toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } },
@@ -577,17 +634,11 @@ fun MessageItem(
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                     fontWeight = FontWeight.SemiBold
                                                 )
-                                                val density = androidx.compose.ui.platform.LocalDensity.current
-                                                CompositionLocalProvider(
-                                                    androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                                ) {
-                                                    SelectionContainer {
-                                                        Markdown(
-                                                            (seg.toolResult ?: ""), modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
-                                                            typography = thoughtTypography, padding = thoughtMarkdownPadding
-                                                        )
-                                                    }
-                                                }
+                                                Text(
+                                                    text = toolSummary(seg),
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                             if (idx < segs.lastIndex) {
                                                 HorizontalDivider(
@@ -684,20 +735,15 @@ fun MessageItem(
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(20.dp))
-                                        val density = androidx.compose.ui.platform.LocalDensity.current
-                                        CompositionLocalProvider(
-                                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                        ) {
-                                            SelectionContainer {
-                                                Markdown(
-                                                    content = debouncedThoughts,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .bringIntoViewResponder(noOpResponder),
-                                                    typography = thoughtTypography,
-                                                    padding = thoughtMarkdownPadding // Use tighter padding for thoughts
-                                                )
-                                            }
+                                        SelectionContainer {
+                                            Markdown(
+                                                content = debouncedThoughts,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .bringIntoViewResponder(noOpResponder),
+                                                typography = thoughtTypography,
+                                                padding = thoughtMarkdownPadding // Use tighter padding for thoughts
+                                            )
                                         }
                                     }
                                 }
@@ -773,18 +819,13 @@ fun MessageItem(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                             fontWeight = FontWeight.SemiBold
                                         )
-                                        val density = androidx.compose.ui.platform.LocalDensity.current
-                                        CompositionLocalProvider(
-                                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * 0.8f)
-                                        ) {
-                                            SelectionContainer {
-                                                Markdown(
-                                                    message.toolCall!!.result,
-                                                    modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
-                                                    typography = thoughtTypography,
-                                                    padding = thoughtMarkdownPadding
-                                                )
-                                            }
+                                        val summary = toolResultSummary(message.toolCall!!.toolName, message.toolCall!!.arguments)
+                                        SelectionContainer {
+                                            Text(
+                                                summary,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
