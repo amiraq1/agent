@@ -512,7 +512,7 @@ class ChatViewModel(
     fun stopGeneration() {
         generationJob?.cancel()
         _isLoading.value = false
-        _streamingMessage.value = null
+        _streamingMessage.value = _streamingMessage.value?.copy(status = MessageStatus.STOPPED)
         _generatingInConversationId.value = null
         AgoraForegroundService.stop(getApplication())
     }

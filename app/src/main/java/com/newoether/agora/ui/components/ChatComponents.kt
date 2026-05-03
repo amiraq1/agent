@@ -896,7 +896,8 @@ fun MessageItem(
                                 }
                             }
                         }
-                        if (!isStreaming && message.status == MessageStatus.STOPPED) {
+                        val showStopped = message.status == MessageStatus.STOPPED || (!isStreaming && message.status == MessageStatus.SENDING && message.text.isEmpty() && (message.thoughts.isNullOrBlank()))
+                        if (showStopped) {
                             Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp), modifier = Modifier.padding(top = if (debouncedText.isNotEmpty()) 8.dp else 0.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                                     Icon(Icons.Default.Info, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
