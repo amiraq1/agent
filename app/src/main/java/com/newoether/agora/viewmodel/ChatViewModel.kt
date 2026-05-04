@@ -1020,8 +1020,8 @@ class ChatViewModel(
                                 }
                                 val result = executeTool(event.name, event.arguments)
                                 val tcd = ToolCallData(event.name, event.arguments, result)
-                                toolCallData = tcd
-                                toolCallDataList = listOf(tcd)
+                                if (toolCallData == null) toolCallData = tcd
+                                toolCallDataList = toolCallDataList + tcd
                                 val ts = MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result, signature = event.signature)
                                 segments.add(ts)
                                 roundToolSegments.add(ts)
@@ -1170,8 +1170,8 @@ class ChatViewModel(
                                     }
                                     val result = executeTool(event.name, event.arguments)
                                     val tcd = ToolCallData(event.name, event.arguments, result)
-                                    toolCallData = tcd
-                                    toolCallDataList = listOf(tcd)
+                                    if (toolCallData == null) toolCallData = tcd
+                                    toolCallDataList = toolCallDataList + tcd
                                     val ts = MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result)
                                     segments.add(ts)
                                     roundToolSegments.add(ts)

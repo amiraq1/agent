@@ -12,12 +12,12 @@ import com.newoether.agora.util.Constants
 import java.io.File
 import java.security.MessageDigest
 
-fun buildToolCallId(toolName: String, arguments: String): String {
+fun buildToolCallId(toolName: String, arguments: String, prefix: String = Constants.TOOL_CALL_ID_PREFIX): String {
     val digest = MessageDigest.getInstance("SHA-256")
     val input = "$toolName:$arguments"
     val hash = digest.digest(input.toByteArray())
     val shortHash = hash.take(8).joinToString("") { "%02x".format(it) }
-    return "${Constants.TOOL_CALL_ID_PREFIX}${toolName}_$shortHash"
+    return "$prefix${toolName}_$shortHash"
 }
 
 fun encodeImageToBase64(imagePath: String): Pair<String, String>? {

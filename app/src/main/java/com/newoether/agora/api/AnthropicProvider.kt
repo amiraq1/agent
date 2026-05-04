@@ -3,6 +3,7 @@ package com.newoether.agora.api
 import android.util.Log
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
+import com.newoether.agora.api.util.buildToolCallId
 import com.newoether.agora.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -139,7 +140,7 @@ class AnthropicProvider : LlmProvider {
                 val toolSegs = msg.segments?.filter { it.type == "tool" }
                 if (!toolSegs.isNullOrEmpty()) {
                     val toolUseBlocks = toolSegs.map { seg ->
-                        val toolId = "tool_${seg.toolName ?: ""}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        val toolId = buildToolCallId(seg.toolName ?: "", seg.toolArgs ?: "{}", "tool_")
                         AnthropicContentPart(
                             type = "tool_use",
                             id = toolId,
@@ -150,7 +151,7 @@ class AnthropicProvider : LlmProvider {
                     entries.add(AnthropicMessage(role = "assistant", content = toolUseBlocks))
                 } else if (msg.toolCall != null) {
                     val tc = msg.toolCall!!
-                    val toolId = "tool_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+                    val toolId = buildToolCallId(tc.toolName, tc.arguments, "tool_")
                     entries.add(AnthropicMessage(
                         role = "assistant",
                         content = listOf(AnthropicContentPart(
@@ -169,7 +170,7 @@ class AnthropicProvider : LlmProvider {
                 val toolSegs = msg.segments?.filter { it.type == "tool" }
                 if (!toolSegs.isNullOrEmpty()) {
                     val toolResultBlocks = toolSegs.map { seg ->
-                        val toolId = "tool_${seg.toolName ?: ""}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        val toolId = buildToolCallId(seg.toolName ?: "", seg.toolArgs ?: "{}", "tool_")
                         AnthropicContentPart(
                             type = "tool_result",
                             toolUseId = toolId,
@@ -179,7 +180,7 @@ class AnthropicProvider : LlmProvider {
                     entries.add(AnthropicMessage(role = "user", content = toolResultBlocks))
                 } else if (msg.toolCall != null) {
                     val tc = msg.toolCall!!
-                    val toolId = "tool_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+                    val toolId = buildToolCallId(tc.toolName, tc.arguments, "tool_")
                     entries.add(AnthropicMessage(
                         role = "user",
                         content = listOf(AnthropicContentPart(

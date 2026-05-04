@@ -83,23 +83,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.newoether.agora.model.ChatMessage
-import com.newoether.agora.model.MessageSegment
-import com.newoether.agora.model.MessageStatus
-import com.newoether.agora.model.Participant
-import com.newoether.agora.ui.theme.MonoFamily
-import com.newoether.agora.ui.components.parseLatexSpans
-import com.newoether.agora.ui.components.LatexImageTransformer
-import com.newoether.agora.ui.components.LatexAwareText
-import com.newoether.agora.ui.components.renderLatexToBitmap
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownTypography
-import com.mikepenz.markdown.model.markdownPadding
-import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.compose.elements.MarkdownTable
-import com.mikepenz.markdown.compose.elements.MarkdownTableHeader
-import com.mikepenz.markdown.compose.elements.MarkdownTableRow
-
 fun Modifier.verticalScrollbar(
     scrollState: ScrollState,
     color: Color,

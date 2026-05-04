@@ -163,41 +163,72 @@ class GeminiProvider : LlmProvider {
         val apiContents = limitedPath.flatMap { msg ->
             val entries = mutableListOf<ApiRequestContent>()
 
-            // tool_ messages: model turn with functionCall
+            // tool_ messages: model turn with functionCall(s)
             // Note: Gemini 3 requires thought to be boolean in requests, so we omit thought strings
             // and only include thoughtSignature on the functionCall part
-            if (msg.id.startsWith(Constants.TOOL_MSG_PREFIX) && msg.toolCall != null) {
-                val args = try {
-                    json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject
-                } catch (_: Exception) { JsonObject(emptyMap()) }
-                // Extract non-blank signature from any segment (thought or tool)
+            if (msg.id.startsWith(Constants.TOOL_MSG_PREFIX)) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
                 val sig = msg.segments?.lastOrNull { !it.signature.isNullOrBlank() }?.signature
-                entries.add(ApiRequestContent(
-                    role = "model",
-                    parts = listOf(ApiRequestPart(
-                        functionCall = GeminiFunctionCall(
-                            name = msg.toolCall!!.toolName, args = args ?: JsonObject(emptyMap())
-                        ),
-                        thoughtSignature = sig
+                if (!toolSegs.isNullOrEmpty()) {
+                    val parts = toolSegs.map { seg ->
+                        val args = try {
+                            json.parseToJsonElement(seg.toolArgs ?: "{}") as? JsonObject
+                        } catch (_: Exception) { JsonObject(emptyMap()) }
+                        ApiRequestPart(
+                            functionCall = GeminiFunctionCall(
+                                name = seg.toolName ?: "", args = args ?: JsonObject(emptyMap())
+                            ),
+                            thoughtSignature = sig
+                        )
+                    }
+                    entries.add(ApiRequestContent(role = "model", parts = parts))
+                } else if (msg.toolCall != null) {
+                    val args = try {
+                        json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject
+                    } catch (_: Exception) { JsonObject(emptyMap()) }
+                    entries.add(ApiRequestContent(
+                        role = "model",
+                        parts = listOf(ApiRequestPart(
+                            functionCall = GeminiFunctionCall(
+                                name = msg.toolCall!!.toolName, args = args ?: JsonObject(emptyMap())
+                            ),
+                            thoughtSignature = sig
+                        ))
                     ))
-                ))
+                }
                 return@flatMap entries
             }
 
-            // result_ messages carry the function response
-            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX) && msg.toolCall != null) {
-                val response = try {
-                    json.parseToJsonElement(msg.toolCall!!.result) as? JsonObject
-                } catch (_: Exception) {
-                    JsonObject(mapOf("result" to JsonPrimitive(msg.toolCall!!.result)))
+            // result_ messages carry the function response(s)
+            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX)) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
+                if (!toolSegs.isNullOrEmpty()) {
+                    val parts = toolSegs.map { seg ->
+                        val response = try {
+                            json.parseToJsonElement(seg.toolResult ?: "{}") as? JsonObject
+                        } catch (_: Exception) {
+                            JsonObject(mapOf("result" to JsonPrimitive(seg.toolResult ?: "")))
+                        }
+                        ApiRequestPart(functionResponse = GeminiFunctionResponse(
+                            name = seg.toolName ?: "",
+                            response = response ?: JsonObject(emptyMap())
+                        ))
+                    }
+                    entries.add(ApiRequestContent(role = "user", parts = parts))
+                } else if (msg.toolCall != null) {
+                    val response = try {
+                        json.parseToJsonElement(msg.toolCall!!.result) as? JsonObject
+                    } catch (_: Exception) {
+                        JsonObject(mapOf("result" to JsonPrimitive(msg.toolCall!!.result)))
+                    }
+                    entries.add(ApiRequestContent(
+                        role = "user",
+                        parts = listOf(ApiRequestPart(functionResponse = GeminiFunctionResponse(
+                            name = msg.toolCall!!.toolName,
+                            response = response ?: JsonObject(emptyMap())
+                        )))
+                    ))
                 }
-                entries.add(ApiRequestContent(
-                    role = "user",
-                    parts = listOf(ApiRequestPart(functionResponse = GeminiFunctionResponse(
-                        name = msg.toolCall!!.toolName,
-                        response = response ?: JsonObject(emptyMap())
-                    )))
-                ))
                 return@flatMap entries
             }
 

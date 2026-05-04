@@ -1,6 +1,7 @@
 package com.newoether.agora.api
 
 import android.util.Log
+import com.newoether.agora.api.util.buildToolCallId
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
 import com.newoether.agora.util.Constants
@@ -88,7 +89,7 @@ class OllamaProvider : LlmProvider {
                 val thinkingContent = msg.segments?.lastOrNull { it.type == "thought" }?.content
                 if (!toolSegs.isNullOrEmpty()) {
                     val toolCalls = toolSegs.map { seg ->
-                        val tid = "${Constants.TOOL_CALL_ID_PREFIX}${seg.toolName}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        val tid = buildToolCallId(seg.toolName ?: "", seg.toolArgs ?: "{}")
                         val argsObj = try { json.parseToJsonElement(seg.toolArgs ?: "{}") as? JsonObject } catch (_: Exception) { JsonObject(emptyMap()) }
                         OpenAiToolCall(
                             id = tid,
@@ -103,7 +104,7 @@ class OllamaProvider : LlmProvider {
                         toolCalls = toolCalls
                     ))
                 } else if (msg.toolCall != null) {
-                    val toolId = "${Constants.TOOL_CALL_ID_PREFIX}${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+                    val toolId = buildToolCallId(msg.toolCall!!.toolName, msg.toolCall!!.arguments)
                     val argsObj = try { json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject } catch (_: Exception) { JsonObject(emptyMap()) }
                     entries.add(OllamaMessage(
                         role = "assistant",
@@ -119,12 +120,22 @@ class OllamaProvider : LlmProvider {
                 return@flatMap entries
             }
 
-            // result_ messages carry the tool result
-            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX) && msg.toolCall != null) {
-                entries.add(OllamaMessage(
-                    role = "user",
-                    content = msg.toolCall!!.result
-                ))
+            // result_ messages carry the tool result(s)
+            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX)) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
+                if (!toolSegs.isNullOrEmpty()) {
+                    for (seg in toolSegs) {
+                        entries.add(OllamaMessage(
+                            role = "user",
+                            content = seg.toolResult ?: ""
+                        ))
+                    }
+                } else if (msg.toolCall != null) {
+                    entries.add(OllamaMessage(
+                        role = "user",
+                        content = msg.toolCall!!.result
+                    ))
+                }
                 return@flatMap entries
             }
 
