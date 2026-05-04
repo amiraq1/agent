@@ -192,6 +192,12 @@ data class OpenAiModelListResponse(val data: List<OpenAiModelInfo>)
 @Serializable
 data class OpenAiModelInfo(val id: String)
 
+@Serializable
+data class OpenAiErrorResponse(val error: OpenAiError)
+
+@Serializable
+data class OpenAiError(val message: String, val type: String? = null, val code: String? = null)
+
 class PendingToolCall(
     var id: String = "",
     var name: String = "",

@@ -1,201 +1,61 @@
 package com.newoether.agora.api
 
-
-import android.util.Log
-import com.newoether.agora.api.util.convertToOpenAiMessages
-import com.newoether.agora.model.ChatMessage
-import com.newoether.agora.model.Participant
-import com.newoether.agora.util.Constants
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.isActive
-import kotlinx.serialization.json.Json
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+import com.newoether.agora.api.util.StreamingThinkTagParser
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
-class OpenRouterProvider : LlmProvider {
+class OpenRouterProvider : BaseOpenAiProvider() {
     override val name: String = "Open Router"
     override val defaultBaseUrl: String = "https://openrouter.ai/api/v1"
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 
-    override fun generateResponse(
-        messages: List<ChatMessage>,
-        config: ProviderConfig
-    ): Flow<StreamEvent> = flow {
-        val baseUrl = config.baseUrl?.trimEnd('/') ?: defaultBaseUrl
-        val modelName = config.modelId
-
-        val limitedMessages = if (messages.size > config.maxContextWindow) {
-            messages.takeLast(config.maxContextWindow)
-        } else messages
-
-        // System prompt + time injection
+    override fun transformSystemPrompt(prompt: String?): String? {
         val sdf = SimpleDateFormat("MMMM d, yyyy, HH:mm", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("GMT+8")
         }
         val timeInfo = "Current Time: ${sdf.format(Date())} (UTC+8)\n\n"
-        val systemPrompt = timeInfo + (config.systemPrompt ?: "")
+        return timeInfo + (prompt ?: "")
+    }
 
-        val apiMessages = convertToOpenAiMessages(
-            messages = limitedMessages,
-            systemPrompt = systemPrompt,
-            includeImages = true
-        )
-
-        val requestBody = OpenAiChatRequest(
-            model = config.modelId,
-            messages = apiMessages,
-            stream = true,
-            streamOptions = OpenAiStreamOptions(includeUsage = true),
+    override fun customizeRequest(request: OpenAiChatRequest, config: ProviderConfig): OpenAiChatRequest {
+        return request.copy(
             reasoning = if (config.thinkingEnabled) OpenAiReasoning(effort = "high") else null,
-            plugins = if (config.googleSearchEnabled) listOf(OpenAiPlugin(id = "web")) else null,
-            tools = config.tools
+            plugins = if (config.googleSearchEnabled) listOf(OpenAiPlugin(id = "web")) else null
         )
+    }
 
-        var connection: HttpURLConnection? = null
-        try {
-            val url = URL("$baseUrl/chat/completions")
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            if (config.apiKey.isNotEmpty()) {
-                connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
-            }
-            connection.setRequestProperty("HTTP-Referer", "https://github.com/newo-ether/Agora")
-            connection.setRequestProperty("X-Title", "Agora")
-            connection.doOutput = true
-            val requestBodyJson = json.encodeToString(OpenAiChatRequest.serializer(), requestBody)
-            Log.d("AgoraAPI", "[OpenRouter] REQ → $baseUrl/chat/completions | model=${config.modelId} | msgs=${apiMessages.size} | thinking=${config.thinkingEnabled} | reasoning=${requestBody.reasoning != null} | tools=${config.tools?.size ?: 0}")
-            Log.d("AgoraAPI", "[OpenRouter] BODY: ${requestBodyJson.take(4000)}")
-            connection.outputStream.bufferedWriter().use {
-                it.write(requestBodyJson)
-            }
+    override fun getExtraHeaders(config: ProviderConfig): Map<String, String> = mapOf(
+        "HTTP-Referer" to "https://github.com/newo-ether/Agora",
+        "X-Title" to "Agora"
+    )
 
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.readTimeout = 200
-                val reader = connection.inputStream.bufferedReader()
-                val pendingToolCalls = mutableMapOf<Int, PendingToolCall>()
-                var line: String? = null
-                while (currentCoroutineContext().isActive) {
-                    try {
-                        line = reader.readLine()
-                        if (line == null) break
-                    } catch (e: java.net.SocketTimeoutException) {
-                        if (!currentCoroutineContext().isActive) break
-                        continue
-                    }
-                    if (line.startsWith("data: ")) {
-                        val jsonStr = line.substring(6).trim()
-                        if (jsonStr == "[DONE]") break
-                        try {
-                            val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
-                            val choice = response.choices?.firstOrNull()
-
-                            choice?.delta?.let { delta ->
-                                delta.reasoningDetails?.forEach { detail ->
-                                    if (detail.type == "reasoning.text" || detail.type == "text") {
-                                        detail.text?.let {
-                                            if (it.isNotEmpty()) {
-                                                val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
-                                                    ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
-                                                emit(StreamEvent.ThoughtChunk(it, title))
-                                            }
-                                        }
-                                    }
-                                }
-                                delta.reasoningContent?.let {
-                                    if (it.isNotEmpty()) {
-                                        val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
-                                            ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
-                                        emit(StreamEvent.ThoughtChunk(it, title))
-                                    }
-                                }
-                                delta.content?.let {
-                                    if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it))
-                                }
-                                delta.toolCalls?.forEach { tc ->
-                                    val existing = if (tc.id != null) pendingToolCalls.values.firstOrNull { it.id == tc.id } else null
-                                    val pending = if (existing != null) existing else {
-                                        val idx = tc.index ?: pendingToolCalls.size
-                                        pendingToolCalls.getOrPut(idx) { PendingToolCall() }
-                                    }
-                                    if (tc.id != null) pending.id = tc.id
-                                    tc.function?.name?.let { pending.name = it }
-                                    tc.function?.arguments?.let {
-                                        pending.args.append(if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString())
-                                    }
-                                }
-                            }
-
-                            if (choice?.finishReason == "tool_calls" && pendingToolCalls.isNotEmpty()) {
-                                val calls = pendingToolCalls.values.filter { it.name.isNotEmpty() }.map {
-                                    StreamEvent.ToolCallRequest(it.id, it.name, it.args.toString())
-                                }
-                                pendingToolCalls.clear()
-                                if (calls.size == 1) emit(calls.first())
-                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
-                            }
-
-                            response.usage?.let {
-                                emit(StreamEvent.UsageUpdate(
-                                    it.totalTokens,
-                                    it.completionTokensDetails?.reasoningTokens ?: 0
-                                ))
-                            }
-                        } catch (e: Exception) {
-                            Log.e("AgoraAPI", "Parse error: ${e.message}", e)
-                        }
+    override suspend fun parseDeltaContent(
+        delta: OpenAiDelta,
+        config: ProviderConfig,
+        thinkParser: StreamingThinkTagParser,
+        emit: suspend (StreamEvent) -> Unit
+    ) {
+        delta.reasoningDetails?.forEach { detail ->
+            if (detail.type == "reasoning.text" || detail.type == "text") {
+                detail.text?.let {
+                    if (it.isNotEmpty()) {
+                        val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
+                            ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                        emit(StreamEvent.ThoughtChunk(it, title))
                     }
                 }
-                if (!currentCoroutineContext().isActive) {
-                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
-                }
-            } else {
-                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error (Code: $responseCode)"
-                Log.e("AgoraAPI", "[OpenRouter] ERR $responseCode: $errorRaw")
-                val errorMessage = try {
-                    val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
-                    "Error ${errorJson.error.code ?: responseCode} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
-                } catch (_: Exception) {
-                    "Error $responseCode: $errorRaw"
-                }
-                emit(StreamEvent.Error(errorMessage))
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: java.net.SocketTimeoutException) {
-            emit(StreamEvent.Error("Request timed out. The server took too long to respond."))
-        } catch (e: java.net.ConnectException) {
-            emit(StreamEvent.Error("Connection refused. Please check your internet connection or if the service is available."))
-        } catch (e: java.net.UnknownHostException) {
-            emit(StreamEvent.Error("Network error: Unable to reach the server. Please check your internet connection."))
-        } catch (e: Exception) {
-            if (currentCoroutineContext().isActive) {
-                emit(StreamEvent.Error("Error: ${e.localizedMessage ?: "An unexpected error occurred."}"))
-            }
-        } finally {
-            connection?.disconnect()
         }
-    }.flowOn(Dispatchers.IO)
-
-    override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        try {
-            val url = URL("${baseUrl?.trimEnd('/') ?: defaultBaseUrl}/models")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
-            json.decodeFromString<OpenAiModelListResponse>(responseText).data.map { it.id }.sorted()
-        } catch (e: Exception) { emptyList() }
+        delta.reasoningContent?.let {
+            if (it.isNotEmpty()) {
+                val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
+                    ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                emit(StreamEvent.ThoughtChunk(it, title))
+            }
+        }
+        delta.content?.let {
+            if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it))
+        }
     }
 }
