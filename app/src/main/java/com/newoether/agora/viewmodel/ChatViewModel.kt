@@ -937,6 +937,7 @@ class ChatViewModel(
             )
 
             var toolCallData: ToolCallData? = null
+            var toolCallDataList: List<ToolCallData> = emptyList()
 
             provider.generateResponse(currentPath, config).collect { event ->
                         when (event) {
@@ -977,7 +978,7 @@ class ChatViewModel(
                                 }
                             }
                             is StreamEvent.Error -> {
-                                if (toolCallData == null) {
+                                if (toolCallData == null && toolCallDataList.isEmpty()) {
                                     totalText = event.message
                                     currentStatus = MessageStatus.ERROR
                                 }
@@ -989,8 +990,25 @@ class ChatViewModel(
                                     currentThoughtSignature = null
                                 }
                                 val result = executeTool(event.name, event.arguments)
-                                toolCallData = ToolCallData(event.name, event.arguments, result)
+                                val tcd = ToolCallData(event.name, event.arguments, result)
+                                toolCallData = tcd
+                                toolCallDataList = listOf(tcd)
                                 segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result, signature = event.signature))
+                                currentStatus = MessageStatus.SENDING
+                            }
+                            is StreamEvent.ToolCallsRequest -> {
+                                if (currentThoughtBuf.isNotEmpty()) {
+                                    segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString(), signature = currentThoughtSignature))
+                                    currentThoughtBuf = StringBuilder()
+                                    currentThoughtSignature = null
+                                }
+                                val tcds = event.calls.map { call ->
+                                    val result = executeTool(call.name, call.arguments)
+                                    segments.add(MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature))
+                                    ToolCallData(call.name, call.arguments, result)
+                                }
+                                toolCallData = tcds.firstOrNull()
+                                toolCallDataList = tcds
                                 currentStatus = MessageStatus.SENDING
                             }
                         }
@@ -1020,29 +1038,34 @@ class ChatViewModel(
             // so model_new stays a sibling of model_original
             val chainRootId = if (isRegenerate) parentId else null
 
-            while (toolCallData != null && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < maxToolRounds) {
+            while (toolCallDataList.isNotEmpty() && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < maxToolRounds) {
                 toolRound++
+                val roundSegments = segments.toList()
+                segments.clear()
                 val prevLastId = if (toolRound == 1 && chainRootId != null) chainRootId else toolPath.lastOrNull()?.id
                 val toolMsgId = "tool_${UUID.randomUUID()}"
-                val resultMsgId = "result_${UUID.randomUUID()}"
-                val toolMsgSegs = segments.ifEmpty { null }
-                val tcData = toolCallData!!
-                val allSegmentsJson = Json.encodeToString(toolMsgSegs ?: listOf(
-                    MessageSegment(type = "tool", toolName = tcData.toolName, toolArgs = tcData.arguments, toolResult = tcData.result)
-                ))
+                val toolMsgSegs = roundSegments.ifEmpty { null }
+                val tcds = toolCallDataList
+                val allSegmentsJson = Json.encodeToString(toolMsgSegs ?: tcds.map { tc ->
+                    MessageSegment(type = "tool", toolName = tc.toolName, toolArgs = tc.arguments, toolResult = tc.result)
+                })
+                val resultMsgs = tcds.map { tcData ->
+                    val rid = "result_${UUID.randomUUID()}"
+                    rid to ChatMessage(
+                        id = rid, parentId = toolMsgId,
+                        text = tcData.result,
+                        participant = Participant.USER, status = MessageStatus.SUCCESS,
+                        toolCall = tcData
+                    )
+                }
                 toolPath = toolPath.toMutableList().apply {
                     add(ChatMessage(
                         id = toolMsgId, parentId = prevLastId,
                         text = "", participant = Participant.MODEL,
-                        status = MessageStatus.SUCCESS, toolCall = tcData,
+                        status = MessageStatus.SUCCESS, toolCall = tcds.first(),
                         segments = toolMsgSegs
                     ))
-                    add(ChatMessage(
-                        id = resultMsgId, parentId = toolMsgId,
-                        text = tcData.result,
-                        participant = Participant.USER, status = MessageStatus.SUCCESS,
-                        toolCall = tcData
-                    ))
+                    for ((_, msg) in resultMsgs) add(msg)
                 }
                 // Persist tool call messages to DB so history survives reload
                 chatDao.upsertMessage(MessageEntity(
@@ -1051,16 +1074,19 @@ class ChatViewModel(
                     participant = Participant.MODEL, timestamp = System.currentTimeMillis(),
                     toolCallJson = allSegmentsJson
                 ))
-                chatDao.upsertMessage(MessageEntity(
-                    id = resultMsgId, conversationId = currentId, parentId = toolMsgId,
-                    text = tcData.result, thoughts = null, status = MessageStatus.SUCCESS,
-                    participant = Participant.USER, timestamp = System.currentTimeMillis(),
-                    toolCallJson = Json.encodeToString(listOf(
-                        MessageSegment(type = "tool", toolName = tcData.toolName, toolArgs = tcData.arguments, toolResult = tcData.result)
+                for ((rid, msg) in resultMsgs) {
+                    chatDao.upsertMessage(MessageEntity(
+                        id = rid, conversationId = currentId, parentId = toolMsgId,
+                        text = msg.text, thoughts = null, status = MessageStatus.SUCCESS,
+                        participant = Participant.USER, timestamp = System.currentTimeMillis(),
+                        toolCallJson = Json.encodeToString(listOf(
+                            MessageSegment(type = "tool", toolName = msg.toolCall!!.toolName, toolArgs = msg.toolCall!!.arguments, toolResult = msg.toolCall!!.result)
+                        ))
                     ))
-                ))
+                }
 
                 toolCallData = null
+                toolCallDataList = emptyList()
 
                 provider.generateResponse(toolPath, config).collect { event ->
                             when (event) {
@@ -1106,8 +1132,25 @@ class ChatViewModel(
                                         currentThoughtSignature = null
                                     }
                                     val result = executeTool(event.name, event.arguments)
-                                    toolCallData = ToolCallData(event.name, event.arguments, result)
+                                    val tcd = ToolCallData(event.name, event.arguments, result)
+                                    toolCallData = tcd
+                                    toolCallDataList = listOf(tcd)
                                     segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result))
+                                    currentStatus = MessageStatus.SENDING
+                                }
+                                is StreamEvent.ToolCallsRequest -> {
+                                    if (currentThoughtBuf.isNotEmpty()) {
+                                        segments.add(MessageSegment(type = "thought", content = currentThoughtBuf.toString(), signature = currentThoughtSignature))
+                                        currentThoughtBuf = StringBuilder()
+                                        currentThoughtSignature = null
+                                    }
+                                    val tcds = event.calls.map { call ->
+                                        val result = executeTool(call.name, call.arguments)
+                                        segments.add(MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature))
+                                        ToolCallData(call.name, call.arguments, result)
+                                    }
+                                    toolCallData = tcds.firstOrNull()
+                                    toolCallDataList = tcds
                                     currentStatus = MessageStatus.SENDING
                                 }
                             }

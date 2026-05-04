@@ -46,18 +46,35 @@ class OpenRouterProvider : LlmProvider {
         // Messages with image support
         for (msg in limitedMessages) {
             // tool_ messages: assistant turn with tool_calls
-            if (msg.id.startsWith("tool_") && msg.toolCall != null) {
-                val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+            if (msg.id.startsWith("tool_")) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
                 val thoughtContent = msg.segments?.lastOrNull { it.type == "thought" }?.content
-                apiMessages.add(OpenAiMessage(
-                    role = "assistant",
-                    content = listOf(OpenAiContentPart(type = "text", text = " ")),
-                    toolCalls = listOf(OpenAiRequestToolCall(
-                        id = toolId,
-                        function = OpenAiRequestFunction(name = msg.toolCall!!.toolName, arguments = msg.toolCall!!.arguments)
-                    )),
-                    reasoningContent = thoughtContent?.ifEmpty { null }
-                ))
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolCalls = toolSegs.map { seg ->
+                        val tid = "call_${seg.toolName}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        OpenAiRequestToolCall(
+                            id = tid,
+                            function = OpenAiRequestFunction(name = seg.toolName ?: "", arguments = seg.toolArgs ?: "{}")
+                        )
+                    }
+                    apiMessages.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = toolCalls,
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                } else if (msg.toolCall != null) {
+                    val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+                    apiMessages.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = listOf(OpenAiRequestToolCall(
+                            id = toolId,
+                            function = OpenAiRequestFunction(name = msg.toolCall!!.toolName, arguments = msg.toolCall!!.arguments)
+                        )),
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                }
                 continue
             }
 
@@ -130,6 +147,7 @@ class OpenRouterProvider : LlmProvider {
             if (responseCode == 200) {
                 connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
+                val pendingToolCalls = mutableMapOf<Int, PendingToolCall>()
                 var line: String? = null
                 while (currentCoroutineContext().isActive) {
                     try {
@@ -145,10 +163,6 @@ class OpenRouterProvider : LlmProvider {
                         try {
                             val response = json.decodeFromString<OpenAiStreamResponse>(jsonStr)
                             val choice = response.choices?.firstOrNull()
-
-                            var toolCallId = ""
-                            var toolCallName = ""
-                            var toolCallArgs = ""
 
                             choice?.delta?.let { delta ->
                                 delta.reasoningDetails?.forEach { detail ->
@@ -173,14 +187,22 @@ class OpenRouterProvider : LlmProvider {
                                     if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it))
                                 }
                                 delta.toolCalls?.forEach { tc ->
-                                    if (tc.id != null) toolCallId = tc.id
-                                    tc.function?.name?.let { toolCallName = it }
-                                    tc.function?.arguments?.let { toolCallArgs += if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() }
+                                    val idx = tc.index ?: pendingToolCalls.size
+                                    val pending = pendingToolCalls.getOrPut(idx) { PendingToolCall() }
+                                    if (tc.id != null) pending.id = tc.id
+                                    tc.function?.name?.let { pending.name = it }
+                                    tc.function?.arguments?.let {
+                                        pending.args.append(if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString())
+                                    }
                                 }
                             }
 
-                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
-                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
+                            if (choice?.finishReason == "tool_calls" && pendingToolCalls.isNotEmpty()) {
+                                val calls = pendingToolCalls.values.filter { it.name.isNotEmpty() }.map {
+                                    StreamEvent.ToolCallRequest(it.id, it.name, it.args.toString())
+                                }
+                                if (calls.size == 1) emit(calls.first())
+                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
                             }
 
                             response.usage?.let {

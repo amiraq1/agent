@@ -44,19 +44,36 @@ class DeepSeekProvider : LlmProvider {
             val entries = mutableListOf<OpenAiMessage>()
 
             // tool_ messages: assistant turn with tool_calls (+ reasoning from thought segments)
-            if (msg.id.startsWith("tool_") && msg.toolCall != null) {
-                val tc = msg.toolCall!!
-                val toolId = "call_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+            if (msg.id.startsWith("tool_")) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
                 val thoughtContent = msg.segments?.lastOrNull { it.type == "thought" }?.content
-                entries.add(OpenAiMessage(
-                    role = "assistant",
-                    content = listOf(OpenAiContentPart(type = "text", text = " ")),
-                    toolCalls = listOf(OpenAiRequestToolCall(
-                        id = toolId,
-                        function = OpenAiRequestFunction(name = tc.toolName, arguments = tc.arguments)
-                    )),
-                    reasoningContent = thoughtContent?.ifEmpty { null }
-                ))
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolCalls = toolSegs.map { seg ->
+                        val tid = "call_${seg.toolName}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        OpenAiRequestToolCall(
+                            id = tid,
+                            function = OpenAiRequestFunction(name = seg.toolName ?: "", arguments = seg.toolArgs ?: "{}")
+                        )
+                    }
+                    entries.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = toolCalls,
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                } else if (msg.toolCall != null) {
+                    val tc = msg.toolCall!!
+                    val toolId = "call_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+                    entries.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = listOf(OpenAiRequestToolCall(
+                            id = toolId,
+                            function = OpenAiRequestFunction(name = tc.toolName, arguments = tc.arguments)
+                        )),
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                }
                 return@flatMap entries
             }
 
@@ -124,9 +141,7 @@ class DeepSeekProvider : LlmProvider {
                 connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
                 var inThinkingBlock = false
-                var toolCallId = ""
-                var toolCallName = ""
-                var toolCallArgs = ""
+                val pendingToolCalls = mutableMapOf<Int, PendingToolCall>()
 
                 var line = reader.readLine()
                 while (line != null && currentCoroutineContext().isActive) {
@@ -181,14 +196,20 @@ class DeepSeekProvider : LlmProvider {
                             }
 
                             delta?.toolCalls?.forEach { tc ->
-                                if (tc.id != null) toolCallId = tc.id
-                                tc.function?.name?.let { toolCallName = it }
+                                val idx = tc.index ?: pendingToolCalls.size
+                                val pending = pendingToolCalls.getOrPut(idx) { PendingToolCall() }
+                                if (tc.id != null) pending.id = tc.id
+                                tc.function?.name?.let { pending.name = it }
                                 tc.function?.arguments?.let {
-                                    toolCallArgs += if (it is JsonPrimitive) it.content else it.toString()
+                                    pending.args.append(if (it is JsonPrimitive) it.content else it.toString())
                                 }
                             }
-                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
-                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
+                            if (choice?.finishReason == "tool_calls" && pendingToolCalls.isNotEmpty()) {
+                                val calls = pendingToolCalls.values.filter { it.name.isNotEmpty() }.map {
+                                    StreamEvent.ToolCallRequest(it.id, it.name, it.args.toString())
+                                }
+                                if (calls.size == 1) emit(calls.first())
+                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
                             }
 
                             response.usage?.let { usage ->

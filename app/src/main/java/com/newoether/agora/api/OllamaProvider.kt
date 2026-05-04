@@ -82,20 +82,39 @@ class OllamaProvider : LlmProvider {
             val entries = mutableListOf<OllamaMessage>()
 
             // tool_ messages: assistant turn with tool_calls (and thinking from segments)
-            if (msg.id.startsWith("tool_") && msg.toolCall != null) {
-                val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
-                val argsObj = try { json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject } catch (_: Exception) { JsonObject(emptyMap()) }
+            if (msg.id.startsWith("tool_")) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
                 val thinkingContent = msg.segments?.lastOrNull { it.type == "thought" }?.content
-                entries.add(OllamaMessage(
-                    role = "assistant",
-                    content = " ",
-                    thinking = thinkingContent?.ifEmpty { null },
-                    toolCalls = listOf(OpenAiToolCall(
-                        id = toolId,
-                        type = "function",
-                        function = OpenAiFunctionCall(name = msg.toolCall!!.toolName, arguments = argsObj ?: JsonObject(emptyMap()))
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolCalls = toolSegs.map { seg ->
+                        val tid = "call_${seg.toolName}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        val argsObj = try { json.parseToJsonElement(seg.toolArgs ?: "{}") as? JsonObject } catch (_: Exception) { JsonObject(emptyMap()) }
+                        OpenAiToolCall(
+                            id = tid,
+                            type = "function",
+                            function = OpenAiFunctionCall(name = seg.toolName ?: "", arguments = argsObj ?: JsonObject(emptyMap()))
+                        )
+                    }
+                    entries.add(OllamaMessage(
+                        role = "assistant",
+                        content = " ",
+                        thinking = thinkingContent?.ifEmpty { null },
+                        toolCalls = toolCalls
                     ))
-                ))
+                } else if (msg.toolCall != null) {
+                    val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+                    val argsObj = try { json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject } catch (_: Exception) { JsonObject(emptyMap()) }
+                    entries.add(OllamaMessage(
+                        role = "assistant",
+                        content = " ",
+                        thinking = thinkingContent?.ifEmpty { null },
+                        toolCalls = listOf(OpenAiToolCall(
+                            id = toolId,
+                            type = "function",
+                            function = OpenAiFunctionCall(name = msg.toolCall!!.toolName, arguments = argsObj ?: JsonObject(emptyMap()))
+                        ))
+                    ))
+                }
                 return@flatMap entries
             }
 

@@ -13,6 +13,7 @@ sealed class StreamEvent {
     data class UsageUpdate(val tokenCount: Int, val thoughtsTokenCount: Int = 0) : StreamEvent()
     data class Error(val message: String) : StreamEvent()
     data class ToolCallRequest(val id: String, val name: String, val arguments: String, val signature: String? = null) : StreamEvent()
+    data class ToolCallsRequest(val calls: List<ToolCallRequest>) : StreamEvent()
 }
 
 data class ProviderConfig(
@@ -190,6 +191,12 @@ data class OpenAiModelListResponse(val data: List<OpenAiModelInfo>)
 
 @Serializable
 data class OpenAiModelInfo(val id: String)
+
+class PendingToolCall(
+    var id: String = "",
+    var name: String = "",
+    val args: StringBuilder = StringBuilder()
+)
 
 interface LlmProvider {
     val name: String

@@ -38,18 +38,35 @@ class QwenProvider : LlmProvider {
         apiMessages.addAll(limitedPath.flatMap { msg ->
             val entries = mutableListOf<OpenAiMessage>()
 
-            if (msg.id.startsWith("tool_") && msg.toolCall != null) {
-                val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+            if (msg.id.startsWith("tool_")) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
                 val thoughtContent = msg.segments?.lastOrNull { it.type == "thought" }?.content
-                entries.add(OpenAiMessage(
-                    role = "assistant",
-                    content = listOf(OpenAiContentPart(type = "text", text = " ")),
-                    toolCalls = listOf(OpenAiRequestToolCall(
-                        id = toolId,
-                        function = OpenAiRequestFunction(name = msg.toolCall!!.toolName, arguments = msg.toolCall!!.arguments)
-                    )),
-                    reasoningContent = thoughtContent?.ifEmpty { null }
-                ))
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolCalls = toolSegs.map { seg ->
+                        val tid = "call_${seg.toolName}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        OpenAiRequestToolCall(
+                            id = tid,
+                            function = OpenAiRequestFunction(name = seg.toolName ?: "", arguments = seg.toolArgs ?: "{}")
+                        )
+                    }
+                    entries.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = toolCalls,
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                } else if (msg.toolCall != null) {
+                    val toolId = "call_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
+                    entries.add(OpenAiMessage(
+                        role = "assistant",
+                        content = listOf(OpenAiContentPart(type = "text", text = " ")),
+                        toolCalls = listOf(OpenAiRequestToolCall(
+                            id = toolId,
+                            function = OpenAiRequestFunction(name = msg.toolCall!!.toolName, arguments = msg.toolCall!!.arguments)
+                        )),
+                        reasoningContent = thoughtContent?.ifEmpty { null }
+                    ))
+                }
                 return@flatMap entries
             }
 
