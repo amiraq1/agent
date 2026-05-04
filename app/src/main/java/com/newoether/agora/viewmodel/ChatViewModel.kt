@@ -938,6 +938,7 @@ class ChatViewModel(
 
             var toolCallData: ToolCallData? = null
             var toolCallDataList: List<ToolCallData> = emptyList()
+            val roundToolSegments = mutableListOf<MessageSegment>()
 
             provider.generateResponse(currentPath, config).collect { event ->
                         when (event) {
@@ -993,7 +994,9 @@ class ChatViewModel(
                                 val tcd = ToolCallData(event.name, event.arguments, result)
                                 toolCallData = tcd
                                 toolCallDataList = listOf(tcd)
-                                segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result, signature = event.signature))
+                                val ts = MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result, signature = event.signature)
+                                segments.add(ts)
+                                roundToolSegments.add(ts)
                                 currentStatus = MessageStatus.SENDING
                             }
                             is StreamEvent.ToolCallsRequest -> {
@@ -1004,7 +1007,9 @@ class ChatViewModel(
                                 }
                                 val tcds = event.calls.map { call ->
                                     val result = executeTool(call.name, call.arguments)
-                                    segments.add(MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature))
+                                    val ts = MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature)
+                                    segments.add(ts)
+                                    roundToolSegments.add(ts)
                                     ToolCallData(call.name, call.arguments, result)
                                 }
                                 toolCallData = tcds.firstOrNull()
@@ -1040,8 +1045,8 @@ class ChatViewModel(
 
             while (toolCallDataList.isNotEmpty() && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < maxToolRounds) {
                 toolRound++
-                val roundSegments = segments.toList()
-                segments.clear()
+                val roundSegments = roundToolSegments.toList()
+                roundToolSegments.clear()
                 val prevLastId = if (toolRound == 1 && chainRootId != null) chainRootId else toolPath.lastOrNull()?.id
                 val toolMsgId = "tool_${UUID.randomUUID()}"
                 val toolMsgSegs = roundSegments.ifEmpty { null }
@@ -1135,7 +1140,9 @@ class ChatViewModel(
                                     val tcd = ToolCallData(event.name, event.arguments, result)
                                     toolCallData = tcd
                                     toolCallDataList = listOf(tcd)
-                                    segments.add(MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result))
+                                    val ts = MessageSegment(type = "tool", toolName = event.name, toolArgs = event.arguments, toolResult = result)
+                                    segments.add(ts)
+                                    roundToolSegments.add(ts)
                                     currentStatus = MessageStatus.SENDING
                                 }
                                 is StreamEvent.ToolCallsRequest -> {
@@ -1146,7 +1153,9 @@ class ChatViewModel(
                                     }
                                     val tcds = event.calls.map { call ->
                                         val result = executeTool(call.name, call.arguments)
-                                        segments.add(MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature))
+                                        val ts = MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature)
+                                        segments.add(ts)
+                                        roundToolSegments.add(ts)
                                         ToolCallData(call.name, call.arguments, result)
                                     }
                                     toolCallData = tcds.firstOrNull()
