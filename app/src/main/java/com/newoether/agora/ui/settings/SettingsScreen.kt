@@ -35,6 +35,7 @@ import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,7 +81,7 @@ fun SettingsGroup(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
-    var viewingProvider by remember { mutableStateOf("Google") }
+    var viewingProvider by rememberSaveable { mutableStateOf("Google") }
     val apiKeys by viewModel.apiKeys.collectAsState()
     val activeApiKeyIds by viewModel.activeApiKeyIds.collectAsState()
     val systemPrompts by viewModel.systemPrompts.collectAsState()
@@ -128,7 +129,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     
     val providerBaseUrls by viewModel.providerBaseUrls.collectAsState()
     
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("General", "Models", "Memory")
     
     val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router")

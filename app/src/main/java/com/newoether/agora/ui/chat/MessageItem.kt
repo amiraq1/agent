@@ -384,10 +384,10 @@ fun MessageItem(
                 currentTotalHeight = it.height
                 onHeightChanged(calculateReportedHeight(it.height, currentThoughtBlockHeight))
             }
-            .padding(vertical = 8.dp)
-            .then(if (visualizeContextRollout && !isInContext) Modifier.alpha(0.38f) else Modifier),
+            .padding(vertical = 8.dp),
         horizontalAlignment = alignment
     ) {
+        val contextAlpha = if (visualizeContextRollout && !isInContext) Modifier.alpha(0.38f) else Modifier
         if (message.participant == Participant.USER) {
             Column(horizontalAlignment = Alignment.End) {
                 Surface(
@@ -396,6 +396,7 @@ fun MessageItem(
                     shadowElevation = 1.dp,
                     modifier = Modifier
                         .widthIn(max = 300.dp)
+                        .then(contextAlpha)
                         .then(if (shouldAnimate) Modifier.animateContentSize(animationSpec = tween(150)) else Modifier)
                 ) {
                     if (isEditing) {
@@ -461,6 +462,7 @@ fun MessageItem(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
+                            .then(contextAlpha)
                             .padding(top = 4.dp)
                             .clip(RoundedCornerShape(100))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -495,6 +497,7 @@ fun MessageItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
+                    .then(contextAlpha)
             ) {
                 Column {
                     // Status Header
@@ -531,9 +534,13 @@ fun MessageItem(
 
                     var debouncedText by remember(message.status) { mutableStateOf(message.text) }
                     if (isStreaming) {
+                        var lastUpdateMs by remember { mutableLongStateOf(0L) }
                         LaunchedEffect(message.text) {
-                            kotlinx.coroutines.delay(100)
-                            debouncedText = message.text
+                            val now = System.currentTimeMillis()
+                            if (now - lastUpdateMs >= 50) {
+                                debouncedText = message.text
+                                lastUpdateMs = now
+                            }
                         }
                     } else {
                         debouncedText = message.text

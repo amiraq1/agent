@@ -454,7 +454,7 @@ class ChatViewModel(
                 .minByOrNull { it.timestamp }
 
             val titleModelId = titleGenerationModel.value
-            val modelIdWithPrefix = if (titleModelId != null) titleModelId else (conversation.modelId ?: selectedModel.value)
+            val modelIdWithPrefix = if (!titleModelId.isNullOrBlank()) titleModelId else (conversation.modelId ?: selectedModel.value)
             val providerName = getProviderForModel(modelIdWithPrefix)
             val modelId = modelIdWithPrefix.substringAfter(":")
             val activeKeyId = activeApiKeyIds.value[providerName]
@@ -863,7 +863,8 @@ class ChatViewModel(
     }
 
     private suspend fun generateResponse(currentId: String, text: String, modelMessageId: String, startTime: Long, isRegenerate: Boolean = false, replaceMessageId: String? = null) {
-        val myGenerationId = ++generationId
+        generationId++
+        val myGenerationId = generationId
         val modelIdWithPrefix = currentActiveModel.value
         val providerName = getProviderForModel(modelIdWithPrefix)
         val provider = getProviderInstance(providerName)
@@ -1143,8 +1144,10 @@ class ChatViewModel(
                                     if (event.tokenCount > 0) totalTokenCount = event.tokenCount
                                 }
                                 is StreamEvent.Error -> {
-                                    totalText = event.message
-                                    currentStatus = MessageStatus.ERROR
+                                    if (toolCallData == null && toolCallDataList.isEmpty()) {
+                                        totalText = event.message
+                                        currentStatus = MessageStatus.ERROR
+                                    }
                                 }
                                 is StreamEvent.ToolCallRequest -> {
                                     if (currentThoughtBuf.isNotEmpty()) {

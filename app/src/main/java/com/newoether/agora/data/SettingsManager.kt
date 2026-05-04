@@ -1,6 +1,7 @@
 package com.newoether.agora.data
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -59,12 +60,12 @@ class SettingsManager(private val context: Context) {
     
     val providerBaseUrls: Flow<Map<String, String>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[PROVIDER_BASE_URLS] ?: "{}"
-        try { json.decodeFromString<Map<String, String>>(jsonStr) } catch (e: Exception) { emptyMap() }
+        try { json.decodeFromString<Map<String, String>>(jsonStr) } catch (e: Exception) { Log.e("SettingsManager", "Failed to decode providerBaseUrls", e); emptyMap() }
     }
 
     val availableModels: Flow<Map<String, List<String>>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[AVAILABLE_MODELS_JSON] ?: "{}"
-        try { json.decodeFromString<Map<String, List<String>>>(jsonStr) } catch (e: Exception) { emptyMap() }
+        try { json.decodeFromString<Map<String, List<String>>>(jsonStr) } catch (e: Exception) { Log.e("SettingsManager", "Failed to decode availableModels", e); emptyMap() }
     }
 
     val enabledModels: Flow<Set<String>> = context.dataStore.data.map { it[ENABLED_MODELS] ?: emptySet() }

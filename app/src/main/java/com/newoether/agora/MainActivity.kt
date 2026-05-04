@@ -623,27 +623,33 @@ fun ChatApp(
             
             // Calculate absolute pixel offset of the target position
             var totalHeightBeforePx = 0
+            var hasAnyHeight = false
             for (i in 0 until targetIndex) {
-                totalHeightBeforePx += messageHeights[messages[i].id] ?: 0
+                val h = messageHeights[messages[i].id]
+                if (h != null) { totalHeightBeforePx += h; hasAnyHeight = true }
             }
-            
-            val targetScrollPx = (topPaddingPx + totalHeightBeforePx - targetTopPx).coerceAtLeast(0f)
-            
-            if (animate) {
-                var currentOffsetPx = listState.firstVisibleItemScrollOffset.toFloat()
-                for (i in 0 until listState.firstVisibleItemIndex) {
-                    if (i < messages.size) {
-                        currentOffsetPx += (messageHeights[messages[i].id] ?: 0)
-                    }
-                }
-                
-                val diff = targetScrollPx - currentOffsetPx
-                if (kotlin.math.abs(diff) > 2) {
-                    listState.animateScrollBy(diff, tween(500, easing = FastOutSlowInEasing))
-                }
+
+            if (!hasAnyHeight && targetIndex > 0) {
+                // Heights not measured yet — fall back to item-level scroll
+                listState.scrollToItem(targetIndex, 0)
             } else {
-                // Use the exact same target pixel offset for jumping
-                listState.scrollToItem(0, targetScrollPx.toInt())
+                val targetScrollPx = (topPaddingPx + totalHeightBeforePx - targetTopPx).coerceAtLeast(0f)
+
+                if (animate) {
+                    var currentOffsetPx = listState.firstVisibleItemScrollOffset.toFloat()
+                    for (i in 0 until listState.firstVisibleItemIndex) {
+                        if (i < messages.size) {
+                            currentOffsetPx += (messageHeights[messages[i].id] ?: 0)
+                        }
+                    }
+
+                    val diff = targetScrollPx - currentOffsetPx
+                    if (kotlin.math.abs(diff) > 2) {
+                        listState.animateScrollBy(diff, tween(500, easing = FastOutSlowInEasing))
+                    }
+                } else {
+                    listState.scrollToItem(0, targetScrollPx.toInt())
+                }
             }
         }
     }
