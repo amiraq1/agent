@@ -54,8 +54,15 @@ class OpenRouterProvider : BaseOpenAiProvider() {
                 emit(StreamEvent.ThoughtChunk(it, title))
             }
         }
-        delta.content?.let {
-            if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it))
+        delta.content?.let { content ->
+            if (content.isNotEmpty()) {
+                thinkParser.feed(
+                    content = content,
+                    thinkingEnabled = config.thinkingEnabled,
+                    onText = { emit(StreamEvent.TextChunk(it)) },
+                    onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+                )
+            }
         }
     }
 }

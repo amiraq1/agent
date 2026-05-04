@@ -166,6 +166,11 @@ abstract class BaseOpenAiProvider : LlmProvider {
                     }
                 }
 
+                thinkParser.flush(
+                    onText = { emit(StreamEvent.TextChunk(it)) },
+                    onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+                )
+
                 if (!currentCoroutineContext().isActive) {
                     throw CancellationException("Stream cancelled")
                 }

@@ -650,7 +650,8 @@ class ChatViewModel(
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
-                onGeneratingIdChange = { _generatingInConversationId.value = it }
+                onGeneratingIdChange = { _generatingInConversationId.value = it },
+                onStreamClear = { _streamingMessage.value = null }
             )
         }
     }
@@ -727,7 +728,8 @@ class ChatViewModel(
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
-                onGeneratingIdChange = { _generatingInConversationId.value = it }
+                onGeneratingIdChange = { _generatingInConversationId.value = it },
+                onStreamClear = { _streamingMessage.value = null }
             )
         }
     }
@@ -814,7 +816,8 @@ class ChatViewModel(
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
-                onGeneratingIdChange = { _generatingInConversationId.value = it }
+                onGeneratingIdChange = { _generatingInConversationId.value = it },
+                onStreamClear = { _streamingMessage.value = null }
             )
 
             val lastMsg = _allMessages.value.find { it.id == modelMessageId }

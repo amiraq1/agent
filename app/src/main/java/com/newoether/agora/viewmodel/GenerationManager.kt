@@ -210,7 +210,8 @@ class GenerationManager(
         generationJob: kotlinx.coroutines.Job?,
         onStreamUpdate: (ChatMessage) -> Unit,
         onLoadingChange: (Boolean) -> Unit,
-        onGeneratingIdChange: (String?) -> Unit
+        onGeneratingIdChange: (String?) -> Unit,
+        onStreamClear: () -> Unit
     ) {
         generationId++
         val myGenerationId = generationId
@@ -561,7 +562,8 @@ class GenerationManager(
                     if (generationId == myGenerationId) {
                         val conversationExists = chatDao.getConversation(conversationId) != null
                         if (conversationExists) {
-                            val finalSegments = segments.toList().ifEmpty { null }
+                            val finalSegments = buildLiveSegments(segments, currentThoughtBuf, currentThoughtSignature)
+                                ?: segments.toList().ifEmpty { null }
                             val segmentsJson = finalSegments?.let { Json.encodeToString(it) }
                             val effectiveParentId = if (isRegenerate) parentId else (toolPath.lastOrNull()?.id ?: parentId)
                             chatDao.upsertMessage(MessageEntity(
@@ -577,6 +579,7 @@ class GenerationManager(
                     Log.e("AgoraVM", "Failed to persist message to DB", e)
                 }
                 if (generationId == myGenerationId) {
+                    onStreamClear()
                     onLoadingChange(false)
                     onGeneratingIdChange(null)
                 }
