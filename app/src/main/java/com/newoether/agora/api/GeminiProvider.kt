@@ -338,6 +338,7 @@ class GeminiProvider : LlmProvider {
                             try {
                                 val response = json.decodeFromString<ApiStreamResponse>(jsonStr)
 
+                                inThoughtBlock = false
                                 response.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
                                     var isPartOfThought = false
 

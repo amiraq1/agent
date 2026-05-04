@@ -160,12 +160,19 @@ class ChatViewModel(
             if (siblings.isEmpty()) break
             
             val selectedId = selectedChildren[currentParentId]
-            var selectedMessage = siblings.find { it.id == selectedId } ?: siblings.last()
-            
+            val visibleSiblings = siblings.filter {
+                !it.id.startsWith(Constants.TOOL_MSG_PREFIX) && !it.id.startsWith(Constants.RESULT_MSG_PREFIX)
+            }
+            var selectedMessage = if (visibleSiblings.isNotEmpty()) {
+                visibleSiblings.find { it.id == selectedId } ?: visibleSiblings.last()
+            } else {
+                siblings.find { it.id == selectedId } ?: siblings.last()
+            }
+
             if (streaming != null && selectedMessage.id == streaming.id) {
                 selectedMessage = streaming
             }
-            
+
             // Skip synthetic tool call/result messages (hidden from UI, API context only)
             val isSynthetic = selectedMessage.id.startsWith(Constants.TOOL_MSG_PREFIX) || selectedMessage.id.startsWith(Constants.RESULT_MSG_PREFIX)
             if (!isSynthetic || (streaming != null && selectedMessage.id == streaming.id)) {
@@ -186,7 +193,7 @@ class ChatViewModel(
 
     val totalTokens: StateFlow<Int> = _allMessages.map { list ->
         list.sumOf { it.tokenCount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -537,16 +544,16 @@ class ChatViewModel(
         _streamingMessage.value = stoppedMsg
         // Also update _allMessages entity immediately so UI reacts without flowOn delay
         if (stoppedMsg != null) {
-            _allMessages.value = _allMessages.value.map {
-                if (it.id == stoppedMsg.id) stoppedMsg else it
-            }
+            _allMessages.update { it.map { m ->
+                if (m.id == stoppedMsg.id) stoppedMsg else m
+            } }
         } else {
             // _streamingMessage was null — find the in-flight model message directly
-            _allMessages.value = _allMessages.value.map {
-                if (it.participant == Participant.MODEL &&
-                    (it.status == MessageStatus.SENDING || it.status == MessageStatus.THINKING)
-                ) it.copy(status = MessageStatus.STOPPED) else it
-            }
+            _allMessages.update { it.map { m ->
+                if (m.participant == Participant.MODEL &&
+                    (m.status == MessageStatus.SENDING || m.status == MessageStatus.THINKING)
+                ) m.copy(status = MessageStatus.STOPPED) else m
+            } }
         }
         _generatingInConversationId.value = null
         AgoraForegroundService.stop(getApplication())
@@ -581,7 +588,7 @@ class ChatViewModel(
             id = modelMessageId, parentId = parentId, text = "", participant = Participant.MODEL,
             status = MessageStatus.SENDING, timestamp = startTime
         )
-        _allMessages.value = _allMessages.value.filter { it.id != modelMessageId } + placeholder
+        _allMessages.update { it.filter { m -> m.id != modelMessageId } + placeholder }
         val newMap = _selectedChildren.value.toMutableMap()
         newMap[parentId] = modelMessageId
         _selectedChildren.value = newMap
@@ -1062,8 +1069,8 @@ class ChatViewModel(
                 toolRound++
                 val roundToolList = roundToolSegments.toList()
                 roundToolSegments.clear()
-                val lastThought = segments.lastOrNull { it.type == "thought" }
-                val txedSegments = if (lastThought != null) listOf(lastThought) + roundToolList else roundToolList
+                val thoughtSegs = segments.filter { it.type == "thought" }
+                val txedSegments = if (thoughtSegs.isNotEmpty()) thoughtSegs + roundToolList else roundToolList
                 val prevLastId = if (toolRound == 1 && chainRootId != null) chainRootId else toolPath.lastOrNull()?.id
                 val toolMsgId = "${Constants.TOOL_MSG_PREFIX}${UUID.randomUUID()}"
                 val toolMsgSegs = txedSegments.ifEmpty { null }
