@@ -559,7 +559,7 @@ class GenerationManager(
             withContext(NonCancellable) {
                 try {
                     if (generationId == myGenerationId) {
-                        val conversationExists = chatDao.getMessagesForConversation(conversationId).first().isNotEmpty()
+                        val conversationExists = chatDao.getConversation(conversationId) != null
                         if (conversationExists) {
                             val finalSegments = segments.toList().ifEmpty { null }
                             val segmentsJson = finalSegments?.let { Json.encodeToString(it) }
