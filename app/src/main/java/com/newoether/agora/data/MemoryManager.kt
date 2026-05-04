@@ -71,6 +71,14 @@ class MemoryManager(context: Context) {
         return "Deleted ${file.name}"
     }
 
-    private fun resolveFile(name: String): File =
-        File(memoryDir, if (name.endsWith(".md")) name else "$name.md")
+    private fun resolveFile(name: String): File {
+        val sanitized = name.replace(Regex("""[/\\]"""), "_")
+        val file = File(memoryDir, if (sanitized.endsWith(".md")) sanitized else "$sanitized.md")
+        val canonicalPath = file.canonicalPath
+        val canonicalDir = memoryDir.canonicalPath
+        if (!canonicalPath.startsWith(canonicalDir)) {
+            throw IllegalArgumentException("Invalid file name: $name")
+        }
+        return file
+    }
 }

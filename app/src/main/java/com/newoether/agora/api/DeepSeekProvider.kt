@@ -162,6 +162,7 @@ class DeepSeekProvider : LlmProvider {
                         line = reader.readLine()
                     } catch (e: SocketTimeoutException) {
                         if (!currentCoroutineContext().isActive) break
+                        continue
                     }
                 }
                 if (!currentCoroutineContext().isActive) {

@@ -198,14 +198,15 @@ class OllamaProvider : LlmProvider {
                             }
 
                             // 2. Handle tool calls
-                            msg.toolCalls?.firstOrNull()?.let { tc ->
-                                val id = tc.id ?: "${Constants.TOOL_CALL_ID_PREFIX}0"
-                                val name = tc.function?.name ?: ""
-                                val args = tc.function?.arguments?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() } ?: ""
-                                if (name.isNotEmpty()) {
-                                    emit(StreamEvent.ToolCallRequest(id, name, args))
-                                    return@let
+                            msg.toolCalls?.let { toolCalls ->
+                                val calls = toolCalls.mapNotNull { tc ->
+                                    val id = tc.id ?: "${Constants.TOOL_CALL_ID_PREFIX}0"
+                                    val name = tc.function?.name ?: ""
+                                    val args = tc.function?.arguments?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() } ?: ""
+                                    if (name.isNotEmpty()) StreamEvent.ToolCallRequest(id, name, args) else null
                                 }
+                                if (calls.size == 1) emit(calls.first())
+                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
                             }
 
                             // 3. Handle content and potential <think> tags in content

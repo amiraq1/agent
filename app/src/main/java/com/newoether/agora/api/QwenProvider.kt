@@ -70,9 +70,7 @@ class QwenProvider : LlmProvider {
                 connection.readTimeout = 200
                 val reader = connection.inputStream.bufferedReader()
                 var line: String? = null
-                var toolCallId = ""
-                var toolCallName = ""
-                var toolCallArgs = ""
+                val pendingToolCalls = mutableMapOf<Int, PendingToolCall>()
                 while (currentCoroutineContext().isActive) {
                     try {
                         line = reader.readLine()
@@ -96,17 +94,26 @@ class QwenProvider : LlmProvider {
                                 }
                                 delta.content?.let { if (it.isNotEmpty()) emit(StreamEvent.TextChunk(it)) }
                                 delta.toolCalls?.forEach { tc ->
-                                    if (tc.id != null) toolCallId = tc.id
-                                    tc.function?.name?.let { toolCallName = it }
-                                    tc.function?.arguments?.let { toolCallArgs += if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() }
+                                    val existing = if (tc.id != null) pendingToolCalls.values.firstOrNull { it.id == tc.id } else null
+                                    val pending = if (existing != null) existing else {
+                                        val idx = tc.index ?: pendingToolCalls.size
+                                        pendingToolCalls.getOrPut(idx) { PendingToolCall() }
+                                    }
+                                    if (tc.id != null) pending.id = tc.id
+                                    tc.function?.name?.let { pending.name = it }
+                                    tc.function?.arguments?.let {
+                                        pending.args.append(if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString())
+                                    }
                                 }
                             }
 
-                            if (choice?.finishReason == "tool_calls" && toolCallName.isNotEmpty()) {
-                                emit(StreamEvent.ToolCallRequest(toolCallId, toolCallName, toolCallArgs))
-                                toolCallId = ""
-                                toolCallName = ""
-                                toolCallArgs = ""
+                            if (choice?.finishReason == "tool_calls" && pendingToolCalls.isNotEmpty()) {
+                                val calls = pendingToolCalls.values.filter { it.name.isNotEmpty() }.map {
+                                    StreamEvent.ToolCallRequest(it.id, it.name, it.args.toString())
+                                }
+                                pendingToolCalls.clear()
+                                if (calls.size == 1) emit(calls.first())
+                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
                             }
 
                             response.usage?.let { emit(StreamEvent.UsageUpdate(it.totalTokens)) }

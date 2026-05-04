@@ -161,6 +161,7 @@ abstract class ChatDatabase : RoomDatabase() {
                 ChatDatabase::class.java,
                 DB_NAME
             ).addMigrations(*ALL_MIGRATIONS.toTypedArray())
+                .fallbackToDestructiveMigration(false)
                 .build()
         }
     }

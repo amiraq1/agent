@@ -568,7 +568,7 @@ class ChatViewModel(
         val messageToRegenerate = _allMessages.value.find { it.id == messageId } ?: return
         val parentId = messageToRegenerate.parentId ?: return
         val isErrorOrStopped = messageToRegenerate.status == MessageStatus.ERROR || messageToRegenerate.status == MessageStatus.STOPPED
-        val hasChildren = _allMessages.value.any { it.parentId == messageId && !it.id.startsWith(Constants.TOOL_MSG_PREFIX) && !it.id.startsWith(Constants.RESULT_MSG_PREFIX) }
+        val hasChildren = _allMessages.value.any { it.parentId == messageId }
         val isLatest = !hasChildren
         val modelMessageId = if (isErrorOrStopped && isLatest) messageId else UUID.randomUUID().toString()
         val startTime = System.currentTimeMillis() + 1
@@ -684,6 +684,7 @@ class ChatViewModel(
                                 file.outputStream().use { out ->
                                     bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
                                 }
+                                bitmap.recycle()
                                 file.absolutePath
                             } else null
                         }
@@ -713,11 +714,18 @@ class ChatViewModel(
                 _isNewChatMode.value = false
                 currentId = newId
             }
+            if (currentId == null) {
+                val newId = UUID.randomUUID().toString()
+                chatDao.upsertConversation(ChatEntity(id = newId, title = "New Chat", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                _currentConversationId.value = newId
+                _isNewChatMode.value = false
+                currentId = newId
+            }
             val currentPath = messages.value
             val lastMessageId = currentPath.lastOrNull()?.id
             val userMessageId = UUID.randomUUID().toString()
             chatDao.upsertMessage(MessageEntity(
-                id = userMessageId, conversationId = currentId!!, parentId = lastMessageId,
+                id = userMessageId, conversationId = currentId, parentId = lastMessageId,
                 text = text, images = processedImages, thoughts = null, status = MessageStatus.SUCCESS, participant = Participant.USER, timestamp = System.currentTimeMillis()
             ))
             val modelMessageId = UUID.randomUUID().toString()
@@ -1132,7 +1140,7 @@ class ChatViewModel(
                                     if (event.signature != null) currentThoughtSignature = event.signature
                                 }
                                 is StreamEvent.UsageUpdate -> {
-                                    if (event.tokenCount > 0) totalTokenCount += event.tokenCount
+                                    if (event.tokenCount > 0) totalTokenCount = event.tokenCount
                                 }
                                 is StreamEvent.Error -> {
                                     totalText = event.message
@@ -1188,6 +1196,10 @@ class ChatViewModel(
                                 segments = if (segments.isNotEmpty()) buildLiveSegments(segments, currentThoughtBuf, currentThoughtSignature) else null
                             )
                 }
+            }
+
+            if (!currentCoroutineContext().isActive) {
+                currentStatus = MessageStatus.STOPPED
             }
 
             // Persist synthetic tool messages from toolPath to DB (batch, not during streaming)

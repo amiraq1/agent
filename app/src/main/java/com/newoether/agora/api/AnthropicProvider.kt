@@ -134,32 +134,61 @@ class AnthropicProvider : LlmProvider {
         val apiMessages = limitedPath.flatMap { msg ->
             val entries = mutableListOf<AnthropicMessage>()
 
-            // tool_ messages: assistant turn with tool_use (thinking blocks omitted — signatures unavailable in streaming)
-            if (msg.id.startsWith(Constants.TOOL_MSG_PREFIX) && msg.toolCall != null) {
-                val toolId = "tool_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
-                entries.add(AnthropicMessage(
-                    role = "assistant",
-                    content = listOf(AnthropicContentPart(
-                        type = "tool_use",
-                        id = toolId,
-                        name = msg.toolCall!!.toolName,
-                        input = try { json.parseToJsonElement(msg.toolCall!!.arguments) as? JsonObject ?: JsonObject(emptyMap()) } catch (_: Exception) { JsonObject(emptyMap()) }
+            // tool_ messages: assistant turn with tool_use blocks from segments
+            if (msg.id.startsWith(Constants.TOOL_MSG_PREFIX)) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolUseBlocks = toolSegs.map { seg ->
+                        val toolId = "tool_${seg.toolName ?: ""}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        AnthropicContentPart(
+                            type = "tool_use",
+                            id = toolId,
+                            name = seg.toolName ?: "",
+                            input = try { json.parseToJsonElement(seg.toolArgs ?: "{}") as? JsonObject ?: JsonObject(emptyMap()) } catch (_: Exception) { JsonObject(emptyMap()) }
+                        )
+                    }
+                    entries.add(AnthropicMessage(role = "assistant", content = toolUseBlocks))
+                } else if (msg.toolCall != null) {
+                    val tc = msg.toolCall!!
+                    val toolId = "tool_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+                    entries.add(AnthropicMessage(
+                        role = "assistant",
+                        content = listOf(AnthropicContentPart(
+                            type = "tool_use",
+                            id = toolId,
+                            name = tc.toolName,
+                            input = try { json.parseToJsonElement(tc.arguments) as? JsonObject ?: JsonObject(emptyMap()) } catch (_: Exception) { JsonObject(emptyMap()) }
+                        ))
                     ))
-                ))
+                }
                 return@flatMap entries
             }
 
-            // result_ messages carry the tool_result
-            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX) && msg.toolCall != null) {
-                val toolId = "tool_${msg.toolCall!!.toolName}_${msg.toolCall!!.arguments.hashCode().toUInt().toString(16)}"
-                entries.add(AnthropicMessage(
-                    role = "user",
-                    content = listOf(AnthropicContentPart(
-                        type = "tool_result",
-                        toolUseId = toolId,
-                        content = msg.toolCall!!.result
+            // result_ messages carry the tool_result (handle segments for multi-tool, toolCall for single)
+            if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX)) {
+                val toolSegs = msg.segments?.filter { it.type == "tool" }
+                if (!toolSegs.isNullOrEmpty()) {
+                    val toolResultBlocks = toolSegs.map { seg ->
+                        val toolId = "tool_${seg.toolName ?: ""}_${(seg.toolArgs ?: "{}").hashCode().toUInt().toString(16)}"
+                        AnthropicContentPart(
+                            type = "tool_result",
+                            toolUseId = toolId,
+                            content = seg.toolResult ?: ""
+                        )
+                    }
+                    entries.add(AnthropicMessage(role = "user", content = toolResultBlocks))
+                } else if (msg.toolCall != null) {
+                    val tc = msg.toolCall!!
+                    val toolId = "tool_${tc.toolName}_${tc.arguments.hashCode().toUInt().toString(16)}"
+                    entries.add(AnthropicMessage(
+                        role = "user",
+                        content = listOf(AnthropicContentPart(
+                            type = "tool_result",
+                            toolUseId = toolId,
+                            content = tc.result
+                        ))
                     ))
-                ))
+                }
                 return@flatMap entries
             }
 
@@ -260,6 +289,7 @@ class AnthropicProvider : LlmProvider {
                 var toolUseName: String? = null
                 var toolUseArgs = StringBuilder()
                 var thinkingSignature: String? = null
+                var messageInputTokens = 0
 
                 while (currentCoroutineContext().isActive) {
                     try {
@@ -276,6 +306,9 @@ class AnthropicProvider : LlmProvider {
                         try {
                             val event = json.decodeFromString<AnthropicStreamEvent>(jsonStr)
                             when (event.type) {
+                                "message_start" -> {
+                                    event.message?.usage?.inputTokens?.let { messageInputTokens = it }
+                                }
                                 "content_block_start" -> {
                                     event.contentBlock?.let { block ->
                                         when (block.type) {
@@ -318,7 +351,7 @@ class AnthropicProvider : LlmProvider {
                                 }
                                 "message_delta" -> {
                                     event.usage?.let { u ->
-                                        val total = (u.inputTokens ?: 0) + (u.outputTokens ?: 0)
+                                        val total = messageInputTokens + (u.outputTokens ?: 0)
                                         emit(StreamEvent.UsageUpdate(total))
                                     }
                                 }

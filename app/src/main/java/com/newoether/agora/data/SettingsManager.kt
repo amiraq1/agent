@@ -101,10 +101,12 @@ class SettingsManager(private val context: Context) {
     val titleGenerationModel: Flow<String?> = context.dataStore.data.map { it[TITLE_GENERATION_MODEL] }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
-        val current = context.dataStore.data.map { it[PROVIDER_BASE_URLS] ?: "{}" }.first()
-        val map = try { json.decodeFromString<MutableMap<String, String>>(current) } catch (e: Exception) { mutableMapOf() }
-        map[provider] = url
-        context.dataStore.edit { it[PROVIDER_BASE_URLS] = json.encodeToString(map) }
+        context.dataStore.edit { prefs ->
+            val current = prefs[PROVIDER_BASE_URLS] ?: "{}"
+            val map = try { json.decodeFromString<MutableMap<String, String>>(current) } catch (e: Exception) { mutableMapOf() }
+            map[provider] = url
+            prefs[PROVIDER_BASE_URLS] = json.encodeToString(map)
+        }
     }
 
     suspend fun saveSelectedModel(model: String) {
@@ -112,10 +114,12 @@ class SettingsManager(private val context: Context) {
     }
 
     suspend fun saveAvailableModels(provider: String, models: List<String>) {
-        val current = context.dataStore.data.map { it[AVAILABLE_MODELS_JSON] ?: "{}" }.first()
-        val map = try { json.decodeFromString<MutableMap<String, List<String>>>(current) } catch (e: Exception) { mutableMapOf() }
-        map[provider] = models
-        context.dataStore.edit { it[AVAILABLE_MODELS_JSON] = json.encodeToString(map) }
+        context.dataStore.edit { prefs ->
+            val current = prefs[AVAILABLE_MODELS_JSON] ?: "{}"
+            val map = try { json.decodeFromString<MutableMap<String, List<String>>>(current) } catch (e: Exception) { mutableMapOf() }
+            map[provider] = models
+            prefs[AVAILABLE_MODELS_JSON] = json.encodeToString(map)
+        }
     }
 
     suspend fun saveEnabledModels(models: Set<String>) {
@@ -131,10 +135,12 @@ class SettingsManager(private val context: Context) {
     }
 
     suspend fun setActiveApiKeyId(provider: String, id: String?) {
-        val current = context.dataStore.data.map { it[ACTIVE_API_KEY_IDS_JSON] ?: "{}" }.first()
-        val map = try { json.decodeFromString<MutableMap<String, String>>(current) } catch (e: Exception) { mutableMapOf() }
-        if (id == null) map.remove(provider) else map[provider] = id
-        context.dataStore.edit { it[ACTIVE_API_KEY_IDS_JSON] = json.encodeToString(map) }
+        context.dataStore.edit { prefs ->
+            val current = prefs[ACTIVE_API_KEY_IDS_JSON] ?: "{}"
+            val map = try { json.decodeFromString<MutableMap<String, String>>(current) } catch (e: Exception) { mutableMapOf() }
+            if (id == null) map.remove(provider) else map[provider] = id
+            prefs[ACTIVE_API_KEY_IDS_JSON] = json.encodeToString(map)
+        }
     }
 
     suspend fun saveSystemPrompts(prompts: List<SystemPromptEntry>) {
