@@ -467,12 +467,11 @@ class ChatViewModel(
     fun generateTitle(conversationId: String) {
         viewModelScope.launch {
             val conversation = chatDao.getConversation(conversationId) ?: return@launch
-            val msgs = chatDao.getMessagesForConversation(conversationId).first()
-            val firstUserMsg = msgs.firstOrNull { it.participant == Participant.USER } ?: return@launch
-            // Find the first successful model response after the user message
-            val firstModelMsg = msgs
+            val path = messages.value
+            val firstUserMsg = path.firstOrNull { it.participant == Participant.USER } ?: return@launch
+            val firstModelMsg = path
                 .filter { it.participant == Participant.MODEL && it.text.isNotBlank() }
-                .minByOrNull { it.timestamp }
+                .firstOrNull()
 
             val titleModelId = titleGenerationModel.value
             val modelIdWithPrefix = if (!titleModelId.isNullOrBlank()) titleModelId else (conversation.modelId ?: selectedModel.value)

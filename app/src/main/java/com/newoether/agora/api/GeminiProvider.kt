@@ -296,13 +296,15 @@ class GeminiProvider : LlmProvider {
             tools.add(ApiTool(functionDeclarations = functionDeclarations))
         }
 
-        val thinkingConfig = when {
-            cleanModelName.contains("gemini-3", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = config.thinkingEnabled, thinkingLevel = "HIGH")
-            cleanModelName.contains("gemini-2.5", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = config.thinkingEnabled, thinkingBudget = -1)
-            cleanModelName.contains("thinking-exp", ignoreCase = true) -> 
-                ApiThinkingConfig(includeThoughts = config.thinkingEnabled)
+        val thinkingConfig = if (!config.thinkingEnabled) {
+            null
+        } else when {
+            cleanModelName.contains("gemini-3", ignoreCase = true) ->
+                ApiThinkingConfig(includeThoughts = true, thinkingLevel = "HIGH")
+            cleanModelName.contains("gemini-2.5", ignoreCase = true) ->
+                ApiThinkingConfig(includeThoughts = true, thinkingBudget = -1)
+            cleanModelName.contains("thinking-exp", ignoreCase = true) ->
+                ApiThinkingConfig(includeThoughts = true)
             else -> null
         }
 

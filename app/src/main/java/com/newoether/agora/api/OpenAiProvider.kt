@@ -7,7 +7,7 @@ class OpenAiProvider : BaseOpenAiProvider() {
     override val defaultBaseUrl: String = "https://api.openai.com/v1"
 
     override fun customizeRequest(request: OpenAiChatRequest, config: ProviderConfig): OpenAiChatRequest {
-        return if (config.modelId.startsWith("o1") || config.modelId.startsWith("o3")) {
+        return if (config.thinkingEnabled && (config.modelId.startsWith("o1") || config.modelId.startsWith("o3"))) {
             request.copy(reasoningEffort = "medium")
         } else request
     }
