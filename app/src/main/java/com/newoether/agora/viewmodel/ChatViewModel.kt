@@ -135,6 +135,10 @@ class ChatViewModel(
     val titleGenerationModel = settingsManager.titleGenerationModel.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val accessPastConversations = settingsManager.accessPastConversations.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val accessSavedMemories = settingsManager.accessSavedMemories.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val webSearchEnabled = settingsManager.webSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val webSearchProvider = settingsManager.webSearchProvider.stateIn(viewModelScope, SharingStarted.Eagerly, "brave")
+    val webSearchApiKey = settingsManager.webSearchApiKey.stateIn(viewModelScope, SharingStarted.Eagerly, "")
+    val webSearchBaseUrl = settingsManager.webSearchBaseUrl.stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
         val conversations: StateFlow<List<ChatConversation>> = chatDao.getAllConversations()
             .map { entities ->
@@ -418,6 +422,10 @@ class ChatViewModel(
     fun setTitleGenerationModel(model: String?) { viewModelScope.launch { settingsManager.saveTitleGenerationModel(model) } }
     fun setAccessPastConversations(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessPastConversations(enabled) } }
     fun setAccessSavedMemories(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessSavedMemories(enabled) } }
+    fun setWebSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveWebSearchEnabled(enabled) } }
+    fun setWebSearchProvider(provider: String) { viewModelScope.launch { settingsManager.saveWebSearchProvider(provider) } }
+    fun setWebSearchApiKey(apiKey: String) { viewModelScope.launch { settingsManager.saveWebSearchApiKey(apiKey) } }
+    fun setWebSearchBaseUrl(url: String) { viewModelScope.launch { settingsManager.saveWebSearchBaseUrl(url) } }
 
     fun createNewChat() {
         switchingJob?.cancel()
@@ -651,6 +659,10 @@ class ChatViewModel(
             )
 
             generationManager.accessSavedMemories = accessSavedMemories.value
+            generationManager.webSearchEnabled = webSearchEnabled.value
+            generationManager.webSearchApiKey = webSearchApiKey.value
+            generationManager.webSearchProvider = webSearchProvider.value
+            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,
@@ -730,6 +742,10 @@ class ChatViewModel(
             )
 
             generationManager.accessSavedMemories = accessSavedMemories.value
+            generationManager.webSearchEnabled = webSearchEnabled.value
+            generationManager.webSearchApiKey = webSearchApiKey.value
+            generationManager.webSearchProvider = webSearchProvider.value
+            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,
@@ -819,6 +835,10 @@ class ChatViewModel(
             )
 
             generationManager.accessSavedMemories = accessSavedMemories.value
+            generationManager.webSearchEnabled = webSearchEnabled.value
+            generationManager.webSearchApiKey = webSearchApiKey.value
+            generationManager.webSearchProvider = webSearchProvider.value
+            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,

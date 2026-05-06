@@ -588,7 +588,8 @@ fun ChatApp(
     val codeExecutionEnabled by viewModel.codeExecutionEnabled.collectAsState()
     val googleSearchEnabled by viewModel.googleSearchEnabled.collectAsState()
     val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
-    
+    val webSearchEnabled by viewModel.webSearchEnabled.collectAsState()
+
     val systemPrompts by viewModel.systemPrompts.collectAsState()
     val activeSystemPromptId by viewModel.activeSystemPromptId.collectAsState()
 
@@ -1146,6 +1147,8 @@ fun ChatApp(
                         onCodeExecutionToggle = { viewModel.setCodeExecutionEnabled(it) },
                         onGoogleSearchToggle = { viewModel.setGoogleSearchEnabled(it) },
                         onThinkingToggle = { viewModel.setThinkingEnabled(it) },
+                        webSearchEnabled = webSearchEnabled,
+                        onWebSearchToggle = { viewModel.setWebSearchEnabled(it) },
                         onModelSelect = { viewModel.setActiveModel(it) },
                         onImageClick = onImageClick,
                         modifier = Modifier,

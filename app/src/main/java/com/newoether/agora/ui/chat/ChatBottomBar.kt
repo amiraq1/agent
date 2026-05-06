@@ -112,9 +112,11 @@ fun ChatBottomBar(
     codeExecutionEnabled: Boolean = false,
     googleSearchEnabled: Boolean = false,
     thinkingEnabled: Boolean = true,
+    webSearchEnabled: Boolean = false,
     onCodeExecutionToggle: (Boolean) -> Unit = {},
     onGoogleSearchToggle: (Boolean) -> Unit = {},
     onThinkingToggle: (Boolean) -> Unit = {},
+    onWebSearchToggle: (Boolean) -> Unit = {},
     onModelSelect: (String) -> Unit,
     onImageClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -442,6 +444,23 @@ fun ChatBottomBar(
                                 )
                             },
                             onClick = { onThinkingToggle(!thinkingEnabled) }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Language, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Web Search")
+                                }
+                            },
+                            trailingIcon = {
+                                Switch(
+                                    checked = webSearchEnabled,
+                                    onCheckedChange = { onWebSearchToggle(it) },
+                                    modifier = Modifier.scale(0.7f)
+                                )
+                            },
+                            onClick = { onWebSearchToggle(!webSearchEnabled) }
                         )
                     }
                 }

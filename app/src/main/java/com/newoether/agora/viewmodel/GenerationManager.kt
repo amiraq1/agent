@@ -28,6 +28,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.UUID
 
@@ -51,6 +55,10 @@ class GenerationManager(
 ) {
     private var generationId = 0
     var accessSavedMemories: Boolean = true
+    var webSearchEnabled: Boolean = false
+    var webSearchApiKey: String = ""
+    var webSearchProvider: String = "brave"
+    var webSearchBaseUrl: String = ""
 
     private fun getProviderInstance(name: String): LlmProvider =
         providers[name] ?: providers.values.first()
@@ -151,6 +159,97 @@ class GenerationManager(
     )
     }
 
+    fun buildWebSearchTool(): List<ToolDefinition> {
+        if (!webSearchEnabled) return emptyList()
+        return listOf(
+            ToolDefinition(function = ToolFunction(
+                name = "web_search",
+                description = "Search the web for current information. Use this to find facts, news, or data not in your training set.",
+                parameters = ToolParameters(
+                    properties = mapOf(
+                        "query" to ToolProperty("string", "The search query to execute."),
+                        "num_results" to ToolProperty("integer", "Number of results to return (1-10, default 5).")
+                    ),
+                    required = listOf("query")
+                )
+            ))
+        )
+    }
+
+    private fun executeWebSearch(arguments: String): String {
+        val argsStr = arguments.ifBlank { "{}" }
+        val args = Json.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(argsStr)
+        val query = (args["query"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return "Error: No search query provided."
+        val numResults = ((args["num_results"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 5).coerceIn(1, 10)
+
+        return try {
+            val url: java.net.URL
+            val connection: java.net.HttpURLConnection
+            val requestHeaders = mutableMapOf<String, String>()
+
+            when (webSearchProvider) {
+                "searxng" -> {
+                    val baseUrl = webSearchBaseUrl.ifBlank { "https://searx.be" }
+                    url = java.net.URL("$baseUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&format=json&engines=google,brave")
+                    connection = url.openConnection() as java.net.HttpURLConnection
+                }
+                else -> {
+                    val apiKey = webSearchApiKey.ifBlank { return "Error: No Brave Search API key configured." }
+                    url = java.net.URL("https://api.search.brave.com/res/v1/web/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&count=$numResults")
+                    connection = url.openConnection() as java.net.HttpURLConnection
+                    requestHeaders["Accept"] = "application/json"
+                    requestHeaders["Accept-Encoding"] = "gzip"
+                    requestHeaders["X-Subscription-Token"] = apiKey
+                }
+            }
+
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 10_000
+            requestHeaders.forEach { (k, v) -> connection.setRequestProperty(k, v) }
+            connection.requestMethod = "GET"
+
+            val responseCode = connection.responseCode
+            if (responseCode != 200) {
+                val errorBody = connection.errorStream?.bufferedReader()?.readText() ?: ""
+                connection.disconnect()
+                "Search failed with HTTP $responseCode: $errorBody"
+            } else {
+                val body = connection.inputStream.bufferedReader().readText()
+                connection.disconnect()
+                formatSearchResults(body)
+            }
+        } catch (e: Exception) {
+            "Search error: ${e.message}"
+        }
+    }
+
+    private fun formatSearchResults(jsonStr: String): String {
+        try {
+            val json: Map<String, kotlinx.serialization.json.JsonElement> = Json.decodeFromString(jsonStr)
+            val resultsArray = when {
+                json.containsKey("web") -> {
+                    val web = json["web"]?.jsonObject
+                    val results = web?.get("results")
+                    results?.jsonArray
+                }
+                json.containsKey("results") -> json["results"]?.jsonArray
+                else -> null
+            } ?: return "No search results found."
+
+            if (resultsArray.isEmpty()) return "No search results found."
+
+            return resultsArray.take(10).mapIndexed { i, element ->
+                val obj = element.jsonObject
+                val title = (obj["title"] as? JsonPrimitive)?.content ?: "Untitled"
+                val url = (obj["url"] as? JsonPrimitive)?.content ?: ""
+                val desc = (obj["description"] as? JsonPrimitive)?.content ?: ""
+                "${i + 1}. $title\n   $url\n   $desc"
+            }.joinToString("\n\n")
+        } catch (e: Exception) {
+            return "Failed to parse search results: ${e.message}"
+        }
+    }
+
     private fun executeTool(name: String, arguments: String): String {
         return try {
             val argsStr = arguments.ifBlank { "{}" }
@@ -188,6 +287,7 @@ class GenerationManager(
                     val mode = arg("mode").ifBlank { "replace" }
                     memoryManager.updateActiveMemory(arg("content"), mode)
                 }
+                "web_search" -> executeWebSearch(arguments)
                 else -> "Unknown tool: $name"
             }
         } catch (e: Exception) {
@@ -268,6 +368,8 @@ class GenerationManager(
                 }
 
             val memoryTools = buildMemoryTools()
+            val webSearchTool = buildWebSearchTool()
+            val allTools = memoryTools + webSearchTool
             val providerConfig = ProviderConfig(
                 apiKey = config.apiKey,
                 modelId = config.modelId,
@@ -277,7 +379,7 @@ class GenerationManager(
                 googleSearchEnabled = config.googleSearchEnabled,
                 thinkingEnabled = config.thinkingEnabled,
                 baseUrl = config.baseUrl,
-                tools = memoryTools
+                tools = allTools
             )
 
             var toolCallData: ToolCallData? = null

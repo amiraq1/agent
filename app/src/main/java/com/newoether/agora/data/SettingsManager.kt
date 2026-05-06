@@ -56,6 +56,10 @@ class SettingsManager(private val context: Context) {
         val TITLE_GENERATION_MODEL = stringPreferencesKey("title_generation_model")
         val ACCESS_PAST_CONVERSATIONS = booleanPreferencesKey("access_past_conversations")
         val ACCESS_SAVED_MEMORIES = booleanPreferencesKey("access_saved_memories")
+        val WEB_SEARCH_ENABLED = booleanPreferencesKey("web_search_enabled")
+        val WEB_SEARCH_PROVIDER = stringPreferencesKey("web_search_provider")
+        val WEB_SEARCH_API_KEY = stringPreferencesKey("web_search_api_key")
+        val WEB_SEARCH_BASE_URL = stringPreferencesKey("web_search_base_url")
     }
 
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
@@ -105,6 +109,11 @@ class SettingsManager(private val context: Context) {
 
     val accessPastConversations: Flow<Boolean> = context.dataStore.data.map { it[ACCESS_PAST_CONVERSATIONS] ?: true }
     val accessSavedMemories: Flow<Boolean> = context.dataStore.data.map { it[ACCESS_SAVED_MEMORIES] ?: true }
+
+    val webSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[WEB_SEARCH_ENABLED] ?: false }
+    val webSearchProvider: Flow<String> = context.dataStore.data.map { it[WEB_SEARCH_PROVIDER] ?: "brave" }
+    val webSearchApiKey: Flow<String> = context.dataStore.data.map { it[WEB_SEARCH_API_KEY] ?: "" }
+    val webSearchBaseUrl: Flow<String> = context.dataStore.data.map { it[WEB_SEARCH_BASE_URL] ?: "" }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         context.dataStore.edit { prefs ->
@@ -189,6 +198,22 @@ class SettingsManager(private val context: Context) {
 
     suspend fun saveAccessSavedMemories(enabled: Boolean) {
         context.dataStore.edit { it[ACCESS_SAVED_MEMORIES] = enabled }
+    }
+
+    suspend fun saveWebSearchEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[WEB_SEARCH_ENABLED] = enabled }
+    }
+
+    suspend fun saveWebSearchProvider(provider: String) {
+        context.dataStore.edit { it[WEB_SEARCH_PROVIDER] = provider }
+    }
+
+    suspend fun saveWebSearchApiKey(apiKey: String) {
+        context.dataStore.edit { it[WEB_SEARCH_API_KEY] = apiKey }
+    }
+
+    suspend fun saveWebSearchBaseUrl(url: String) {
+        context.dataStore.edit { it[WEB_SEARCH_BASE_URL] = url }
     }
 
     suspend fun saveTitleGenerationModel(model: String?) {
