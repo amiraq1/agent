@@ -262,7 +262,7 @@ class GenerationManager(
                 else -> {
                     val apiKey = webSearchApiKey.ifBlank { return "Error: No Brave Search API key configured." }
                     ("https://api.search.brave.com/res/v1/web/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&count=$numResults") to
-                        mapOf("Accept" to "application/json", "Accept-Encoding" to "gzip", "X-Subscription-Token" to apiKey)
+                        mapOf("Accept" to "application/json", "X-Subscription-Token" to apiKey)
                 }
             }
 
