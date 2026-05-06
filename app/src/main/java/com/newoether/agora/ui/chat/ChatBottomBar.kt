@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -175,6 +176,7 @@ fun ChatBottomBar(
                         }
                     }
                     val isVideo = mimeType?.startsWith("video/") == true
+                    val isFile = mimeType != null && !mimeType.startsWith("image/") && !mimeType.startsWith("video/")
                     var videoThumb by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
                     LaunchedEffect(uriStr, isVideo) {
                         if (isVideo && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -188,63 +190,77 @@ fun ChatBottomBar(
                         }
                     }
 
-                    Box {
-                        val thumbModifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onImageClick(uriStr) }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(64.dp)
+                    ) {
+                        Box {
+                            val thumbModifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .then(if (!isFile) Modifier.clickable { onImageClick(uriStr) } else Modifier)
 
-                        when {
-                            isVideo && videoThumb != null -> {
-                                Image(
-                                    bitmap = videoThumb!!.asImageBitmap(),
-                                    contentDescription = "Video thumbnail",
-                                    modifier = thumbModifier,
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                )
-                            }
-                            isVideo -> {
-                                Box(
-                                    modifier = thumbModifier
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                            when {
+                                isVideo && videoThumb != null -> {
+                                    Image(
+                                        bitmap = videoThumb!!.asImageBitmap(),
+                                        contentDescription = "Video thumbnail",
+                                        modifier = thumbModifier,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
                                     Icon(
-                                        Icons.Default.Videocam,
-                                        "Video",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(28.dp)
+                                        Icons.Default.PlayArrow,
+                                        contentDescription = "Play",
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .size(24.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                            .padding(4.dp)
+                                    )
+                                }
+                                isVideo -> {
+                                    Box(
+                                        modifier = thumbModifier
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Videocam,
+                                            "Video",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                                isFile -> {
+                                    Box(
+                                        modifier = thumbModifier
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AttachFile,
+                                            "File",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    coil.compose.AsyncImage(
+                                        model = uriStr,
+                                        contentDescription = null,
+                                        modifier = thumbModifier,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                     )
                                 }
                             }
-                            mimeType != null && !mimeType.startsWith("image/") && !mimeType.startsWith("video/") -> {
-                                Box(
-                                    modifier = thumbModifier
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.AttachFile,
-                                        "File",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
-                            }
-                            else -> {
-                                coil.compose.AsyncImage(
-                                    model = uriStr,
-                                    contentDescription = null,
-                                    modifier = thumbModifier,
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                )
-                            }
-                        }
 
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 5.dp, y = (-5).dp)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 5.dp, y = (-5).dp)
                                 .size(18.dp)
                                 .background(Color.Black.copy(alpha = 0.8f), CircleShape)
                                 .clip(RoundedCornerShape(18.dp))
@@ -256,6 +272,20 @@ fun ChatBottomBar(
                                 contentDescription = "Remove",
                                 tint = Color.White,
                                 modifier = Modifier.size(10.dp)
+                            )
+                        }
+                        }
+                        if (isFile) {
+                            val fileName = remember(uriStr) {
+                                uriStr.substringAfterLast("/").substringAfterLast("%2F")
+                            }
+                            Text(
+                                text = fileName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 2.dp)
                             )
                         }
                     }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -40,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -204,7 +206,75 @@ fun MainNavigation(viewModel: ChatViewModel) {
                 }
                 
                 val url = lastUrl ?: return@AnimatedVisibility
-                
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val mimeType = remember(url) {
+                    try { context.contentResolver.getType(android.net.Uri.parse(url)) } catch (_: Exception) { null }
+                }
+                val isVideo = mimeType?.startsWith("video/") == true
+
+                if (isVideo) {
+                    var videoFrame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                    LaunchedEffect(url) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            try {
+                                videoFrame = withContext(Dispatchers.IO) {
+                                    context.contentResolver.loadThumbnail(
+                                        android.net.Uri.parse(url), android.util.Size(1024, 1024), null
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.9f))
+                            .clickable { fullScreenImageUrl = null },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (videoFrame != null) {
+                            Image(
+                                bitmap = videoFrame!!.asImageBitmap(),
+                                contentDescription = "Video preview",
+                                modifier = Modifier.fillMaxSize().padding(48.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                        setDataAndType(android.net.Uri.parse(url), mimeType)
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier
+                                .size(64.dp)
+                                .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = "Play",
+                                tint = Color.Black,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { fullScreenImageUrl = null },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .statusBarsPadding()
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                } else {
                 val scope = rememberCoroutineScope()
                 val density = LocalDensity.current
                 
@@ -533,6 +603,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     } else {
                         fullScreenImageUrl = null
                     }
+                }
                 }
             }
 
