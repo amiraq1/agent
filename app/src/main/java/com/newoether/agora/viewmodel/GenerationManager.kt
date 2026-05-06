@@ -67,20 +67,16 @@ class GenerationManager(
         uris.mapNotNull { uriString ->
             try {
                 val uri = android.net.Uri.parse(uriString)
-                app.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+                val mimeType = app.contentResolver.getType(uri)
 
-                    var scale = 1
-                    while (options.outWidth / scale / 2 >= 1024 && options.outHeight / scale / 2 >= 1024) {
-                        scale *= 2
-                    }
-
-                    val decodeOptions = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
-                    app.contentResolver.openInputStream(uri)?.use { stream2 ->
-                        val bitmap = android.graphics.BitmapFactory.decodeStream(stream2, null, decodeOptions)
+                when {
+                    mimeType?.startsWith("video/") == true -> {
+                        val retriever = android.media.MediaMetadataRetriever()
+                        retriever.setDataSource(app, uri)
+                        val bitmap = retriever.frameAtTime
+                        retriever.release()
                         if (bitmap != null) {
-                            val file = File(app.filesDir, "img_${UUID.randomUUID()}.jpg")
+                            val file = File(app.filesDir, "vid_${UUID.randomUUID()}.jpg")
                             file.outputStream().use { out ->
                                 bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
                             }
@@ -88,6 +84,31 @@ class GenerationManager(
                             file.absolutePath
                         } else null
                     }
+                    mimeType?.startsWith("image/") == true || mimeType == null -> {
+                        app.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+
+                            var scale = 1
+                            while (options.outWidth / scale / 2 >= 1024 && options.outHeight / scale / 2 >= 1024) {
+                                scale *= 2
+                            }
+
+                            val decodeOptions = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
+                            app.contentResolver.openInputStream(uri)?.use { stream2 ->
+                                val bitmap = android.graphics.BitmapFactory.decodeStream(stream2, null, decodeOptions)
+                                if (bitmap != null) {
+                                    val file = File(app.filesDir, "img_${UUID.randomUUID()}.jpg")
+                                    file.outputStream().use { out ->
+                                        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+                                    }
+                                    bitmap.recycle()
+                                    file.absolutePath
+                                } else null
+                            }
+                        }
+                    }
+                    else -> null
                 }
             } catch (_: Exception) {
                 null

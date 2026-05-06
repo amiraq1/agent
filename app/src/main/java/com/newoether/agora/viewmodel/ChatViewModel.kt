@@ -788,7 +788,28 @@ class ChatViewModel(
         stopGeneration()
 
         generationJob = generationScope.launch {
-            val processedImages = if (images.isNotEmpty()) generationManager.processImages(images) else emptyList()
+            val app = getApplication<Application>()
+            val mediaUris = mutableListOf<String>()
+            var fileContent = ""
+            if (images.isNotEmpty()) {
+                for (uri in images) {
+                    val mimeType = try { app.contentResolver.getType(android.net.Uri.parse(uri)) } catch (_: Exception) { null }
+                    if (mimeType != null && !mimeType.startsWith("image/") && !mimeType.startsWith("video/")) {
+                        try {
+                            app.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { stream ->
+                                val content = stream.bufferedReader().readText()
+                                if (content.isNotBlank()) {
+                                    fileContent += "\n\n--- File: ${java.io.File(uri).name} ---\n$content"
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    } else {
+                        mediaUris.add(uri)
+                    }
+                }
+            }
+            val finalText = if (fileContent.isNotBlank()) text + fileContent else text
+            val processedImages = if (mediaUris.isNotEmpty()) generationManager.processImages(mediaUris) else emptyList()
             var currentId = _currentConversationId.value
             val wasNewChat = _isNewChatMode.value
             if (wasNewChat) {
@@ -810,7 +831,7 @@ class ChatViewModel(
             val userMessageId = UUID.randomUUID().toString()
             chatDao.upsertMessage(MessageEntity(
                 id = userMessageId, conversationId = currentId, parentId = lastMessageId,
-                text = text, images = processedImages, thoughts = null, status = MessageStatus.SUCCESS, participant = Participant.USER, timestamp = System.currentTimeMillis()
+                text = finalText, images = processedImages, thoughts = null, status = MessageStatus.SUCCESS, participant = Participant.USER, timestamp = System.currentTimeMillis()
             ))
             val modelMessageId = UUID.randomUUID().toString()
             val startTime = System.currentTimeMillis() + 1
