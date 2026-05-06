@@ -14,8 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,10 +33,10 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Title Generation", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.settings_title_gen), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -50,11 +52,11 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            SettingsGroup(title = "TITLE GENERATION") {
+            SettingsGroup(title = stringResource(R.string.settings_title_gen)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Auto-Generate Title") },
-                    supportingContent = { Text("Generate a title after the first response") },
+                    headlineContent = { Text(stringResource(R.string.title_gen_auto)) },
+                    supportingContent = { Text(stringResource(R.string.title_gen_auto_desc)) },
                     leadingContent = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = {
                         Switch(checked = titleGenEnabled, onCheckedChange = { viewModel.setTitleGenerationEnabled(it) })
@@ -66,9 +68,9 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        headlineContent = { Text("Title Model") },
+                        headlineContent = { Text(stringResource(R.string.title_gen_model)) },
                         supportingContent = {
-                            val displayName = if (titleGenModel == null) "Use Current Model" else {
+                            val displayName = if (titleGenModel == null) stringResource(R.string.title_gen_current_model) else {
                                 val alias = modelAliases[titleGenModel!!]
                                 alias ?: titleGenModel!!.substringAfter(":").removePrefix("models/")
                             }
@@ -86,13 +88,13 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         val enabledModelsList = enabledModels.toList()
         AlertDialog(
             onDismissRequest = { showTitleModelDialog = false },
-            title = { Text("Select Title Model") },
+            title = { Text(stringResource(R.string.title_gen_select_model)) },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { Text("Use Current Model", fontWeight = if (titleGenModel == null) FontWeight.Bold else FontWeight.Normal) },
+                            headlineContent = { Text(stringResource(R.string.title_gen_current_model), fontWeight = if (titleGenModel == null) FontWeight.Bold else FontWeight.Normal) },
                             leadingContent = {
                                 RadioButton(selected = titleGenModel == null, onClick = {
                                     viewModel.setTitleGenerationModel(null)
@@ -126,7 +128,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showTitleModelDialog = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { showTitleModelDialog = false }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 }

@@ -63,6 +63,7 @@ import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.delay
@@ -84,6 +85,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.newoether.agora.R
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
@@ -111,20 +114,22 @@ private fun mergeAdjacentSegments(segs: List<MessageSegment>): List<MessageSegme
     return merged
 }
 
+@Composable
 private fun toolDisplayName(toolName: String?): String {
     return when (toolName) {
-        "list_memory_files" -> "Look Up Memories"
-        "read_memory_file" -> "Read Memory"
-        "create_memory_file" -> "Add Memory"
-        "edit_memory_file" -> "Edit Memory"
-        "delete_memory_file" -> "Delete Memory"
-        "update_active_memory" -> "Update Active Memory"
-        "web_search" -> "Web Search"
-        "search_conversations" -> "Search Conversations"
-        else -> (toolName ?: "Tool").split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+        "list_memory_files" -> stringResource(R.string.tool_look_up_memories)
+        "read_memory_file" -> stringResource(R.string.tool_read_memory)
+        "create_memory_file" -> stringResource(R.string.tool_add_memory)
+        "edit_memory_file" -> stringResource(R.string.tool_edit_memory)
+        "delete_memory_file" -> stringResource(R.string.tool_delete_memory)
+        "update_active_memory" -> stringResource(R.string.tool_update_active_memory)
+        "web_search" -> stringResource(R.string.tool_web_search)
+        "search_conversations" -> stringResource(R.string.tool_search_conversations)
+        else -> (toolName ?: stringResource(R.string.tool_context)).split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
     }
 }
 
+@Composable
 private fun toolSummary(seg: MessageSegment): String {
     val name = seg.toolName ?: ""
     val argsJson = try { Json.parseToJsonElement(seg.toolArgs ?: "{}").jsonObject } catch (_: Exception) { null }
@@ -139,47 +144,48 @@ private fun toolSummary(seg: MessageSegment): String {
     val fileCount = Regex("Memory files:\\s*\\n((?:- .+\\n?)*)").find(content)?.groupValues?.get(1)?.lines()?.count { it.isNotBlank() }
     return when (name) {
         "read_memory_file" -> when {
-            isError -> content.lines().firstOrNull()?.take(100) ?: "Read memory"
-            nameCount != null && nameCount > 1 -> "Read $nameCount memories"
-            fileName != null -> "Read $fileName"
-            else -> "Read memory"
+            isError -> content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_read_memory_success)
+            nameCount != null && nameCount > 1 -> stringResource(R.string.tool_read_memory_count, nameCount)
+            fileName != null -> stringResource(R.string.tool_read_memory_name, fileName)
+            else -> stringResource(R.string.tool_read_memory_success)
         }
         "create_memory_file" -> when {
-            isError -> content.lines().firstOrNull()?.take(100) ?: "Save memory failed"
-            fileName != null -> "Saved $fileName"
-            else -> "Saved a memory"
+            isError -> content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_save_memory_failed)
+            fileName != null -> stringResource(R.string.tool_save_memory_name, fileName)
+            else -> stringResource(R.string.tool_save_memory_default)
         }
         "edit_memory_file" -> when {
-            isError -> content.lines().firstOrNull()?.take(100) ?: "Edit memory failed"
-            fileName != null -> "Updated $fileName"
-            else -> "Updated a memory"
+            isError -> content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_edit_memory_failed)
+            fileName != null -> stringResource(R.string.tool_edit_memory_name, fileName)
+            else -> stringResource(R.string.tool_edit_memory_default)
         }
         "delete_memory_file" -> when {
-            isError -> content.lines().firstOrNull()?.take(100) ?: "Remove memory failed"
-            fileName != null -> "Removed $fileName"
-            else -> "Removed a memory"
+            isError -> content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_delete_memory_failed)
+            fileName != null -> stringResource(R.string.tool_delete_memory_name, fileName)
+            else -> stringResource(R.string.tool_delete_memory_default)
         }
-        "list_memory_files" -> if (isError) "Look up memories failed" else (if (fileCount != null) "Looked through $fileCount saved memories" else "Looked through saved memories")
-        "update_active_memory" -> if (isError) "Update active memory failed" else "Updated active memory"
+        "list_memory_files" -> if (isError) stringResource(R.string.tool_lookup_failed) else (if (fileCount != null) stringResource(R.string.tool_lookup_count, fileCount) else stringResource(R.string.tool_lookup_default))
+        "update_active_memory" -> if (isError) stringResource(R.string.tool_update_active_failed) else stringResource(R.string.tool_update_active_default)
         "web_search" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (isError) "Search failed"
+            if (isError) stringResource(R.string.tool_search_failed)
             else if (content.isNotEmpty()) content.lines().first().take(100)
-            else if (query != null) "Searching '$query' on the web" else "Searching the web"
+            else if (query != null) stringResource(R.string.tool_searching_web, query) else stringResource(R.string.tool_searching_web_default)
         }
         "search_conversations" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (isError) "Search failed"
+            if (isError) stringResource(R.string.tool_search_failed)
             else if (content.isNotEmpty()) content.lines().first().take(100)
-            else if (query != null) "Searching '$query' in conversations" else "Searching conversations"
+            else if (query != null) stringResource(R.string.tool_searching_conversations, query) else stringResource(R.string.tool_searching_conversations_default)
         }
-        else -> content.lines().firstOrNull()?.take(100) ?: "Done"
+        else -> content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_done)
     }
 }
 
+@Composable
 private fun toolResultSummary(toolName: String, toolArgs: String, result: String = ""): String {
     val isError = result.startsWith("Error")
-    if (isError) return result.lines().firstOrNull()?.take(100) ?: "Tool call failed"
+    if (isError) return result.lines().firstOrNull()?.take(100) ?: stringResource(R.string.tool_call_failed)
     val argsJson = try { Json.parseToJsonElement(toolArgs.ifBlank { "{}" }).jsonObject } catch (_: Exception) { null }
     val fileName = argsJson?.get("name")?.let { (it as? JsonPrimitive)?.content }
         ?: argsJson?.get("names")?.let { names ->
@@ -189,18 +195,18 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
     val nameCount = argsJson?.get("names")?.let { (it as? kotlinx.serialization.json.JsonArray)?.size }
     return when (toolName) {
         "read_memory_file" -> when {
-            nameCount != null && nameCount > 1 -> "Read $nameCount memories"
-            fileName != null -> "Read $fileName"
-            else -> "Read memory"
+            nameCount != null && nameCount > 1 -> stringResource(R.string.tool_read_memory_count, nameCount)
+            fileName != null -> stringResource(R.string.tool_read_memory_name, fileName)
+            else -> stringResource(R.string.tool_read_memory_success)
         }
-        "create_memory_file" -> if (fileName != null) "Saved $fileName" else "Saved a memory"
-        "edit_memory_file" -> if (fileName != null) "Updated $fileName" else "Updated a memory"
-        "delete_memory_file" -> if (fileName != null) "Removed $fileName" else "Removed a memory"
-        "list_memory_files" -> "Looked through saved memories"
-        "update_active_memory" -> "Updated active memory"
-        "web_search" -> result.lines().first().take(100).ifBlank { "Web search done" }
-        "search_conversations" -> result.lines().first().take(100).ifBlank { "Conversation search done" }
-        else -> "Done"
+        "create_memory_file" -> if (fileName != null) stringResource(R.string.tool_save_memory_name, fileName) else stringResource(R.string.tool_save_memory_default)
+        "edit_memory_file" -> if (fileName != null) stringResource(R.string.tool_edit_memory_name, fileName) else stringResource(R.string.tool_edit_memory_default)
+        "delete_memory_file" -> if (fileName != null) stringResource(R.string.tool_delete_memory_name, fileName) else stringResource(R.string.tool_delete_memory_default)
+        "list_memory_files" -> stringResource(R.string.tool_lookup_default)
+        "update_active_memory" -> stringResource(R.string.tool_update_active_default)
+        "web_search" -> result.lines().first().take(100).ifBlank { stringResource(R.string.tool_web_search_done) }
+        "search_conversations" -> result.lines().first().take(100).ifBlank { stringResource(R.string.tool_conversation_search_done) }
+        else -> stringResource(R.string.tool_done)
     }
 }
 
@@ -246,18 +252,18 @@ fun MessageItem(
 
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("Message Info") },
+            title = { Text(stringResource(R.string.message_info)) },
             text = {
                 Column {
-                    Text("Time: $dateString", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.time_with_label, dateString), style = MaterialTheme.typography.bodyMedium)
                     if (message.participant == Participant.MODEL) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Model: $modelDisplay", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.model_with_label, modelDisplay), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }) { Text("Close") }
+                TextButton(onClick = { showInfoDialog = false }) { Text(stringResource(R.string.provider_close)) }
             }
         )
     }
@@ -435,8 +441,8 @@ fun MessageItem(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
                             ) {
-                                TextButton(onClick = { onCancelEdit() }) { Text("Cancel") }
-                                TextButton(onClick = { onEdit(message.id, editState.text.toString()) }) { Text("Send") }
+                                TextButton(onClick = { onCancelEdit() }) { Text(stringResource(R.string.cancel)) }
+                                TextButton(onClick = { onEdit(message.id, editState.text.toString()) }) { Text(stringResource(R.string.send)) }
                             }
                         }
                     } else {
@@ -498,13 +504,13 @@ fun MessageItem(
                 if (!isEditing) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { clipboardManager.setText(AnnotatedString(message.text)) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                            Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                         }
                         IconButton(onClick = { onStartEdit() }, enabled = isEditingAllowed, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                         }
                         IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                            Icon(Icons.Default.Info, contentDescription = stringResource(R.string.info), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                         }
                     }
                 }
@@ -523,18 +529,19 @@ fun MessageItem(
                         val rotation by infiniteTransition.animateFloat(0f, 360f, infiniteRepeatable(tween(1000, easing = LinearEasing)), "rot")
 
                         val isThinkingNow = !message.thoughts.isNullOrBlank() || message.status == MessageStatus.THINKING
+                        val thinkingStatus = stringResource(R.string.thinking_ellipsis)
                         val statusText = when {
-                            message.status == MessageStatus.SUCCESS -> if (message.tokenCount > 0) "Cost ${message.tokenCount} tokens" else null
-                            isStreaming && isThinkingNow -> "Thinking..."
-                            isStreaming && message.text.isNotEmpty() -> "Answering..."
-                            isStreaming -> "Sending..."
+                            message.status == MessageStatus.SUCCESS -> if (message.tokenCount > 0) stringResource(R.string.cost_tokens, message.tokenCount) else null
+                            isStreaming && isThinkingNow -> thinkingStatus
+                            isStreaming && message.text.isNotEmpty() -> stringResource(R.string.answering_ellipsis)
+                            isStreaming -> stringResource(R.string.sending_ellipsis)
                             else -> null
                         }
 
                         if (statusText != null) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
                                 if (isStreaming || message.status == MessageStatus.SENDING || message.status == MessageStatus.THINKING) {
-                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(12.dp).rotate(rotation), tint = if (statusText == "Thinking...") MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(12.dp).rotate(rotation), tint = if (statusText == thinkingStatus) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary)
                                 } else {
                                     val icon = when (message.status) {
                                         MessageStatus.SUCCESS -> Icons.Default.CheckCircle
@@ -589,10 +596,10 @@ fun MessageItem(
                                 else if (!isThinking) {
                                     if (message.thoughtTimeMs != null && message.thoughtTimeMs > 0) {
                                         val seconds = message.thoughtTimeMs / 1000
-                                        if (seconds >= 60) "Thought for ${seconds / 60}m ${seconds % 60}s"
-                                        else "Thought for ${seconds}s"
-                                    } else "Thinking complete"
-                                } else "Thinking..."
+                                        if (seconds >= 60) stringResource(R.string.thought_for_minutes, seconds / 60, seconds % 60)
+                                        else stringResource(R.string.thought_for_seconds, seconds)
+                                    } else stringResource(R.string.thinking_complete)
+                                } else stringResource(R.string.thinking_ellipsis)
                             }
                             var isMergedExpanded by remember { mutableStateOf(false) }
                             val mergedBottomPadding by animateDpAsState(
@@ -638,7 +645,7 @@ fun MessageItem(
                                         segs.forEachIndexed { idx, seg ->
                                             if (seg.type == "thought" && seg.content.isNotBlank()) {
                                                 Text(
-                                                    "Thinking", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                    stringResource(R.string.tool_thinking), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                     fontWeight = FontWeight.SemiBold
                                                 )
@@ -732,7 +739,8 @@ fun MessageItem(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     
                                     // Dynamic Title: Use API provided title, or fallback to default labels
-                                    val thoughtTitle = remember(message.thoughts, message.thoughtTitle, isThinking, message.thoughtTimeMs, message.modelName) {
+                                    val thoughtResources = LocalContext.current.resources
+                                    val thoughtTitle = remember(message.thoughts, message.thoughtTitle, isThinking, message.thoughtTimeMs, message.modelName, thoughtResources) {
                                         if (message.thoughtTitle != null) {
                                             message.thoughtTitle
                                         } else if (!isThinking) {
@@ -741,15 +749,15 @@ fun MessageItem(
                                                 if (seconds >= 60) {
                                                     val minutes = seconds / 60
                                                     val remSeconds = seconds % 60
-                                                    "Thought for ${minutes}m ${remSeconds}s"
+                                                    thoughtResources.getString(R.string.thought_for_minutes, minutes, remSeconds)
                                                 } else {
-                                                    "Thought for ${seconds}s"
+                                                    thoughtResources.getString(R.string.thought_for_seconds, seconds)
                                                 }
                                             } else {
-                                                "Thinking complete"
+                                                thoughtResources.getString(R.string.thinking_complete)
                                             }
                                         } else {
-                                            "Thinking..."
+                                            thoughtResources.getString(R.string.thinking_ellipsis)
                                         }
                                     }
 
@@ -773,7 +781,7 @@ fun MessageItem(
                                     Column {
                                         Spacer(modifier = Modifier.height(20.dp))
                                         Text(
-                                            "Thinking", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            stringResource(R.string.tool_thinking), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                             fontWeight = FontWeight.SemiBold
                                         )
@@ -844,7 +852,7 @@ fun MessageItem(
                                     Column {
                                         Spacer(modifier = Modifier.height(20.dp))
                                         Text(
-                                            "Arguments:",
+                                            stringResource(R.string.arguments_label),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                             fontWeight = FontWeight.SemiBold
@@ -858,7 +866,7 @@ fun MessageItem(
                                         }
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            "Result:",
+                                            stringResource(R.string.result_label),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                             fontWeight = FontWeight.SemiBold
@@ -889,7 +897,7 @@ fun MessageItem(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         SelectionContainer {
                                             Text(
-                                                debouncedText.ifEmpty { "Failed to generate." },
+                                                debouncedText.ifEmpty { stringResource(R.string.failed_to_generate) },
                                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, lineHeight = 18.sp),
                                                 color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                             )
@@ -979,7 +987,7 @@ fun MessageItem(
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                                     Icon(Icons.Default.Info, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Generation stopped.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                    Text(stringResource(R.string.generation_stopped), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                 }
                             }
                         }

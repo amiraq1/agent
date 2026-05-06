@@ -1,0 +1,180 @@
+<resources>
+    <string name="app_name">Agora</string>
+
+    <!-- Chat Bottom Bar -->
+    <string name="add_attachment">添加附件</string>
+    <string name="photos">照片</string>
+    <string name="videos">视频</string>
+    <string name="files">文件</string>
+    <string name="select_model">选择模型</string>
+    <string name="no_model_selected">未选择模型</string>
+    <string name="collapse">收起</string>
+    <string name="expand">展开</string>
+    <string name="settings">设置</string>
+    <string name="tools">工具</string>
+    <string name="code_execution">代码执行</string>
+    <string name="google_search">Google 搜索</string>
+    <string name="thinking">思考</string>
+    <string name="web_search">网页搜索</string>
+    <string name="ask_agora">向 Agora 提问...</string>
+    <string name="stop">停止</string>
+    <string name="send">发送</string>
+
+    <!-- Tool Display -->
+    <string name="tool_look_up_memories">查看记忆</string>
+    <string name="tool_read_memory">读取记忆</string>
+    <string name="tool_add_memory">添加记忆</string>
+    <string name="tool_edit_memory">编辑记忆</string>
+    <string name="tool_delete_memory">删除记忆</string>
+    <string name="tool_update_active_memory">更新活跃记忆</string>
+    <string name="tool_web_search">网页搜索</string>
+    <string name="tool_search_conversations">搜索对话</string>
+    <string name="tool_searching_web">正在网上搜索 \'%1$s\'</string>
+    <string name="tool_searching_conversations">正在对话中搜索 \'%1$s\'</string>
+    <string name="tool_search_failed">搜索失败</string>
+    <string name="tool_search_done">搜索完成</string>
+    <string name="tool_web_search_done">网页搜索完成</string>
+    <string name="tool_conversation_search_done">对话搜索完成</string>
+    <string name="tool_thinking">思考</string>
+
+    <!-- System Prompt -->
+    <string name="system_prompt">系统指令</string>
+    <string name="no_system_prompt">未设置系统指令</string>
+
+    <!-- Drawer -->
+    <string name="conversations">对话</string>
+    <string name="new_chat">新建对话</string>
+
+    <!-- Settings - Main -->
+    <string name="settings_title">设置</string>
+    <string name="settings_provider">提供商</string>
+    <string name="settings_provider_desc">API 密钥、基础 URL 和提供商选择</string>
+    <string name="settings_prompts">系统指令</string>
+    <string name="settings_prompts_desc">创建和管理系统指令</string>
+    <string name="settings_models">模型</string>
+    <string name="settings_models_desc">启用、禁用和配置 AI 模型</string>
+    <string name="settings_context">上下文</string>
+    <string name="settings_context_desc">上下文窗口大小和可视化</string>
+    <string name="settings_web_search">网页搜索</string>
+    <string name="settings_web_search_desc">为所有提供商配置网页搜索工具</string>
+    <string name="settings_title_gen">标题生成</string>
+    <string name="settings_title_gen_desc">自动生成对话标题</string>
+    <string name="settings_memory">记忆</string>
+    <string name="settings_memory_desc">访问控制、活跃记忆和已保存文件</string>
+
+    <!-- Settings - Provider Page -->
+    <string name="provider_api_provider">API 提供商</string>
+    <string name="provider_base_url">基础 URL</string>
+    <string name="provider_api_keys">API 密钥</string>
+    <string name="provider_api_keys_optional">API 密钥（可选）</string>
+    <string name="provider_no_keys">未为 %1$s 配置密钥</string>
+    <string name="provider_keys_count">已配置 %1$d 个密钥</string>
+    <string name="provider_add_key">添加新密钥</string>
+    <string name="provider_select_provider">选择 AI 提供商</string>
+    <string name="provider_edit_key">编辑 API 密钥</string>
+    <string name="provider_add_key_title">添加 API 密钥</string>
+    <string name="provider_key_name_hint">名称（例如：工作区）</string>
+    <string name="provider_delete_key_title">删除 API 密钥？</string>
+    <string name="provider_delete_key_text">确定要删除 \'%1$s\' 吗？此操作无法撤销。</string>
+    <string name="provider_close">关闭</string>
+    <string name="provider_save">保存</string>
+    <string name="provider_add">添加</string>
+    <string name="provider_delete">删除</string>
+    <string name="provider_edit">编辑</string>
+    <string name="provider_cancel">取消</string>
+
+    <!-- Settings - Prompts Page -->
+    <string name="prompts_title">系统指令</string>
+    <string name="prompts_default">默认系统指令</string>
+    <string name="prompts_default_desc">定义全局角色或规则</string>
+    <string name="prompts_add">添加新指令</string>
+    <string name="prompts_edit_title">编辑系统指令</string>
+    <string name="prompts_add_title">添加系统指令</string>
+    <string name="prompts_title_hint">标题（例如：翻译器）</string>
+    <string name="prompts_content_hint">系统指令</string>
+    <string name="prompts_delete_title">删除系统指令？</string>
+    <string name="prompts_delete_text">确定要删除 \'%1$s\' 吗？此操作无法撤销。</string>
+
+    <!-- Settings - Models Page -->
+    <string name="models_title">模型</string>
+    <string name="models_default">默认模型</string>
+    <string name="models_no_models">未启用模型</string>
+    <string name="models_available">可用模型</string>
+    <string name="models_sync">从所有提供商同步</string>
+    <string name="models_sync_desc">获取所有已配置 API 的最新模型列表</string>
+    <string name="models_count">%1$d 个模型可用</string>
+    <string name="models_rename">重命名模型</string>
+    <string name="models_rename_current">当前 ID：%1$s</string>
+    <string name="models_alias_hint">别名</string>
+    <string name="models_select_default">选择默认模型</string>
+
+    <!-- Settings - Context Page -->
+    <string name="context_title">上下文</string>
+    <string name="context_window">上下文窗口</string>
+    <string name="context_retain">保留最近 %1$d 条消息</string>
+    <string name="context_visualize">可视化上下文滚动</string>
+    <string name="context_visualize_desc">将上下文窗口外的消息变暗</string>
+
+    <!-- Settings - Web Search Page -->
+    <string name="web_search_title">网页搜索</string>
+    <string name="web_search_enable">启用网页搜索</string>
+    <string name="web_search_enable_desc">允许模型通过工具调用搜索网页</string>
+    <string name="web_search_provider_label">搜索提供商</string>
+    <string name="web_search_brave">Brave</string>
+    <string name="web_search_searxng">SearXNG</string>
+    <string name="web_search_brave_desc">注重隐私的搜索 API。提供免费套餐。</string>
+    <string name="web_search_searxng_desc">自托管的元搜索引擎。无需 API 密钥。</string>
+    <string name="web_search_select_provider">选择搜索提供商</string>
+    <string name="web_search_brave_key">Brave 搜索 API 密钥</string>
+    <string name="web_search_brave_key_hint">来自 brave.com/search/api/ 的 API 密钥</string>
+    <string name="web_search_searxng_url">SearXNG 基础 URL</string>
+    <string name="web_search_searxng_url_hint">https://searx.be</string>
+
+    <!-- Settings - Title Generation -->
+    <string name="title_gen_auto">自动生成标题</string>
+    <string name="title_gen_auto_desc">在首次回复后生成标题</string>
+    <string name="title_gen_model">标题模型</string>
+    <string name="title_gen_current_model">使用当前模型</string>
+    <string name="title_gen_select_model">选择标题模型</string>
+
+    <!-- Settings - Memory Page -->
+    <string name="memory_title">记忆</string>
+    <string name="memory_access_saved">访问已保存的记忆</string>
+    <string name="memory_access_saved_desc">允许模型读取、创建和编辑记忆文件</string>
+    <string name="memory_access_past">访问过去的对话</string>
+    <string name="memory_access_past_desc">允许模型搜索对话历史（RAG）</string>
+    <string name="memory_active_title">活跃记忆</string>
+    <string name="memory_active_context">活跃记忆上下文</string>
+    <string name="memory_active_empty">未设置活跃记忆。模型将在所有对话中记住此内容。</string>
+    <string name="memory_saved_title">已保存的记忆</string>
+    <string name="memory_add">添加记忆</string>
+    <string name="memory_add_desc">向已保存的记忆中添加新记忆</string>
+    <string name="memory_no_files">暂无文件</string>
+    <string name="memory_create_hint">创建一个文件或让模型通过工具调用来创建</string>
+    <string name="memory_edit_active">编辑活跃记忆</string>
+    <string name="memory_edit">编辑记忆</string>
+    <string name="memory_title_hint">标题</string>
+    <string name="memory_content_hint">内容</string>
+    <string name="memory_active_desc">此内容将包含在每次 API 调用中。写入模型应始终记住的事实、偏好或上下文。</string>
+    <string name="memory_delete_title">删除记忆？</string>
+    <string name="memory_delete_text">确定要删除 \'%1$s\' 吗？此操作无法撤销。</string>
+    <string name="memory_add_title">添加记忆</string>
+    <string name="memory_create">创建</string>
+
+    <!-- Snackbar Messages -->
+    <string name="snackbar_fetching_models">正在获取可用模型...</string>
+    <string name="snackbar_generating_title">正在生成标题...</string>
+    <string name="snackbar_title_generated">标题已生成。</string>
+    <string name="snackbar_title_error">生成标题时遇到错误。</string>
+
+    <!-- General -->
+    <string name="back">返回</string>
+    <string name="remove">移除</string>
+    <string name="menu">菜单</string>
+    <string name="options">选项</string>
+    <string name="full_screen_image">全屏图片</string>
+    <string name="video_thumbnail">视频缩略图</string>
+    <string name="play">播放</string>
+    <string name="video_preview">视频预览</string>
+    <string name="file">文件</string>
+</resources>

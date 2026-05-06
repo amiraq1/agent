@@ -68,6 +68,8 @@ import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.newoether.agora.R
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.Dispatchers
@@ -157,7 +159,7 @@ fun ChatBottomBar(
     Column(modifier = modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight().statusBarsPadding() else Modifier).padding(8.dp)) {
         if (isExpanded) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = onCollapse) { Icon(Icons.Default.CloseFullscreen, "Collapse", tint = MaterialTheme.colorScheme.primary) }
+                IconButton(onClick = onCollapse) { Icon(Icons.Default.CloseFullscreen, stringResource(R.string.collapse), tint = MaterialTheme.colorScheme.primary) }
             }
         }
 
@@ -205,13 +207,13 @@ fun ChatBottomBar(
                                 isVideo && videoThumb != null -> {
                                     Image(
                                         bitmap = videoThumb!!.asImageBitmap(),
-                                        contentDescription = "Video thumbnail",
+                                        contentDescription = stringResource(R.string.video_thumbnail),
                                         modifier = thumbModifier,
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                     )
                                     Icon(
                                         Icons.Default.PlayArrow,
-                                        contentDescription = "Play",
+                                        contentDescription = stringResource(R.string.play),
                                         tint = Color.White,
                                         modifier = Modifier
                                             .align(Alignment.Center)
@@ -228,7 +230,7 @@ fun ChatBottomBar(
                                     ) {
                                         Icon(
                                             Icons.Default.Videocam,
-                                            "Video",
+                                            stringResource(R.string.video),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(28.dp)
                                         )
@@ -242,7 +244,7 @@ fun ChatBottomBar(
                                     ) {
                                         Icon(
                                             Icons.Default.AttachFile,
-                                            "File",
+                                            stringResource(R.string.file),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(28.dp)
                                         )
@@ -270,7 +272,7 @@ fun ChatBottomBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(R.string.remove),
                                 tint = Color.White,
                                 modifier = Modifier.size(10.dp)
                             )
@@ -305,10 +307,10 @@ fun ChatBottomBar(
         }
 
         Box(modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.weight(1f) else Modifier).bringIntoViewResponder(noOpResponder)) {
-            TextField(state = textFieldState, scrollState = scrollState, modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight() else Modifier).verticalScrollbar(scrollState, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)), placeholder = { Text("Ask Agora anything...", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) }, enabled = true, lineLimits = TextFieldLineLimits.MultiLine(1, if (isExpanded) Int.MAX_VALUE else 6), colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, cursorColor = MaterialTheme.colorScheme.primary), textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface))
+            TextField(state = textFieldState, scrollState = scrollState, modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight() else Modifier).verticalScrollbar(scrollState, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)), placeholder = { Text(stringResource(R.string.ask_agora), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) }, enabled = true, lineLimits = TextFieldLineLimits.MultiLine(1, if (isExpanded) Int.MAX_VALUE else 6), colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, cursorColor = MaterialTheme.colorScheme.primary), textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface))
             if (!isExpanded) {
                 val elevatedSurface = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
-                IconButton(onClick = onExpand, modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp, top = 4.dp).size(32.dp).background(Brush.radialGradient(listOf(elevatedSurface, elevatedSurface.copy(alpha = 0.5f), Color.Transparent)), CircleShape)) { Icon(Icons.Default.OpenInFull, "Expand", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)) }
+                IconButton(onClick = onExpand, modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp, top = 4.dp).size(32.dp).background(Brush.radialGradient(listOf(elevatedSurface, elevatedSurface.copy(alpha = 0.5f), Color.Transparent)), CircleShape)) { Icon(Icons.Default.OpenInFull, stringResource(R.string.expand), modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)) }
             }
         }
         }
@@ -332,7 +334,7 @@ fun ChatBottomBar(
                         },
                         modifier = Modifier.size(32.dp).menuAnchor()
                     ) {
-                        Icon(Icons.Default.Add, "Add Attachment", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Add, stringResource(R.string.add_attachment), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
                     ExposedDropdownMenu(
@@ -352,7 +354,7 @@ fun ChatBottomBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Photos")
+                                    Text(stringResource(R.string.photos))
                                 }
                             },
                             onClick = {
@@ -366,7 +368,7 @@ fun ChatBottomBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Videocam, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Videos")
+                                    Text(stringResource(R.string.videos))
                                 }
                             },
                             onClick = {
@@ -380,7 +382,7 @@ fun ChatBottomBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.AttachFile, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Files")
+                                    Text(stringResource(R.string.files))
                                 }
                             },
                             onClick = {
@@ -400,8 +402,8 @@ fun ChatBottomBar(
                 
                 val displayText = when {
                     isModelValid -> modelAliases[selectedModel] ?: ("$modelId ($provider)")
-                    enabledModels.isNotEmpty() -> "Select Model"
-                    else -> "No model selected"
+                    enabledModels.isNotEmpty() -> stringResource(R.string.select_model)
+                    else -> stringResource(R.string.no_model_selected)
                 }
                 
                 ExposedDropdownMenuBox(
@@ -443,11 +445,11 @@ fun ChatBottomBar(
                     ) {
                         if (enabledModels.isEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("No models enabled") }, 
-                                onClick = { 
+                                text = { Text(stringResource(R.string.models_no_models)) },
+                                onClick = {
                                     activeMenu = null
                                     lastModelDismissTime = 0L // Reset to allow immediate re-open
-                                }, 
+                                },
                                 enabled = false
                             )
                         } else {
@@ -484,7 +486,7 @@ fun ChatBottomBar(
                         }, 
                         modifier = Modifier.size(32.dp).menuAnchor()
                     ) { 
-                        Icon(Icons.Default.MoreVert, "Tools", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) 
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.tools), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     
                     ExposedDropdownMenu(
@@ -506,7 +508,7 @@ fun ChatBottomBar(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Terminal, null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Code Execution")
+                                        Text(stringResource(R.string.code_execution))
                                         Spacer(modifier = Modifier.width(6.dp))
                                         ProviderBadge("Gemini")
                                     }
@@ -525,7 +527,7 @@ fun ChatBottomBar(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Language, null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Google Search")
+                                        Text(stringResource(R.string.google_search))
                                         Spacer(modifier = Modifier.width(6.dp))
                                         ProviderBadge("Gemini")
                                     }
@@ -545,7 +547,7 @@ fun ChatBottomBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Thinking")
+                                    Text(stringResource(R.string.thinking))
                                 }
                             },
                             trailingIcon = {
@@ -562,7 +564,7 @@ fun ChatBottomBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Language, null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Web Search")
+                                    Text(stringResource(R.string.web_search))
                                 }
                             },
                             trailingIcon = {
@@ -596,7 +598,7 @@ fun ChatBottomBar(
                 shape = CircleShape, 
                 elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
             ) { 
-                Icon(if (isLoading) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send, "Action", modifier = Modifier.size(24.dp))
+                Icon(if (isLoading) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send, stringResource(R.string.action), modifier = Modifier.size(24.dp))
             }
         }
     }

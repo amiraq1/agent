@@ -18,8 +18,10 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,10 +44,10 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Web Search", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.web_search_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -63,11 +65,11 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { fm.clearFocus() }
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            SettingsGroup(title = "WEB SEARCH") {
+            SettingsGroup(title = stringResource(R.string.web_search_title)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Enable Web Search") },
-                    supportingContent = { Text("Allow models to search the web via tool calling") },
+                    headlineContent = { Text(stringResource(R.string.web_search_enable)) },
+                    supportingContent = { Text(stringResource(R.string.web_search_enable_desc)) },
                     leadingContent = { Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = {
                         Switch(checked = webSearchEnabled, onCheckedChange = { viewModel.setWebSearchEnabled(it) })
@@ -79,8 +81,8 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        headlineContent = { Text("Search Provider") },
-                        supportingContent = { Text(if (webSearchProvider == "searxng") "SearXNG" else "Brave") },
+                        headlineContent = { Text(stringResource(R.string.web_search_provider_label)) },
+                        supportingContent = { Text(if (webSearchProvider == "searxng") stringResource(R.string.web_search_searxng) else stringResource(R.string.web_search_brave)) },
                         leadingContent = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable { showProviderDialog = true }
                     )
@@ -97,7 +99,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 Icon(Icons.Default.Key, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Brave Search API Key", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(stringResource(R.string.web_search_brave_key), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                                     val keyState = rememberTextFieldState(webSearchApiKey)
                                     LaunchedEffect(keyState.text) {
                                         viewModel.setWebSearchApiKey(keyState.text.toString())
@@ -105,7 +107,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
                                         OutlinedTextField(
                                             state = keyState,
-                                            placeholder = { Text("API key from brave.com/search/api/") },
+                                            placeholder = { Text(stringResource(R.string.web_search_brave_key_hint)) },
                                             modifier = Modifier.fillMaxWidth(),
                                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         )
@@ -125,7 +127,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 Icon(painter = androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.link_24), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("SearXNG Base URL", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(stringResource(R.string.web_search_searxng_url), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                                     val urlState = rememberTextFieldState(webSearchBaseUrl)
                                     LaunchedEffect(urlState.text) {
                                         viewModel.setWebSearchBaseUrl(urlState.text.toString())
@@ -133,7 +135,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
                                         OutlinedTextField(
                                             state = urlState,
-                                            placeholder = { Text("https://searx.be") },
+                                            placeholder = { Text(stringResource(R.string.web_search_searxng_url_hint)) },
                                             modifier = Modifier.fillMaxWidth(),
                                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         )
@@ -150,21 +152,23 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showProviderDialog) {
         AlertDialog(
             onDismissRequest = { showProviderDialog = false },
-            title = { Text("Select Search Provider") },
+            title = { Text(stringResource(R.string.web_search_select_provider)) },
             text = {
                 Column {
-                    val providers = listOf("brave" to "Brave", "searxng" to "SearXNG")
-                    providers.forEach { (key, label) ->
+                    val providers = listOf("brave" to R.string.web_search_brave, "searxng" to R.string.web_search_searxng)
+                    providers.forEach { (key, labelRes) ->
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            headlineContent = { Text(label, fontWeight = if (webSearchProvider == key) FontWeight.Bold else FontWeight.Normal) },
+                            headlineContent = { Text(stringResource(labelRes), fontWeight = if (webSearchProvider == key) FontWeight.Bold else FontWeight.Normal) },
                             supportingContent = {
                                 Text(
-                                    when (key) {
-                                        "brave" -> "Privacy-focused search API. Free tier available."
-                                        "searxng" -> "Self-hosted metasearch engine. No API key needed."
-                                        else -> ""
-                                    }
+                                    stringResource(
+                                        when (key) {
+                                            "brave" -> R.string.web_search_brave_desc
+                                            "searxng" -> R.string.web_search_searxng_desc
+                                            else -> R.string.web_search_brave_desc
+                                        }
+                                    )
                                 )
                             },
                             leadingContent = {
@@ -184,7 +188,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showProviderDialog = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { showProviderDialog = false }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 }

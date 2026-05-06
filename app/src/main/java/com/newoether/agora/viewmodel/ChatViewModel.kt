@@ -15,6 +15,7 @@ import com.newoether.agora.data.local.ChatEntity
 import com.newoether.agora.data.local.MessageEntity
 import com.newoether.agora.model.ChatConversation
 import com.newoether.agora.util.Constants
+import com.newoether.agora.R
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
@@ -478,7 +479,7 @@ class ChatViewModel(
 
     fun generateTitle(conversationId: String) {
         viewModelScope.launch {
-            _snackbarMessage.emit("Generating title...")
+            _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_generating_title))
             val conversation = chatDao.getConversation(conversationId) ?: return@launch
             val path = messages.value
             val firstUserMsg = path.firstOrNull { it.participant == Participant.USER } ?: return@launch
@@ -532,9 +533,9 @@ class ChatViewModel(
             title = title.trim().replace("\n", " ").take(60)
             if (title.isNotBlank()) {
                 renameConversation(conversationId, title)
-                _snackbarMessage.emit("Title generated.")
+                _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_title_generated))
             } else {
-                _snackbarMessage.emit("Error encountered when generating title.")
+                _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_title_error))
             }
         }
     }

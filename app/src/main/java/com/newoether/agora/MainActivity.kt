@@ -50,6 +50,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -107,16 +108,16 @@ class MainActivity : ComponentActivity() {
                 if (needsErrorDialog) {
                     AlertDialog(
                         onDismissRequest = { activity?.finish() },
-                        title = { Text("Database Incompatible") },
-                        text = { Text("The database is incompatible with this version of Agora. Please clear the database and restart the app.") },
+                        title = { Text(stringResource(R.string.database_incompatible)) },
+                        text = { Text(stringResource(R.string.database_incompatible_desc)) },
                         dismissButton = {
-                            TextButton(onClick = { activity?.finish() }) { Text("Quit") }
+                            TextButton(onClick = { activity?.finish() }) { Text(stringResource(R.string.quit)) }
                         },
                         confirmButton = {
                             TextButton(onClick = {
                                 applicationContext.deleteDatabase(ChatDatabase.DB_NAME)
                                 activity?.recreate()
-                            }) { Text("Clear Database") }
+                            }) { Text(stringResource(R.string.clear_database)) }
                         }
                     )
                 } else {
@@ -324,7 +325,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                 ) {
                     coil.compose.AsyncImage(
                         model = url,
-                        contentDescription = "Full screen image",
+                        contentDescription = stringResource(R.string.full_screen_image),
                         onSuccess = { state ->
                             imageSize = state.painter.intrinsicSize
                         },
@@ -524,7 +525,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.provider_close),
                             tint = Color.White
                         )
                     }
@@ -801,7 +802,7 @@ fun ChatApp(
                         .fillMaxHeight()
                         .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    Text("Conversations", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.conversations), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Button(
@@ -815,7 +816,7 @@ fun ChatApp(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("New Chat")
+                        Text(stringResource(R.string.new_chat))
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
@@ -878,7 +879,7 @@ fun ChatApp(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Generate Title") },
+                                        text = { Text(stringResource(R.string.generate_title)) },
                                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
                                         enabled = !isSwitching && !isLoading,
                                         onClick = {
@@ -887,7 +888,7 @@ fun ChatApp(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Rename") },
+                                        text = { Text(stringResource(R.string.rename)) },
                                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                                         enabled = !isSwitching && !isLoading,
                                         onClick = {
@@ -897,7 +898,7 @@ fun ChatApp(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Delete", color = if (!isSwitching && !isLoading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.5f)) },
+                                        text = { Text(stringResource(R.string.delete), color = if (!isSwitching && !isLoading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.5f)) },
                                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = if (!isSwitching && !isLoading) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.5f)) },
                                         enabled = !isSwitching && !isLoading,
                                         onClick = {
@@ -923,7 +924,7 @@ fun ChatApp(
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Settings")
+                        Text(stringResource(R.string.settings))
                     }
                 }
             }
@@ -969,21 +970,21 @@ fun ChatApp(
                                             Text(currentTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         }
                                         if (!isNewChatMode && totalTokens > 0) {
-                                            Text("Total: $totalTokens tokens", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(stringResource(R.string.total_tokens, totalTokens), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 },
                                 navigationIcon = {
                                     IconButton(onClick = { focusManager.clearFocus(); scope.launch { drawerState.open() } }) {
-                                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                        Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
                                     }
                                 },
                                 actions = {
                                     IconButton(onClick = { showPromptDialog = true }) {
-                                        Icon(Icons.Default.Psychology, contentDescription = "System Prompt")
+                                        Icon(Icons.Default.Psychology, contentDescription = stringResource(R.string.system_prompt))
                                     }
                                     IconButton(onClick = { focusManager.clearFocus(); isExpanded = false; viewModel.createNewChat() }) {
-                                        Icon(Icons.Default.Add, contentDescription = "New Chat")
+                                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat))
                                     }
                                 },
                                 colors = TopAppBarDefaults.topAppBarColors(
@@ -1088,7 +1089,7 @@ fun ChatApp(
                                 ) {
                                     // Welcome - positioned from top
                                     Text(
-                                        "Welcome to Agora.",
+                                        stringResource(R.string.welcome_to_agora),
                                         style = MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onBackground,
@@ -1182,7 +1183,7 @@ fun ChatApp(
     if (showRenameDialog != null) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = null },
-            title = { Text("Rename Chat") },
+            title = { Text(stringResource(R.string.rename_chat)) },
             text = {
                 val fm = androidx.compose.ui.platform.LocalFocusManager.current
                 Box(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
@@ -1199,12 +1200,12 @@ fun ChatApp(
                     viewModel.renameConversation(showRenameDialog!!, conversationToRename)
                     showRenameDialog = null
                 }) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -1213,8 +1214,8 @@ fun ChatApp(
     if (showDeleteConfirmDialog != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text("Delete Chat?") },
-            text = { Text("Are you sure you want to delete this conversation? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_chat)) },
+            text = { Text(stringResource(R.string.delete_chat_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1223,12 +1224,12 @@ fun ChatApp(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -1243,7 +1244,7 @@ fun ChatApp(
 
         AlertDialog(
             onDismissRequest = { showPromptDialog = false },
-            title = { Text("Conversation Prompt") },
+            title = { Text(stringResource(R.string.conversation_prompt)) },
             text = {
                 LazyColumn {
                     item {
@@ -1256,8 +1257,8 @@ fun ChatApp(
                                 onClick = { selectedPromptId = null }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            val globalDefaultTitle = systemPrompts.find { it.id == activeSystemPromptId }?.title ?: "None"
-                            Text("Global Default ($globalDefaultTitle)")
+                            val globalDefaultTitle = systemPrompts.find { it.id == activeSystemPromptId }?.title ?: stringResource(R.string.no_system_prompt)
+                            Text(stringResource(R.string.global_default_format, globalDefaultTitle))
                         }
                     }
                     items(systemPrompts) { prompt ->
@@ -1286,12 +1287,12 @@ fun ChatApp(
                     }
                     showPromptDialog = false
                 }) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPromptDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

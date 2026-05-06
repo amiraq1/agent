@@ -12,8 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,10 +28,10 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Context", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.context_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -45,7 +47,7 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            SettingsGroup(title = "CONTEXT") {
+            SettingsGroup(title = stringResource(R.string.context_title)) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -64,12 +66,12 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Context Window",
+                                text = stringResource(R.string.context_window),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Retain $maxContextWindow recent messages",
+                                text = stringResource(R.string.context_retain, maxContextWindow),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
@@ -90,8 +92,8 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Visualize Context Roll-Out") },
-                    supportingContent = { Text("Dim messages outside the context window") },
+                    headlineContent = { Text(stringResource(R.string.context_visualize)) },
+                    supportingContent = { Text(stringResource(R.string.context_visualize_desc)) },
                     leadingContent = {
                         Icon(Icons.Default.Visibility, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },

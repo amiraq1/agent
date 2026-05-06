@@ -22,8 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @Composable
@@ -53,19 +56,19 @@ fun SettingsGroup(
 
 private data class SettingsCategory(
     val key: String,
-    val title: String,
-    val description: String,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
     val icon: ImageVector
 )
 
 private val categories = listOf(
-    SettingsCategory("provider", "Provider", "API keys, base URL, and provider selection", Icons.Default.Cloud),
-    SettingsCategory("prompts", "System Prompts", "Create and manage system instructions", Icons.Default.Psychology),
-    SettingsCategory("models", "Models", "Enable, disable, and configure AI models", Icons.Default.Chat),
-    SettingsCategory("context", "Context", "Context window size and visualization", Icons.Default.Memory),
-    SettingsCategory("websearch", "Web Search", "Configure web search tool for all providers", Icons.Default.Language),
-    SettingsCategory("titlegen", "Title Generation", "Auto-generate conversation titles", Icons.Default.Edit),
-    SettingsCategory("memory", "Memory", "Access controls, active memory, and saved files", Icons.Default.Description)
+    SettingsCategory("provider", R.string.settings_provider, R.string.settings_provider_desc, Icons.Default.Cloud),
+    SettingsCategory("prompts", R.string.settings_prompts, R.string.settings_prompts_desc, Icons.Default.Psychology),
+    SettingsCategory("models", R.string.settings_models, R.string.settings_models_desc, Icons.Default.Chat),
+    SettingsCategory("context", R.string.settings_context, R.string.settings_context_desc, Icons.Default.Memory),
+    SettingsCategory("websearch", R.string.settings_web_search, R.string.settings_web_search_desc, Icons.Default.Language),
+    SettingsCategory("titlegen", R.string.settings_title_gen, R.string.settings_title_gen_desc, Icons.Default.Edit),
+    SettingsCategory("memory", R.string.settings_memory, R.string.settings_memory_desc, Icons.Default.Description)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,11 +77,12 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     val isSyncingModels by viewModel.isSyncingModels.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val fetchingModelsMessage = stringResource(R.string.snackbar_fetching_models)
 
     LaunchedEffect(isSyncingModels) {
         if (isSyncingModels) {
             snackbarHostState.showSnackbar(
-                message = "Fetching available models...",
+                message = fetchingModelsMessage,
                 duration = SnackbarDuration.Short
             )
         }
@@ -123,10 +127,10 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         containerColor = MaterialTheme.colorScheme.background,
                         topBar = {
                             TopAppBar(
-                                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                                 navigationIcon = {
                                     IconButton(onClick = onBack) {
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                                     }
                                 },
                                 colors = TopAppBarDefaults.topAppBarColors(
@@ -144,8 +148,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             items(categories) { cat ->
                                 ListItem(
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = { Text(cat.title) },
-                                    supportingContent = { Text(cat.description, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    headlineContent = { Text(stringResource(cat.titleRes)) },
+                                    supportingContent = { Text(stringResource(cat.descriptionRes), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     leadingContent = {
                                         Icon(cat.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                     },

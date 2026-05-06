@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.newoether.agora.R
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -99,7 +101,7 @@ fun VideoPlayer(
         ) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = "Close",
+                contentDescription = stringResource(R.string.provider_close),
                 tint = Color.White
             )
         }

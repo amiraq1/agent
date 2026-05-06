@@ -1,3 +1,237 @@
 <resources>
     <string name="app_name">Agora</string>
+
+    <!-- Chat Bottom Bar -->
+    <string name="add_attachment">Add Attachment</string>
+    <string name="photos">Photos</string>
+    <string name="videos">Videos</string>
+    <string name="files">Files</string>
+    <string name="select_model">Select Model</string>
+    <string name="no_model_selected">No model selected</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="settings">Settings</string>
+    <string name="tools">Tools</string>
+    <string name="code_execution">Code Execution</string>
+    <string name="google_search">Google Search</string>
+    <string name="thinking">Thinking</string>
+    <string name="web_search">Web Search</string>
+    <string name="ask_agora">Ask Agora anything...</string>
+    <string name="stop">Stop</string>
+    <string name="send">Send</string>
+
+    <!-- Tool Display -->
+    <string name="tool_look_up_memories">Look Up Memories</string>
+    <string name="tool_read_memory">Read Memory</string>
+    <string name="tool_add_memory">Add Memory</string>
+    <string name="tool_edit_memory">Edit Memory</string>
+    <string name="tool_delete_memory">Delete Memory</string>
+    <string name="tool_update_active_memory">Update Active Memory</string>
+    <string name="tool_web_search">Web Search</string>
+    <string name="tool_search_conversations">Search Conversations</string>
+    <string name="tool_searching_web">Searching \'%1$s\' on the web</string>
+    <string name="tool_searching_conversations">Searching \'%1$s\' in conversations</string>
+    <string name="tool_search_failed">Search failed</string>
+    <string name="tool_search_done">Search done</string>
+    <string name="tool_web_search_done">Web search done</string>
+    <string name="tool_conversation_search_done">Conversation search done</string>
+    <string name="tool_thinking">Thinking</string>
+    <string name="tool_read_memory_success">Read memory</string>
+    <string name="tool_read_memory_count">Read %1$d memories</string>
+    <string name="tool_read_memory_name">Read %1$s</string>
+    <string name="tool_save_memory_failed">Save memory failed</string>
+    <string name="tool_save_memory_name">Saved %1$s</string>
+    <string name="tool_save_memory_default">Saved a memory</string>
+    <string name="tool_edit_memory_failed">Edit memory failed</string>
+    <string name="tool_edit_memory_name">Updated %1$s</string>
+    <string name="tool_edit_memory_default">Updated a memory</string>
+    <string name="tool_delete_memory_failed">Remove memory failed</string>
+    <string name="tool_delete_memory_name">Removed %1$s</string>
+    <string name="tool_delete_memory_default">Removed a memory</string>
+    <string name="tool_lookup_failed">Look up memories failed</string>
+    <string name="tool_lookup_count">Looked through %1$d saved memories</string>
+    <string name="tool_lookup_default">Looked through saved memories</string>
+    <string name="tool_update_active_failed">Update active memory failed</string>
+    <string name="tool_update_active_default">Updated active memory</string>
+    <string name="tool_searching_web_default">Searching the web</string>
+    <string name="tool_searching_conversations_default">Searching conversations</string>
+    <string name="tool_call_failed">Tool call failed</string>
+    <string name="tool_done">Done</string>
+    <string name="tool_context">Tool</string>
+    <string name="message_info">Message Info</string>
+    <string name="time_with_label">Time: %1$s</string>
+    <string name="model_with_label">Model: %1$s</string>
+    <string name="cancel">Cancel</string>
+    <string name="copy">Copy</string>
+    <string name="edit">Edit</string>
+    <string name="info">Info</string>
+    <string name="arguments_label">Arguments:</string>
+    <string name="result_label">Result:</string>
+    <string name="cost_tokens">Cost %1$d tokens</string>
+    <string name="thinking_ellipsis">Thinking...</string>
+    <string name="answering_ellipsis">Answering...</string>
+    <string name="sending_ellipsis">Sending...</string>
+    <string name="thinking_complete">Thinking complete</string>
+    <string name="thought_for_seconds">Thought for %1$ds</string>
+    <string name="thought_for_minutes">Thought for %1$dm %2$ds</string>
+    <string name="failed_to_generate">Failed to generate.</string>
+    <string name="generation_stopped">Generation stopped.</string>
+    <string name="action">Action</string>
+    <string name="video">Video</string>
+
+    <!-- System Prompt -->
+    <string name="system_prompt">System Prompt</string>
+    <string name="no_system_prompt">No system prompt set</string>
+
+    <!-- Drawer -->
+    <string name="conversations">Conversations</string>
+    <string name="new_chat">New Chat</string>
+
+    <!-- Settings - Main -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_provider">Provider</string>
+    <string name="settings_provider_desc">API keys, base URL, and provider selection</string>
+    <string name="settings_prompts">System Prompts</string>
+    <string name="settings_prompts_desc">Create and manage system instructions</string>
+    <string name="settings_models">Models</string>
+    <string name="settings_models_desc">Enable, disable, and configure AI models</string>
+    <string name="settings_context">Context</string>
+    <string name="settings_context_desc">Context window size and visualization</string>
+    <string name="settings_web_search">Web Search</string>
+    <string name="settings_web_search_desc">Configure web search tool for all providers</string>
+    <string name="settings_title_gen">Title Generation</string>
+    <string name="settings_title_gen_desc">Auto-generate conversation titles</string>
+    <string name="settings_memory">Memory</string>
+    <string name="settings_memory_desc">Access controls, active memory, and saved files</string>
+
+    <!-- Settings - Provider Page -->
+    <string name="provider_api_provider">API Provider</string>
+    <string name="provider_base_url">Base URL</string>
+    <string name="provider_api_keys">API Keys</string>
+    <string name="provider_api_keys_optional">API Keys (Optional)</string>
+    <string name="provider_no_keys">No keys configured for %1$s</string>
+    <string name="provider_keys_count">%1$d key(s) configured</string>
+    <string name="provider_add_key">Add New Key</string>
+    <string name="provider_select_provider">Select AI Provider</string>
+    <string name="provider_edit_key">Edit API Key</string>
+    <string name="provider_add_key_title">Add API Key</string>
+    <string name="provider_key_name_hint">Name (e.g. Workspace)</string>
+    <string name="provider_delete_key_title">Delete API Key?</string>
+    <string name="provider_delete_key_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+    <string name="provider_close">Close</string>
+    <string name="provider_save">Save</string>
+    <string name="provider_add">Add</string>
+    <string name="provider_delete">Delete</string>
+    <string name="provider_edit">Edit</string>
+    <string name="provider_cancel">Cancel</string>
+
+    <!-- Settings - Prompts Page -->
+    <string name="prompts_title">System Prompts</string>
+    <string name="prompts_default">Default System Prompt</string>
+    <string name="prompts_default_desc">Define global personas or rules</string>
+    <string name="prompts_add">Add New Prompt</string>
+    <string name="prompts_edit_title">Edit System Prompt</string>
+    <string name="prompts_add_title">Add System Prompt</string>
+    <string name="prompts_title_hint">Title (e.g. Translator)</string>
+    <string name="prompts_content_hint">System Prompt</string>
+    <string name="prompts_delete_title">Delete System Instruction?</string>
+    <string name="prompts_delete_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+
+    <!-- Settings - Models Page -->
+    <string name="models_title">Models</string>
+    <string name="models_default">DEFAULT MODEL</string>
+    <string name="models_no_models">No models enabled</string>
+    <string name="models_available">AVAILABLE MODELS</string>
+    <string name="models_sync">Sync from All Providers</string>
+    <string name="models_sync_desc">Fetch the latest model list for all configured APIs</string>
+    <string name="models_count">%1$d models available</string>
+    <string name="models_rename">Rename Model</string>
+    <string name="models_rename_current">Current ID: %1$s</string>
+    <string name="models_alias_hint">Alias</string>
+    <string name="models_select_default">Select Default Model</string>
+
+    <!-- Settings - Context Page -->
+    <string name="context_title">Context</string>
+    <string name="context_window">Context Window</string>
+    <string name="context_retain">Retain %1$d recent messages</string>
+    <string name="context_visualize">Visualize Context Roll-Out</string>
+    <string name="context_visualize_desc">Dim messages outside the context window</string>
+
+    <!-- Settings - Web Search Page -->
+    <string name="web_search_title">Web Search</string>
+    <string name="web_search_enable">Enable Web Search</string>
+    <string name="web_search_enable_desc">Allow models to search the web via tool calling</string>
+    <string name="web_search_provider_label">Search Provider</string>
+    <string name="web_search_brave">Brave</string>
+    <string name="web_search_searxng">SearXNG</string>
+    <string name="web_search_brave_desc">Privacy-focused search API. Free tier available.</string>
+    <string name="web_search_searxng_desc">Self-hosted metasearch engine. No API key needed.</string>
+    <string name="web_search_select_provider">Select Search Provider</string>
+    <string name="web_search_brave_key">Brave Search API Key</string>
+    <string name="web_search_brave_key_hint">API key from brave.com/search/api/</string>
+    <string name="web_search_searxng_url">SearXNG Base URL</string>
+    <string name="web_search_searxng_url_hint">https://searx.be</string>
+
+    <!-- Settings - Title Generation -->
+    <string name="title_gen_auto">Auto-Generate Title</string>
+    <string name="title_gen_auto_desc">Generate a title after the first response</string>
+    <string name="title_gen_model">Title Model</string>
+    <string name="title_gen_current_model">Use Current Model</string>
+    <string name="title_gen_select_model">Select Title Model</string>
+
+    <!-- Settings - Memory Page -->
+    <string name="memory_title">Memory</string>
+    <string name="memory_access_saved">Access saved memories</string>
+    <string name="memory_access_saved_desc">Allow the model to read, create, and edit memory files</string>
+    <string name="memory_access_past">Access past conversations</string>
+    <string name="memory_access_past_desc">Allow the model to search conversation history (RAG)</string>
+    <string name="memory_active_title">ACTIVE MEMORY</string>
+    <string name="memory_active_context">Active Memory Context</string>
+    <string name="memory_active_empty">No active memory set. The model will remember this across all conversations.</string>
+    <string name="memory_saved_title">SAVED MEMORIES</string>
+    <string name="memory_add">Add Memory</string>
+    <string name="memory_add_desc">Add a new memory to saved memories</string>
+    <string name="memory_no_files">No files yet</string>
+    <string name="memory_create_hint">Create a file or let the model create one via tool calling</string>
+    <string name="memory_edit_active">Edit Active Memory</string>
+    <string name="memory_edit">Edit Memory</string>
+    <string name="memory_title_hint">Title</string>
+    <string name="memory_content_hint">Content</string>
+    <string name="memory_active_desc">This content is included in every API call. Write facts, preferences, or context the model should always remember.</string>
+    <string name="memory_delete_title">Delete Memory?</string>
+    <string name="memory_delete_text">Are you sure you want to delete \'%1$s\'? This cannot be undone.</string>
+    <string name="memory_add_title">Add Memory</string>
+    <string name="memory_create">Create</string>
+
+    <!-- Snackbar Messages -->
+    <string name="snackbar_fetching_models">Fetching available models...</string>
+    <string name="snackbar_generating_title">Generating title...</string>
+    <string name="snackbar_title_generated">Title generated.</string>
+    <string name="snackbar_title_error">Error encountered when generating title.</string>
+
+    <!-- General -->
+    <string name="back">Back</string>
+    <string name="remove">Remove</string>
+    <string name="menu">Menu</string>
+    <string name="options">Options</string>
+    <string name="full_screen_image">Full screen image</string>
+    <string name="video_thumbnail">Video thumbnail</string>
+    <string name="play">Play</string>
+    <string name="video_preview">Video preview</string>
+    <string name="file">File</string>
+    <string name="total_tokens">Total: %1$d tokens</string>
+    <string name="welcome_to_agora">Welcome to Agora.</string>
+    <string name="database_incompatible">Database Incompatible</string>
+    <string name="database_incompatible_desc">The database is incompatible with this version of Agora. Please clear the database and restart the app.</string>
+    <string name="quit">Quit</string>
+    <string name="clear_database">Clear Database</string>
+    <string name="generate_title">Generate Title</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="rename_chat">Rename Chat</string>
+    <string name="delete_chat">Delete Chat?</string>
+    <string name="delete_chat_confirm">Are you sure you want to delete this conversation? This action cannot be undone.</string>
+    <string name="conversation_prompt">Conversation Prompt</string>
+    <string name="global_default_format">Global Default (%1$s)</string>
+    <string name="save">Save</string>
 </resources>

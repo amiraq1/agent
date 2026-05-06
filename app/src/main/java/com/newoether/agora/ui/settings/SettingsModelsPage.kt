@@ -25,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,10 +52,10 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Models", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.models_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -69,7 +71,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            SettingsGroup(title = "DEFAULT MODEL") {
+            SettingsGroup(title = stringResource(R.string.models_default)) {
                 val activeAlias = modelAliases[selectedModel]
                 val cleanId = selectedModel.substringAfter(":")
                 val providerName = selectedModel.substringBefore(":")
@@ -79,7 +81,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = {
                         Text(
-                            if (enabledModels.isEmpty()) "No models enabled" else activeDisplayName,
+                            if (enabledModels.isEmpty()) stringResource(R.string.models_no_models) else activeDisplayName,
                             color = if (enabledModels.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                     },
@@ -90,11 +92,11 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     modifier = Modifier.clickable(enabled = enabledModels.isNotEmpty()) { showActiveModelDialog = true }
                 )
             }
-            SettingsGroup(title = "AVAILABLE MODELS") {
+            SettingsGroup(title = stringResource(R.string.models_available)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Sync from All Providers") },
-                    supportingContent = { Text("Fetch the latest model list for all configured APIs") },
+                    headlineContent = { Text(stringResource(R.string.models_sync)) },
+                    supportingContent = { Text(stringResource(R.string.models_sync_desc)) },
                     leadingContent = { Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable { viewModel.fetchAvailableModels() }
                 )
@@ -111,7 +113,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = { Text(providerName, fontWeight = FontWeight.Bold) },
-                                supportingContent = { Text("${models.size} models available") },
+                                supportingContent = { Text(stringResource(R.string.models_count, models.size)) },
                                 trailingContent = {
                                     Icon(if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
                                 },
@@ -132,7 +134,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         trailingContent = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 IconButton(onClick = { showModelAliasDialog = model }) {
-                                                    Icon(Icons.Default.Edit, contentDescription = "Rename", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.models_rename), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                                 }
                                                 Checkbox(checked = isEnabled, onCheckedChange = {
                                                     viewModel.setEnabledModels(if (it) enabledModels + model else enabledModels - model)
@@ -156,7 +158,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showActiveModelDialog) {
         AlertDialog(
             onDismissRequest = { showActiveModelDialog = false },
-            title = { Text("Select Default Model") },
+            title = { Text(stringResource(R.string.models_select_default)) },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(enabledModels.toList()) { model ->
@@ -189,7 +191,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showActiveModelDialog = false }) { Text("Close") } }
+            confirmButton = { TextButton(onClick = { showActiveModelDialog = false }) { Text(stringResource(R.string.provider_close)) } }
         )
     }
 
@@ -199,16 +201,16 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
         AlertDialog(
             onDismissRequest = { showModelAliasDialog = null },
-            title = { Text("Rename Model") },
+            title = { Text(stringResource(R.string.models_rename)) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
-                    Text("Current ID: ${model.removePrefix("models/")}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.models_rename_current, model.removePrefix("models/")), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
                         OutlinedTextField(
                             state = aliasState,
-                            label = { Text("Alias") },
+                            label = { Text(stringResource(R.string.models_alias_hint)) },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text(model.removePrefix("models/")) }
                         )
@@ -219,9 +221,9 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 TextButton(onClick = {
                     viewModel.updateModelAlias(model, aliasState.text.toString())
                     showModelAliasDialog = null
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.provider_save)) }
             },
-            dismissButton = { TextButton(onClick = { showModelAliasDialog = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showModelAliasDialog = null }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 }

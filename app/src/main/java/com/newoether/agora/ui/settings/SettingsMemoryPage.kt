@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,10 +51,10 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Memory", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.memory_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -73,8 +75,8 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             SettingsGroup(title = "ACCESS") {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Access saved memories") },
-                    supportingContent = { Text("Allow the model to read, create, and edit memory files") },
+                    headlineContent = { Text(stringResource(R.string.memory_access_saved)) },
+                    supportingContent = { Text(stringResource(R.string.memory_access_saved_desc)) },
                     leadingContent = { Icon(Icons.Default.Memory, null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = {
                         Switch(checked = accessSavedMemories, onCheckedChange = { viewModel.setAccessSavedMemories(it) })
@@ -84,8 +86,8 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Access past conversations") },
-                    supportingContent = { Text("Allow the model to search conversation history (RAG)") },
+                    headlineContent = { Text(stringResource(R.string.memory_access_past)) },
+                    supportingContent = { Text(stringResource(R.string.memory_access_past_desc)) },
                     leadingContent = { Icon(Icons.Default.Chat, null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = {
                         Switch(checked = accessPastConversations, onCheckedChange = { viewModel.setAccessPastConversations(it) })
@@ -94,13 +96,13 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 )
             }
 
-            SettingsGroup(title = "ACTIVE MEMORY") {
+            SettingsGroup(title = stringResource(R.string.memory_active_title)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Active Memory Context") },
+                    headlineContent = { Text(stringResource(R.string.memory_active_context)) },
                     supportingContent = {
                         Text(
-                            if (activeMemoryContent.isBlank()) "No active memory set. The model will remember this across all conversations."
+                            if (activeMemoryContent.isBlank()) stringResource(R.string.memory_active_empty)
                             else activeMemoryContent.take(100) + if (activeMemoryContent.length > 100) "..." else ""
                         )
                     },
@@ -112,11 +114,11 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 )
             }
 
-            SettingsGroup(title = "SAVED MEMORIES") {
+            SettingsGroup(title = stringResource(R.string.memory_saved_title)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Add Memory") },
-                    supportingContent = { Text("Add a new memory to saved memories") },
+                    headlineContent = { Text(stringResource(R.string.memory_add)) },
+                    supportingContent = { Text(stringResource(R.string.memory_add_desc)) },
                     leadingContent = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable { showNewFileDialog = true }
                 )
@@ -124,8 +126,8 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 if (memoryFiles.isEmpty()) {
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        headlineContent = { Text("No files yet", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                        supportingContent = { Text("Create a file or let the model create one via tool calling") }
+                        headlineContent = { Text(stringResource(R.string.memory_no_files), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                        supportingContent = { Text(stringResource(R.string.memory_create_hint)) }
                     )
                 } else {
                     memoryFiles.forEach { fileName ->
@@ -139,7 +141,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             trailingContent = {
                                 Box {
                                     IconButton(onClick = { showFileMenu = true }) {
-                                        Icon(Icons.Default.MoreVert, "Menu", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                                        Icon(Icons.Default.MoreVert, stringResource(R.string.menu), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                     }
                                     DropdownMenu(
                                         expanded = showFileMenu,
@@ -147,7 +149,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Edit") },
+                                            text = { Text(stringResource(R.string.provider_edit)) },
                                             leadingIcon = { Icon(Icons.Default.Edit, null) },
                                             onClick = {
                                                 showFileMenu = false
@@ -158,7 +160,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                            text = { Text(stringResource(R.string.provider_delete), color = MaterialTheme.colorScheme.error) },
                                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                             onClick = {
                                                 showFileMenu = false
@@ -179,8 +181,8 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     showDeleteFileConfirm?.let { fileName ->
         AlertDialog(
             onDismissRequest = { showDeleteFileConfirm = null },
-            title = { Text("Delete Memory?") },
-            text = { Text("Are you sure you want to delete '$fileName'? This cannot be undone.") },
+            title = { Text(stringResource(R.string.memory_delete_title)) },
+            text = { Text(stringResource(R.string.memory_delete_text, fileName)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -189,9 +191,9 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         showDeleteFileConfirm = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.provider_delete)) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteFileConfirm = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteFileConfirm = null }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 
@@ -206,13 +208,13 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 showFileEditor = null
                 fileEditorContent = ""
             },
-            title = { Text(if (isActiveMemory) "Edit Active Memory" else "Edit Memory") },
+            title = { Text(if (isActiveMemory) stringResource(R.string.memory_edit_active) else stringResource(R.string.memory_edit)) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
                     if (isActiveMemory) {
                         Text(
-                            "This content is included in every API call. Write facts, preferences, or context the model should always remember.",
+                            stringResource(R.string.memory_active_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -221,7 +223,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         OutlinedTextField(
                             value = editFileName,
                             onValueChange = { editFileName = it },
-                            label = { Text("Title") },
+                            label = { Text(stringResource(R.string.memory_title_hint)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -230,7 +232,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     OutlinedTextField(
                         value = editContent,
                         onValueChange = { editContent = it },
-                        label = { Text("Content") },
+                        label = { Text(stringResource(R.string.memory_content_hint)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 200.dp, max = 400.dp),
@@ -256,13 +258,13 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     showFileEditor = null
                     fileEditorContent = ""
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.provider_save)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showFileEditor = null
                     fileEditorContent = ""
-                }) { Text("Cancel") }
+                }) { Text(stringResource(R.string.provider_cancel)) }
             }
         )
     }
@@ -271,14 +273,14 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showNewFileDialog) {
         AlertDialog(
             onDismissRequest = { showNewFileDialog = false },
-            title = { Text("Add Memory") },
+            title = { Text(stringResource(R.string.memory_add_title)) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
                     OutlinedTextField(
                         value = newFileName,
                         onValueChange = { newFileName = it },
-                        label = { Text("Title") },
+                        label = { Text(stringResource(R.string.memory_title_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -286,7 +288,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     OutlinedTextField(
                         value = newFileContent,
                         onValueChange = { newFileContent = it },
-                        label = { Text("Content") },
+                        label = { Text(stringResource(R.string.memory_content_hint)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 150.dp),
@@ -305,14 +307,14 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     showNewFileDialog = false
                     newFileName = ""
                     newFileContent = ""
-                }) { Text("Create") }
+                }) { Text(stringResource(R.string.memory_create)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showNewFileDialog = false
                     newFileName = ""
                     newFileContent = ""
-                }) { Text("Cancel") }
+                }) { Text(stringResource(R.string.provider_cancel)) }
             }
         )
     }

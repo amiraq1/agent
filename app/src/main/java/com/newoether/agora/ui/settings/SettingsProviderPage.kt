@@ -25,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.newoether.agora.R
 import com.newoether.agora.data.ApiKeyEntry
 import com.newoether.agora.viewmodel.ChatViewModel
 
@@ -54,10 +56,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Provider", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.settings_provider), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,10 +77,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            SettingsGroup(title = "PROVIDER") {
+            SettingsGroup(title = stringResource(R.string.settings_provider)) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("API Provider") },
+                    headlineContent = { Text(stringResource(R.string.provider_api_provider)) },
                     supportingContent = { Text(viewingProvider) },
                     leadingContent = {
                         Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -120,7 +122,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Base URL",
+                                text = stringResource(R.string.provider_base_url),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -140,10 +142,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text(if (viewingProvider == "Ollama") "API Keys (Optional)" else "API Keys") },
+                    headlineContent = { Text(if (viewingProvider == "Ollama") stringResource(R.string.provider_api_keys_optional) else stringResource(R.string.provider_api_keys)) },
                     supportingContent = {
                         val providerKeys = apiKeys.filter { it.provider == viewingProvider }
-                        Text(if (providerKeys.isEmpty()) "No keys configured for $viewingProvider" else "${providerKeys.size} key(s) configured")
+                        Text(if (providerKeys.isEmpty()) stringResource(R.string.provider_no_keys, viewingProvider) else stringResource(R.string.provider_keys_count, providerKeys.size))
                     },
                     leadingContent = { Icon(Icons.Default.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
                 )
@@ -160,11 +162,11 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         trailingContent = {
                             Box {
                                 IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                                 }
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
-                                    DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
-                                    DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteKeyConfirm = entry })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.provider_edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.provider_delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteKeyConfirm = entry })
                                 }
                             }
                         },
@@ -178,7 +180,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add New Key")
+                    Text(stringResource(R.string.provider_add_key))
                 }
             }
         }
@@ -188,7 +190,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showProviderDialog) {
         AlertDialog(
             onDismissRequest = { showProviderDialog = false },
-            title = { Text("Select AI Provider") },
+            title = { Text(stringResource(R.string.provider_select_provider)) },
             text = {
                 Column {
                     providers.forEach { p ->
@@ -224,7 +226,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showProviderDialog = false }) { Text("Close") } }
+            confirmButton = { TextButton(onClick = { showProviderDialog = false }) { Text(stringResource(R.string.provider_close)) } }
         )
     }
 
@@ -236,13 +238,13 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
         AlertDialog(
             onDismissRequest = { showKeyDialog = null },
-            title = { Text(if (isEdit) "Edit API Key" else "Add API Key") },
+            title = { Text(if (isEdit) stringResource(R.string.provider_edit_key) else stringResource(R.string.provider_add_key_title)) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
                     OutlinedTextField(
                         value = name, onValueChange = { name = it },
-                        label = { Text("Name (e.g. Workspace)") },
+                        label = { Text(stringResource(R.string.provider_key_name_hint)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .bringIntoViewResponder(noOpResponder)
@@ -264,9 +266,9 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         if (isEdit) viewModel.updateApiKey(entry.id, name, key) else viewModel.addApiKey(name, key, entry.provider)
                         showKeyDialog = null
                     }
-                }) { Text(if (isEdit) "Save" else "Add") }
+                }) { Text(if (isEdit) stringResource(R.string.provider_save) else stringResource(R.string.provider_add)) }
             },
-            dismissButton = { TextButton(onClick = { showKeyDialog = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showKeyDialog = null }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 
@@ -274,8 +276,8 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     showDeleteKeyConfirm?.let { entry ->
         AlertDialog(
             onDismissRequest = { showDeleteKeyConfirm = null },
-            title = { Text("Delete API Key?") },
-            text = { Text("Are you sure you want to delete '${entry.name}'? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.provider_delete_key_title)) },
+            text = { Text(stringResource(R.string.provider_delete_key_text, entry.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -283,9 +285,9 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         showDeleteKeyConfirm = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.provider_delete)) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteKeyConfirm = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteKeyConfirm = null }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 }
