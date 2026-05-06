@@ -17,8 +17,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 @Serializable
 internal data class OllamaChatRequest(
@@ -165,105 +163,96 @@ class OllamaProvider : LlmProvider {
             tools = config.tools
         )
 
-        var connection: HttpURLConnection? = null
         try {
-            val url = URL("$baseUrl/api/chat")
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
+            val url = "$baseUrl/api/chat"
+            val headers = mutableMapOf("Content-Type" to "application/json")
             if (config.apiKey.isNotEmpty()) {
-                connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
+                headers["Authorization"] = "Bearer ${config.apiKey}"
             }
-            connection.doOutput = true
             val requestBodyJson = json.encodeToString(OllamaChatRequest.serializer(), requestBody)
             Log.d("AgoraAPI", "[Ollama] REQ → $baseUrl/api/chat | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
             Log.d("AgoraAPI", "[Ollama] BODY: ${requestBodyJson.take(4000)}")
-            connection.outputStream.bufferedWriter().use {
-                it.write(requestBodyJson)
-            }
+            val handle = HttpClient.streamPost(url, requestBodyJson, headers)
+            try {
+                if (handle.code == 200) {
+                    var line: String? = null
+                    val thinkParser = StreamingThinkTagParser()
+                    var receivedStructuredThinking = false
 
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.readTimeout = 200
-                val reader = connection.inputStream.bufferedReader()
-                var line: String? = null
-                val thinkParser = StreamingThinkTagParser()
-                var receivedStructuredThinking = false
-
-                while (currentCoroutineContext().isActive) {
-                    try {
-                        line = reader.readLine()
-                        if (line == null) break
-                    } catch (e: java.net.SocketTimeoutException) {
-                        if (!currentCoroutineContext().isActive) break
-                        continue
-                    }
-                    try {
-                        val response = json.decodeFromString<OllamaStreamResponse>(line)
-                        response.message?.let { msg ->
-                            // 1. Handle explicit thinking field (Ollama 0.5.4+)
-                            msg.thinking?.let { thinking ->
-                                if (thinking.isNotEmpty() && config.thinkingEnabled) {
-                                    emit(StreamEvent.ThoughtChunk(thinking, null))
-                                    receivedStructuredThinking = true
-                                }
-                            }
-
-                            // 2. Handle tool calls
-                            msg.toolCalls?.let { toolCalls ->
-                                val calls = toolCalls.mapNotNull { tc ->
-                                    val id = tc.id ?: "${Constants.TOOL_CALL_ID_PREFIX}0"
-                                    val name = tc.function?.name ?: ""
-                                    val args = tc.function?.arguments?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() } ?: ""
-                                    if (name.isNotEmpty()) StreamEvent.ToolCallRequest(id, name, args) else null
-                                }
-                                if (calls.size == 1) emit(calls.first())
-                                else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
-                            }
-
-                            // 3. Handle content: if structured thinking was received, emit content
-                            // directly (any <think> tags in content are literal, not semantic).
-                            // Otherwise, parse <think> tags as a fallback for older models.
-                            if (msg.content.isNotEmpty()) {
-                                if (receivedStructuredThinking) {
-                                    emit(StreamEvent.TextChunk(msg.content))
-                                } else {
-                                    thinkParser.feed(
-                                        content = msg.content,
-                                        thinkingEnabled = config.thinkingEnabled,
-                                        onText = { emit(StreamEvent.TextChunk(it)) },
-                                        onThought = { emit(StreamEvent.ThoughtChunk(it)) }
-                                    )
-                                }
-                            }
+                    while (currentCoroutineContext().isActive) {
+                        try {
+                            line = handle.readLine()
+                            if (line == null) break
+                        } catch (e: java.net.SocketTimeoutException) {
+                            if (!currentCoroutineContext().isActive) break
+                            continue
                         }
-                        if (response.done) {
-                            thinkParser.flush(
-                                onText = { emit(StreamEvent.TextChunk(it)) },
-                                onThought = { emit(StreamEvent.ThoughtChunk(it)) }
-                            )
-                            val total = (response.promptEvalCount ?: 0) + (response.evalCount ?: 0)
-                            emit(StreamEvent.UsageUpdate(total))
+                        try {
+                            val response = json.decodeFromString<OllamaStreamResponse>(line)
+                            response.message?.let { msg ->
+                                // 1. Handle explicit thinking field (Ollama 0.5.4+)
+                                msg.thinking?.let { thinking ->
+                                    if (thinking.isNotEmpty() && config.thinkingEnabled) {
+                                        emit(StreamEvent.ThoughtChunk(thinking, null))
+                                        receivedStructuredThinking = true
+                                    }
+                                }
+
+                                // 2. Handle tool calls
+                                msg.toolCalls?.let { toolCalls ->
+                                    val calls = toolCalls.mapNotNull { tc ->
+                                        val id = tc.id ?: "${Constants.TOOL_CALL_ID_PREFIX}0"
+                                        val name = tc.function?.name ?: ""
+                                        val args = tc.function?.arguments?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else it.toString() } ?: ""
+                                        if (name.isNotEmpty()) StreamEvent.ToolCallRequest(id, name, args) else null
+                                    }
+                                    if (calls.size == 1) emit(calls.first())
+                                    else if (calls.size > 1) emit(StreamEvent.ToolCallsRequest(calls))
+                                }
+
+                                // 3. Handle content: if structured thinking was received, emit content
+                                // directly (any <think> tags in content are literal, not semantic).
+                                // Otherwise, parse <think> tags as a fallback for older models.
+                                if (msg.content.isNotEmpty()) {
+                                    if (receivedStructuredThinking) {
+                                        emit(StreamEvent.TextChunk(msg.content))
+                                    } else {
+                                        thinkParser.feed(
+                                            content = msg.content,
+                                            thinkingEnabled = config.thinkingEnabled,
+                                            onText = { emit(StreamEvent.TextChunk(it)) },
+                                            onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+                                        )
+                                    }
+                                }
+                            }
+                            if (response.done) {
+                                thinkParser.flush(
+                                    onText = { emit(StreamEvent.TextChunk(it)) },
+                                    onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+                                )
+                                val total = (response.promptEvalCount ?: 0) + (response.evalCount ?: 0)
+                                emit(StreamEvent.UsageUpdate(total))
+                            }
+                        } catch (e: Exception) {
+                            Log.e("AgoraAPI", "Parse error: ${e.message}")
                         }
-                    } catch (e: Exception) {
-                        Log.e("AgoraAPI", "Parse error: ${e.message}")
                     }
+                    if (!currentCoroutineContext().isActive) {
+                        throw kotlinx.coroutines.CancellationException("Stream cancelled")
+                    }
+                } else {
+                    val errorRaw = handle.errorBody ?: "Unknown error"
+                    Log.e("AgoraAPI", "[Ollama] ERR ${handle.code}: $errorRaw")
+                    val errorMessage = try {
+                        val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
+                        "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
+                    } catch (_: Exception) {
+                        "Error ${handle.code}: $errorRaw"
+                    }
+                    emit(StreamEvent.Error(errorMessage))
                 }
-                if (!currentCoroutineContext().isActive) {
-                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
-                }
-            } else {
-                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
-                Log.e("AgoraAPI", "[Ollama] ERR $responseCode: $errorRaw")
-                val errorMessage = try {
-                    val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
-                    "Error ${errorJson.error.code ?: responseCode} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
-                } catch (_: Exception) {
-                    "Error $responseCode: $errorRaw"
-                }
-                emit(StreamEvent.Error(errorMessage))
-            }
+            } finally { handle.close() }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: java.net.SocketTimeoutException) {
@@ -276,20 +265,16 @@ class OllamaProvider : LlmProvider {
             if (currentCoroutineContext().isActive) {
                 emit(StreamEvent.Error("Error: ${e.localizedMessage}"))
             }
-        } finally {
-            connection?.disconnect()
         }
     }.flowOn(Dispatchers.IO)
 
     override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "http://localhost:11434"
-            val url = URL("$effectiveBaseUrl/api/tags")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
+            val responseText = HttpClient.fetchModels("$effectiveBaseUrl/api/tags") ?: run {
+                Log.e("AgoraAPI", "Failed to fetch Ollama models: empty response")
+                return@withContext emptyList()
+            }
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<OllamaTagsResponse>(responseText).models.map { it.name }
         } catch (e: Exception) {

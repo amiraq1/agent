@@ -20,8 +20,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 @Serializable
 internal data class AnthropicRequest(
@@ -263,119 +261,110 @@ class AnthropicProvider : LlmProvider {
             tools = anthropicTools
         )
 
-        var connection: HttpURLConnection? = null
         try {
-            val url = URL("$baseUrl/messages")
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.setRequestProperty("x-api-key", config.apiKey)
-            connection.setRequestProperty("anthropic-version", "2023-06-01")
-            connection.doOutput = true
+            val url = "$baseUrl/messages"
+            val headers = mutableMapOf("Content-Type" to "application/json")
+            headers["x-api-key"] = config.apiKey
+            headers["anthropic-version"] = "2023-06-01"
             val requestBodyJson = json.encodeToString(AnthropicRequest.serializer(), requestBody)
             Log.d("AgoraAPI", "[Anthropic] REQ → $baseUrl/messages | model=$modelName | msgs=${apiMessages.size} | thinking=${thinking != null} | tools=${anthropicTools?.size ?: 0}")
             Log.d("AgoraAPI", "[Anthropic] BODY: ${requestBodyJson.take(4000)}")
-            connection.outputStream.bufferedWriter().use {
-                it.write(requestBodyJson)
-            }
+            val handle = HttpClient.streamPost(url, requestBodyJson, headers)
+            try {
+                if (handle.code == 200) {
+                    var line: String? = null
+                    var currentType: String? = null
+                    var toolUseId: String? = null
+                    var toolUseName: String? = null
+                    var toolUseArgs = StringBuilder()
+                    var thinkingSignature: String? = null
+                    var messageInputTokens = 0
 
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.readTimeout = 200
-                val reader = connection.inputStream.bufferedReader()
-                var line: String? = null
-                var currentType: String? = null
-                var toolUseId: String? = null
-                var toolUseName: String? = null
-                var toolUseArgs = StringBuilder()
-                var thinkingSignature: String? = null
-                var messageInputTokens = 0
-
-                while (currentCoroutineContext().isActive) {
-                    try {
-                        line = reader.readLine()
-                        if (line == null) break
-                    } catch (e: java.net.SocketTimeoutException) {
-                        if (!currentCoroutineContext().isActive) break
-                        continue
-                    }
-                    if (line.startsWith("event: ")) {
-                        currentType = line.substring(7).trim()
-                    } else if (line.startsWith("data: ")) {
-                        val jsonStr = line.substring(6).trim()
+                    while (currentCoroutineContext().isActive) {
                         try {
-                            val event = json.decodeFromString<AnthropicStreamEvent>(jsonStr)
-                            when (event.type) {
-                                "message_start" -> {
-                                    event.message?.usage?.inputTokens?.let { messageInputTokens = it }
-                                }
-                                "content_block_start" -> {
-                                    event.contentBlock?.let { block ->
-                                        when (block.type) {
-                                            "thinking" -> {
-                                                block.signature?.takeIf { it.isNotBlank() }?.let { thinkingSignature = it }
-                                            }
-                                            "tool_use" -> {
-                                                toolUseId = block.id
-                                                toolUseName = block.name
-                                                toolUseArgs = StringBuilder()
-                                            }
-                                        }
+                            line = handle.readLine()
+                            if (line == null) break
+                        } catch (e: java.net.SocketTimeoutException) {
+                            if (!currentCoroutineContext().isActive) break
+                            continue
+                        }
+                        if (line.startsWith("event: ")) {
+                            currentType = line.substring(7).trim()
+                        } else if (line.startsWith("data: ")) {
+                            val jsonStr = line.substring(6).trim()
+                            try {
+                                val event = json.decodeFromString<AnthropicStreamEvent>(jsonStr)
+                                when (event.type) {
+                                    "message_start" -> {
+                                        event.message?.usage?.inputTokens?.let { messageInputTokens = it }
                                     }
-                                }
-                                "content_block_delta" -> {
-                                    event.delta?.let { delta ->
-                                        when (delta.type) {
-                                            "input_json_delta" -> {
-                                                delta.partialJson?.let { toolUseArgs.append(it) }
-                                            }
-                                            else -> {
-                                                delta.text?.let { emit(StreamEvent.TextChunk(it)) }
-                                                delta.thinking?.let {
-                                                    if (delta.signature != null) thinkingSignature = delta.signature
-                                                    emit(StreamEvent.ThoughtChunk(it, null, thinkingSignature))
+                                    "content_block_start" -> {
+                                        event.contentBlock?.let { block ->
+                                            when (block.type) {
+                                                "thinking" -> {
+                                                    block.signature?.takeIf { it.isNotBlank() }?.let { thinkingSignature = it }
+                                                }
+                                                "tool_use" -> {
+                                                    toolUseId = block.id
+                                                    toolUseName = block.name
+                                                    toolUseArgs = StringBuilder()
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                "content_block_stop" -> {
-                                    if (toolUseId != null && toolUseName != null) {
-                                        emit(StreamEvent.ToolCallRequest(
-                                            toolUseId!!, toolUseName!!, toolUseArgs.toString()
-                                        ))
-                                        toolUseId = null
-                                        toolUseName = null
+                                    "content_block_delta" -> {
+                                        event.delta?.let { delta ->
+                                            when (delta.type) {
+                                                "input_json_delta" -> {
+                                                    delta.partialJson?.let { toolUseArgs.append(it) }
+                                                }
+                                                else -> {
+                                                    delta.text?.let { emit(StreamEvent.TextChunk(it)) }
+                                                    delta.thinking?.let {
+                                                        if (delta.signature != null) thinkingSignature = delta.signature
+                                                        emit(StreamEvent.ThoughtChunk(it, null, thinkingSignature))
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
-                                    thinkingSignature = null
-                                }
-                                "message_delta" -> {
-                                    event.usage?.let { u ->
-                                        val total = messageInputTokens + (u.outputTokens ?: 0)
-                                        emit(StreamEvent.UsageUpdate(total))
+                                    "content_block_stop" -> {
+                                        if (toolUseId != null && toolUseName != null) {
+                                            emit(StreamEvent.ToolCallRequest(
+                                                toolUseId!!, toolUseName!!, toolUseArgs.toString()
+                                            ))
+                                            toolUseId = null
+                                            toolUseName = null
+                                        }
+                                        thinkingSignature = null
+                                    }
+                                    "message_delta" -> {
+                                        event.usage?.let { u ->
+                                            val total = messageInputTokens + (u.outputTokens ?: 0)
+                                            emit(StreamEvent.UsageUpdate(total))
+                                        }
                                     }
                                 }
+                            } catch (e: Exception) {
+                                Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                             }
-                        } catch (e: Exception) {
-                            Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                         }
                     }
+                    if (!currentCoroutineContext().isActive) {
+                        throw kotlinx.coroutines.CancellationException("Stream cancelled")
+                    }
+                } else {
+                    val errorRaw = handle.errorBody ?: "Unknown error"
+                    Log.e("AgoraAPI", "[Anthropic] ERR ${handle.code}: $errorRaw")
+                    val errorMessage = try {
+                        val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
+                        "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
+                    } catch (_: Exception) {
+                        "Error ${handle.code}: $errorRaw"
+                    }
+                    emit(StreamEvent.Error(errorMessage))
                 }
-                if (!currentCoroutineContext().isActive) {
-                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
-                }
-            } else {
-                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
-                Log.e("AgoraAPI", "[Anthropic] ERR $responseCode: $errorRaw")
-                val errorMessage = try {
-                    val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
-                    "Error ${errorJson.error.code ?: responseCode} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
-                } catch (_: Exception) {
-                    "Error $responseCode: $errorRaw"
-                }
-                emit(StreamEvent.Error(errorMessage))
-            }
+            } finally { handle.close() }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: java.net.SocketTimeoutException) {
@@ -388,23 +377,19 @@ class AnthropicProvider : LlmProvider {
             if (currentCoroutineContext().isActive) {
                 emit(StreamEvent.Error("Error: ${e.localizedMessage}"))
             }
-        } finally {
-            connection?.disconnect()
         }
     }.flowOn(Dispatchers.IO)
 
     override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "https://api.anthropic.com/v1"
-            val url = URL("$effectiveBaseUrl/models")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("x-api-key", apiKey)
-            connection.setRequestProperty("anthropic-version", "2023-06-01")
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
+            val responseText = HttpClient.fetchModels(
+                "$effectiveBaseUrl/models",
+                mapOf("x-api-key" to apiKey, "anthropic-version" to "2023-06-01")
+            ) ?: run {
+                Log.e("AgoraAPI", "Failed to fetch Anthropic models: empty response")
+                return@withContext emptyList()
+            }
             json.decodeFromString<AnthropicModelsResponse>(responseText).data.map { it.id }
         } catch (e: Exception) {
             Log.e("AgoraAPI", "Failed to fetch Anthropic models", e)

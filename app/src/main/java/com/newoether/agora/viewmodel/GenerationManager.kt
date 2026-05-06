@@ -254,41 +254,21 @@ class GenerationManager(
         val numResults = ((args["num_results"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 5).coerceIn(1, 10)
 
         return try {
-            val url: java.net.URL
-            val connection: java.net.HttpURLConnection
-            val requestHeaders = mutableMapOf<String, String>()
-
-            when (webSearchProvider) {
+            val (url, requestHeaders) = when (webSearchProvider) {
                 "searxng" -> {
                     val baseUrl = webSearchBaseUrl.ifBlank { "https://searx.be" }
-                    url = java.net.URL("$baseUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&format=json&engines=google,brave")
-                    connection = url.openConnection() as java.net.HttpURLConnection
+                    ("$baseUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&format=json&engines=google,brave") to emptyMap<String, String>()
                 }
                 else -> {
                     val apiKey = webSearchApiKey.ifBlank { return "Error: No Brave Search API key configured." }
-                    url = java.net.URL("https://api.search.brave.com/res/v1/web/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&count=$numResults")
-                    connection = url.openConnection() as java.net.HttpURLConnection
-                    requestHeaders["Accept"] = "application/json"
-                    requestHeaders["Accept-Encoding"] = "gzip"
-                    requestHeaders["X-Subscription-Token"] = apiKey
+                    ("https://api.search.brave.com/res/v1/web/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&count=$numResults") to
+                        mapOf("Accept" to "application/json", "Accept-Encoding" to "gzip", "X-Subscription-Token" to apiKey)
                 }
             }
 
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 10_000
-            requestHeaders.forEach { (k, v) -> connection.setRequestProperty(k, v) }
-            connection.requestMethod = "GET"
-
-            val responseCode = connection.responseCode
-            if (responseCode != 200) {
-                val errorBody = connection.errorStream?.bufferedReader()?.readText() ?: ""
-                connection.disconnect()
-                "Search failed with HTTP $responseCode: $errorBody"
-            } else {
-                val body = connection.inputStream.bufferedReader().readText()
-                connection.disconnect()
-                formatSearchResults(body)
-            }
+            val body = com.newoether.agora.api.HttpClient.fetchModels(url, requestHeaders)
+                ?: return "Search failed: no response"
+            formatSearchResults(body)
         } catch (e: Exception) {
             "Search error: ${e.message}"
         }

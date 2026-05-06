@@ -15,9 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import java.net.ConnectException
-import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
-import java.net.URL
 import java.net.UnknownHostException
 
 abstract class BaseOpenAiProvider : LlmProvider {
@@ -83,36 +81,24 @@ abstract class BaseOpenAiProvider : LlmProvider {
 
         val thinkParser = StreamingThinkTagParser()
 
-        var connection: HttpURLConnection? = null
         try {
-            val url = URL("$baseUrl/chat/completions")
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            if (config.apiKey.isNotEmpty()) {
-                connection.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
-            }
-            for ((key, value) in getExtraHeaders(config)) {
-                connection.setRequestProperty(key, value)
-            }
-            connection.doOutput = true
-
             val requestBodyJson = json.encodeToString(OpenAiChatRequest.serializer(), request)
             Log.d("AgoraAPI", "[$name] REQ → $baseUrl/chat/completions | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
             Log.d("AgoraAPI", "[$name] BODY: ${requestBodyJson.take(4000)}")
-            connection.outputStream.bufferedWriter().use { it.write(requestBodyJson) }
 
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.readTimeout = 200
-                val reader = connection.inputStream.bufferedReader()
+            val headers = mutableMapOf("Content-Type" to "application/json")
+            if (config.apiKey.isNotEmpty()) headers["Authorization"] = "Bearer ${config.apiKey}"
+            for ((key, value) in getExtraHeaders(config)) headers[key] = value
+
+            val handle = HttpClient.streamPost("$baseUrl/chat/completions", requestBodyJson, headers)
+            try {
+            if (handle.code == 200) {
                 val pendingToolCalls = mutableMapOf<Int, PendingToolCall>()
 
                 while (currentCoroutineContext().isActive) {
                     val line: String?
                     try {
-                        line = reader.readLine()
+                        line = handle.readLine()
                         if (line == null) break
                     } catch (e: SocketTimeoutException) {
                         if (!currentCoroutineContext().isActive) break
@@ -175,16 +161,17 @@ abstract class BaseOpenAiProvider : LlmProvider {
                     throw CancellationException("Stream cancelled")
                 }
             } else {
-                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
-                Log.e("AgoraAPI", "[$name] ERR $responseCode: $errorRaw")
+                val errorRaw = handle.errorBody ?: "Unknown error"
+                Log.e("AgoraAPI", "[$name] ERR ${handle.code}: $errorRaw")
                 val errorMessage = try {
                     val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
-                    "Error ${errorJson.error.code ?: responseCode} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
+                    "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
                 } catch (_: Exception) {
-                    "Error $responseCode: $errorRaw"
+                    "Error ${handle.code}: $errorRaw"
                 }
                 emit(StreamEvent.Error(errorMessage))
             }
+            } finally { handle.close() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: SocketTimeoutException) {
@@ -197,22 +184,19 @@ abstract class BaseOpenAiProvider : LlmProvider {
             if (currentCoroutineContext().isActive) {
                 emit(StreamEvent.Error("Error: ${e.localizedMessage ?: "An unexpected error occurred."}"))
             }
-        } finally {
-            connection?.disconnect()
         }
     }.flowOn(Dispatchers.IO)
 
     override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> = withContext(Dispatchers.IO) {
         try {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: defaultBaseUrl
-            val url = URL("$effectiveBaseUrl/models")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
+            val responseText = HttpClient.fetchModels(
+                "$effectiveBaseUrl/models",
+                mapOf("Authorization" to "Bearer $apiKey")
+            ) ?: run {
+                Log.e("AgoraAPI", "Failed to fetch $name models: empty response")
+                return@withContext emptyList()
+            }
             json.decodeFromString<OpenAiModelListResponse>(responseText)
                 .data.map { it.id }.sorted()
         } catch (e: Exception) {

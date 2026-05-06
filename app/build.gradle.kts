@@ -97,6 +97,7 @@ dependencies {
     implementation(libs.jlatexmath.android)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -19,8 +19,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -322,7 +320,6 @@ class GeminiProvider : LlmProvider {
             generationConfig = if (thinkingConfig != null) ApiGenerationConfig(thinkingConfig = thinkingConfig) else null
         )
 
-        var connection: HttpURLConnection? = null
         try {
             // Determine if baseUrl already includes versioning
             val finalUrlString = if (baseUrl.contains("/v1") || baseUrl.contains("/v1beta")) {
@@ -330,128 +327,121 @@ class GeminiProvider : LlmProvider {
             } else {
                 "$baseUrl/v1beta/models/$cleanModelName:streamGenerateContent?alt=sse&key=${config.apiKey}"
             }
-            
-            val url = URL(finalUrlString)
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.doOutput = true
+
+            val headers = mapOf("Content-Type" to "application/json")
             val requestJson = json.encodeToString(ApiGenerateContentRequest.serializer(), requestBody)
             Log.d("AgoraAPI", "[Gemini] REQ → $finalUrlString | model=$cleanModelName | msgs=${apiContents.size} | thinking=${config.thinkingEnabled} | tools=${tools.size}")
             Log.d("AgoraAPI", "[Gemini] BODY: ${requestJson.take(4000)}")
-            connection.outputStream.bufferedWriter().use { it.write(requestJson) }
+            val handle = HttpClient.streamPost(finalUrlString, requestJson, headers)
+            try {
+                if (handle.code == 200) {
+                    var line: String? = null
+                    var currentThoughtSignature: String? = null
+                    var inThoughtBlock = false
+                    while (currentCoroutineContext().isActive) {
+                        try {
+                            line = handle.readLine()
+                            if (line == null) break
+                        } catch (e: java.net.SocketTimeoutException) {
+                            if (!currentCoroutineContext().isActive) break
+                            continue
+                        }
+                        if (line.startsWith("data: ")) {
+                            val jsonStr = line.substring(6).trim()
+                            if (jsonStr != "[DONE]") {
+                                try {
+                                    val response = json.decodeFromString<ApiStreamResponse>(jsonStr)
 
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.readTimeout = 200
-                val reader = connection.inputStream.bufferedReader()
-                var line: String? = null
-                var currentThoughtSignature: String? = null
-                var inThoughtBlock = false
-                while (currentCoroutineContext().isActive) {
-                    try {
-                        line = reader.readLine()
-                        if (line == null) break
-                    } catch (e: java.net.SocketTimeoutException) {
-                        if (!currentCoroutineContext().isActive) break
-                        continue
-                    }
-                    if (line.startsWith("data: ")) {
-                        val jsonStr = line.substring(6).trim()
-                        if (jsonStr != "[DONE]") {
-                            try {
-                                val response = json.decodeFromString<ApiStreamResponse>(jsonStr)
+                                    inThoughtBlock = false
+                                    response.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
+                                        var isPartOfThought = false
 
-                                inThoughtBlock = false
-                                response.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
-                                    var isPartOfThought = false
-
-                                    part.thought?.let { thoughtElement ->
-                                        if (thoughtElement is JsonPrimitive) {
-                                            if (thoughtElement.isString) {
-                                                val content = thoughtElement.content
-                                                val title = Regex("\\*\\*(.*?)\\*\\*").find(content)?.groupValues?.get(1)
-                                                          ?: Regex("(?m)^#+\\s*(.*)$").find(content)?.groupValues?.get(1)
-                                                emit(StreamEvent.ThoughtChunk(content, title, currentThoughtSignature))
-                                                isPartOfThought = true
-                                                inThoughtBlock = true
-                                            } else if (thoughtElement.content == "true") {
-                                                isPartOfThought = true
-                                                inThoughtBlock = true
+                                        part.thought?.let { thoughtElement ->
+                                            if (thoughtElement is JsonPrimitive) {
+                                                if (thoughtElement.isString) {
+                                                    val content = thoughtElement.content
+                                                    val title = Regex("\\*\\*(.*?)\\*\\*").find(content)?.groupValues?.get(1)
+                                                              ?: Regex("(?m)^#+\\s*(.*)$").find(content)?.groupValues?.get(1)
+                                                    emit(StreamEvent.ThoughtChunk(content, title, currentThoughtSignature))
+                                                    isPartOfThought = true
+                                                    inThoughtBlock = true
+                                                } else if (thoughtElement.content == "true") {
+                                                    isPartOfThought = true
+                                                    inThoughtBlock = true
+                                                }
                                             }
                                         }
-                                    }
 
-                                    part.reasoningContent?.let {
-                                        val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
-                                                  ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
-                                        emit(StreamEvent.ThoughtChunk(it, title, currentThoughtSignature))
-                                        isPartOfThought = true
-                                        inThoughtBlock = true
-                                    }
-
-                                    part.thoughtSignature?.let { sig ->
-                                        currentThoughtSignature = sig
-                                        isPartOfThought = true
-                                        inThoughtBlock = true
-                                    }
-
-                                    part.text?.let {
-                                        // isPartOfThought: explicit marker on this part (thought, thoughtSignature, reasoningContent)
-                                        // inThoughtBlock: carry-over from a preceding boolean {thought: true} part in an earlier event
-                                        val inThought = isPartOfThought || inThoughtBlock
-                                        if (inThought) {
+                                        part.reasoningContent?.let {
                                             val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
                                                       ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
                                             emit(StreamEvent.ThoughtChunk(it, title, currentThoughtSignature))
+                                            isPartOfThought = true
+                                            inThoughtBlock = true
+                                        }
+
+                                        part.thoughtSignature?.let { sig ->
+                                            currentThoughtSignature = sig
+                                            isPartOfThought = true
+                                            inThoughtBlock = true
+                                        }
+
+                                        part.text?.let {
+                                            // isPartOfThought: explicit marker on this part (thought, thoughtSignature, reasoningContent)
+                                            // inThoughtBlock: carry-over from a preceding boolean {thought: true} part in an earlier event
+                                            val inThought = isPartOfThought || inThoughtBlock
+                                            if (inThought) {
+                                                val title = Regex("\\*\\*(.*?)\\*\\*").find(it)?.groupValues?.get(1)
+                                                          ?: Regex("(?m)^#+\\s*(.*)$").find(it)?.groupValues?.get(1)
+                                                emit(StreamEvent.ThoughtChunk(it, title, currentThoughtSignature))
+                                                inThoughtBlock = false
+                                            } else {
+                                                emit(StreamEvent.TextChunk(it))
+                                            }
+                                        }
+
+                                        part.executableCode?.let {
+                                            emit(StreamEvent.TextChunk("\n```${it.language}\n${it.code}\n```\n"))
+                                        }
+
+                                        part.codeExecutionResult?.let {
+                                            emit(StreamEvent.TextChunk("\n> Output: ${it.output}\n"))
+                                        }
+
+                                        part.functionCall?.let { fc ->
+                                            val argsJson = fc.args?.let { Json.encodeToString(JsonObject.serializer(), it) } ?: "{}"
+                                            val sig = fc.thoughtSignature ?: currentThoughtSignature
+                                            emit(StreamEvent.ToolCallRequest("gemini_call", fc.name, argsJson, sig))
                                             inThoughtBlock = false
-                                        } else {
-                                            emit(StreamEvent.TextChunk(it))
                                         }
                                     }
-
-                                    part.executableCode?.let {
-                                        emit(StreamEvent.TextChunk("\n```${it.language}\n${it.code}\n```\n"))
+                                    response.usageMetadata?.let { metadata ->
+                                        emit(StreamEvent.UsageUpdate(metadata.totalTokenCount ?: 0, metadata.thoughtsTokenCount ?: 0))
                                     }
-
-                                    part.codeExecutionResult?.let {
-                                        emit(StreamEvent.TextChunk("\n> Output: ${it.output}\n"))
-                                    }
-
-                                    part.functionCall?.let { fc ->
-                                        val argsJson = fc.args?.let { Json.encodeToString(JsonObject.serializer(), it) } ?: "{}"
-                                        val sig = fc.thoughtSignature ?: currentThoughtSignature
-                                        emit(StreamEvent.ToolCallRequest("gemini_call", fc.name, argsJson, sig))
-                                        inThoughtBlock = false
-                                    }
+                                } catch (e: Exception) {
+                                    Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                                 }
-                                response.usageMetadata?.let { metadata ->
-                                    emit(StreamEvent.UsageUpdate(metadata.totalTokenCount ?: 0, metadata.thoughtsTokenCount ?: 0))
-                                }
-                            } catch (e: Exception) {
-                                Log.e("AgoraAPI", "Parse error: ${e.message}", e)
                             }
                         }
                     }
+                    if (!currentCoroutineContext().isActive) {
+                        throw kotlinx.coroutines.CancellationException("Stream cancelled")
+                    }
+                } else {
+                    val errorRaw = handle.errorBody ?: "Unknown error (Code: ${handle.code})"
+                    Log.e("AgoraAPI", "[Gemini] ERR ${handle.code}: $errorRaw")
+                    val errorMessage = try {
+                        val errorJson = json.decodeFromString<ApiErrorResponse>(errorRaw)
+                        val code = errorJson.error.code ?: handle.code
+                        val status = errorJson.error.status ?: "UNKNOWN"
+                        val message = errorJson.error.message ?: "No error message provided"
+                        "Error $code ($status): $message"
+                    } catch (e: Exception) {
+                        "Error (Code ${handle.code}): $errorRaw"
+                    }
+                    emit(StreamEvent.Error(errorMessage))
                 }
-                if (!currentCoroutineContext().isActive) {
-                    throw kotlinx.coroutines.CancellationException("Stream cancelled")
-                }
-            } else {
-                val errorRaw = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error (Code: $responseCode)"
-                Log.e("AgoraAPI", "[Gemini] ERR $responseCode: $errorRaw")
-                val errorMessage = try {
-                    val errorJson = json.decodeFromString<ApiErrorResponse>(errorRaw)
-                    val code = errorJson.error.code ?: responseCode
-                    val status = errorJson.error.status ?: "UNKNOWN"
-                    val message = errorJson.error.message ?: "No error message provided"
-                    "Error $code ($status): $message"
-                } catch (e: Exception) {
-                    "Error (Code $responseCode): $errorRaw"
-                }
-                emit(StreamEvent.Error(errorMessage))
-            }
+            } finally { handle.close() }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: java.net.SocketTimeoutException) {
@@ -464,8 +454,6 @@ class GeminiProvider : LlmProvider {
             if (currentCoroutineContext().isActive) {
                 emit(StreamEvent.Error("Error: ${e.localizedMessage ?: "An unexpected error occurred."}"))
             }
-        } finally {
-            connection?.disconnect()
         }
     }.flowOn(Dispatchers.IO)
 
@@ -477,14 +465,11 @@ class GeminiProvider : LlmProvider {
             } else {
                 "$effectiveBaseUrl/v1beta/models?key=$apiKey"
             }
-            
-            val url = URL(finalUrlString)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.requestMethod = "GET"
-            val responseText = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
+
+            val responseText = HttpClient.fetchModels(finalUrlString) ?: run {
+                Log.e("AgoraAPI", "Failed to fetch Gemini models: empty response")
+                return@withContext emptyList()
+            }
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<ModelListResponse>(responseText).models
                 .filter { it.supportedGenerationMethods.contains("generateContent") }
