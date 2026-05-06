@@ -119,7 +119,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         containerColor = MaterialTheme.colorScheme.background,
                         topBar = {
                             TopAppBar(
-                                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                                title = { Text("Settings") },
                                 navigationIcon = {
                                     IconButton(onClick = onBack) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -140,7 +140,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             items(categories) { cat ->
                                 ListItem(
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = { Text(cat.title, fontWeight = FontWeight.SemiBold) },
+                                    headlineContent = { Text(cat.title) },
                                     supportingContent = { Text(cat.description, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     leadingContent = {
                                         Icon(cat.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)

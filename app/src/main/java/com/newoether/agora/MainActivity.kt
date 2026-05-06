@@ -950,9 +950,13 @@ fun ChatApp(
                             TopAppBar(
                                 modifier = Modifier.statusBarsPadding(),
                                 title = { 
-                                    val currentTitle = if (isNewChatMode) "Agora Chat" else conversations.find { it.id == currentConversationId }?.title ?: "Agora Chat"
+                                    val currentTitle = if (isNewChatMode) "Agora" else conversations.find { it.id == currentConversationId }?.title ?: "Agora"
                                     Column {
-                                        Text(currentTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) 
+                                        if (isNewChatMode) {
+                                            Text(currentTitle, fontWeight = FontWeight.Bold)
+                                        } else {
+                                            Text(currentTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        }
                                         if (!isNewChatMode && totalTokens > 0) {
                                             Text("Total: $totalTokens tokens", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
