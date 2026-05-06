@@ -277,8 +277,18 @@ fun ChatBottomBar(
                         }
                         if (isFile) {
                             val fileName = remember(uriStr) {
-                                uriStr.substringAfterLast("/").substringAfterLast("%2F")
-                            }
+                                try {
+                                    val cursor = context.contentResolver.query(
+                                        Uri.parse(uriStr), arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null
+                                    )
+                                    cursor?.use {
+                                        if (it.moveToFirst()) {
+                                            val idx = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                            if (idx >= 0) it.getString(idx) else null
+                                        } else null
+                                    }
+                                } catch (_: Exception) { null }
+                            } ?: uriStr.substringAfterLast("/")
                             Text(
                                 text = fileName,
                                 style = MaterialTheme.typography.labelSmall,
