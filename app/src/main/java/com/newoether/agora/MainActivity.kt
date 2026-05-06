@@ -230,7 +230,10 @@ fun MainNavigation(viewModel: ChatViewModel) {
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.9f))
-                            .clickable { fullScreenImageUrl = null },
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) { fullScreenImageUrl = null },
                         contentAlignment = Alignment.Center
                     ) {
                         if (videoFrame != null) {
