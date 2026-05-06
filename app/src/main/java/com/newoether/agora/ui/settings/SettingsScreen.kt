@@ -100,7 +100,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
         if (isSyncingModels) {
             snackbarHostState.showSnackbar(
                 message = "Fetching available models...",
-                duration = SnackbarDuration.Indefinite
+                duration = SnackbarDuration.Short
             )
         }
     }

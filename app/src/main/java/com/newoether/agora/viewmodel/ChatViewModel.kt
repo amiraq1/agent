@@ -459,13 +459,14 @@ class ChatViewModel(
         viewModelScope.launch {
             val existing = chatDao.getConversation(id)
             if (existing != null) {
-                chatDao.upsertConversation(existing.copy(title = newTitle, lastUpdated = System.currentTimeMillis()))
+                chatDao.upsertConversation(existing.copy(title = newTitle))
             }
         }
     }
 
     fun generateTitle(conversationId: String) {
         viewModelScope.launch {
+            _snackbarMessage.emit("Generating title...")
             val conversation = chatDao.getConversation(conversationId) ?: return@launch
             val path = messages.value
             val firstUserMsg = path.firstOrNull { it.participant == Participant.USER } ?: return@launch
@@ -474,7 +475,7 @@ class ChatViewModel(
                 .firstOrNull()
 
             val titleModelId = titleGenerationModel.value
-            val modelIdWithPrefix = if (!titleModelId.isNullOrBlank()) titleModelId else (conversation.modelId ?: selectedModel.value)
+            val modelIdWithPrefix = if (!titleModelId.isNullOrBlank()) titleModelId else (conversation.modelId ?: firstModelMsg?.modelName ?: selectedModel.value)
             val providerName = getProviderForModel(modelIdWithPrefix)
             val modelId = modelIdWithPrefix.substringAfter(":")
             val activeKeyId = activeApiKeyIds.value[providerName]
@@ -519,6 +520,9 @@ class ChatViewModel(
             title = title.trim().replace("\n", " ").take(60)
             if (title.isNotBlank()) {
                 renameConversation(conversationId, title)
+                _snackbarMessage.emit("Title generated.")
+            } else {
+                _snackbarMessage.emit("Error encountered when generating title.")
             }
         }
     }
@@ -527,7 +531,7 @@ class ChatViewModel(
         viewModelScope.launch {
             val existing = chatDao.getConversation(id)
             if (existing != null) {
-                chatDao.upsertConversation(existing.copy(systemPromptId = promptId, lastUpdated = System.currentTimeMillis()))
+                chatDao.upsertConversation(existing.copy(systemPromptId = promptId))
             }
         }
     }
@@ -538,7 +542,7 @@ class ChatViewModel(
             viewModelScope.launch {
                 val existing = chatDao.getConversation(id)
                 if (existing != null) {
-                    chatDao.upsertConversation(existing.copy(modelId = model, lastUpdated = System.currentTimeMillis()))
+                    chatDao.upsertConversation(existing.copy(modelId = model))
                 }
             }
         }

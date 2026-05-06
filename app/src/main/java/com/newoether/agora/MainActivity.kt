@@ -132,6 +132,14 @@ class MainActivity : ComponentActivity() {
 fun MainNavigation(viewModel: ChatViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var fullScreenImageUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessage.collect { message ->
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(message)
+        }
+    }
     
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -530,6 +538,13 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     }
                 }
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+            )
         }
     }
 }
