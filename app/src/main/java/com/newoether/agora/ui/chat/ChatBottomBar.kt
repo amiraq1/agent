@@ -161,7 +161,7 @@ fun ChatBottomBar(
             }
         }
 
-        Column(modifier = Modifier.fillMaxWidth().animateContentSize(tween(400))) {
+        Column(modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.weight(1f) else Modifier).animateContentSize(tween(400))) {
         if (selectedImageUris.isNotEmpty() && !isExpanded) {
             androidx.compose.foundation.lazy.LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
