@@ -1,5 +1,7 @@
 package com.newoether.agora.ui.chat
 
+import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
@@ -64,9 +66,12 @@ import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
@@ -161,16 +166,81 @@ fun ChatBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(selectedImageUris) { uriStr ->
+                    val context = LocalContext.current
+                    val mimeType = remember(uriStr) {
+                        try {
+                            context.contentResolver.getType(Uri.parse(uriStr))
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                    val isVideo = mimeType?.startsWith("video/") == true
+                    var videoThumb by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                    LaunchedEffect(uriStr, isVideo) {
+                        if (isVideo && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            try {
+                                videoThumb = withContext(Dispatchers.IO) {
+                                    context.contentResolver.loadThumbnail(
+                                        Uri.parse(uriStr), android.util.Size(128, 128), null
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+
                     Box {
-                        coil.compose.AsyncImage(
-                            model = uriStr,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onImageClick(uriStr) },
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                        )
+                        val thumbModifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onImageClick(uriStr) }
+
+                        when {
+                            isVideo && videoThumb != null -> {
+                                Image(
+                                    bitmap = videoThumb!!.asImageBitmap(),
+                                    contentDescription = "Video thumbnail",
+                                    modifier = thumbModifier,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            }
+                            isVideo -> {
+                                Box(
+                                    modifier = thumbModifier
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Videocam,
+                                        "Video",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            mimeType != null && !mimeType.startsWith("image/") && !mimeType.startsWith("video/") -> {
+                                Box(
+                                    modifier = thumbModifier
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.AttachFile,
+                                        "File",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            else -> {
+                                coil.compose.AsyncImage(
+                                    model = uriStr,
+                                    contentDescription = null,
+                                    modifier = thumbModifier,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)

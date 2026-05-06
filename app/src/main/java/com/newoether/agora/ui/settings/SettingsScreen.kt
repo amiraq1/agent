@@ -1,5 +1,6 @@
 package com.newoether.agora.ui.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -88,6 +89,10 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message)
         }
+    }
+
+    BackHandler(enabled = selectedCategory != null) {
+        selectedCategory = null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
