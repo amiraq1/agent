@@ -1129,7 +1129,8 @@ fun ChatApp(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .onSizeChanged { 
+                    .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
+                    .onSizeChanged {
                         bottomBarHeightPx = it.height.toFloat()
                     },
                 color = MaterialTheme.colorScheme.surface,
