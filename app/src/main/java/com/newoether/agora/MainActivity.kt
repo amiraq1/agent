@@ -1141,7 +1141,8 @@ fun ChatApp(
                 Box(
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .imePadding()
+                        .imePadding(),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     ChatBottomBar(
                         onSendMessage = { text, images ->
