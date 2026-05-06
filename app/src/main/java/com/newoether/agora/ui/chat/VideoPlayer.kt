@@ -33,8 +33,9 @@ fun VideoPlayer(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var contentReady by remember { mutableStateOf(false) }
+    var closing by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
-        targetValue = if (contentReady) 1f else 0f,
+        targetValue = if (contentReady && !closing) 1f else 0f,
         animationSpec = tween(400)
     )
 
@@ -57,6 +58,13 @@ fun VideoPlayer(
         contentReady = true
     }
 
+    LaunchedEffect(closing) {
+        if (closing) {
+            delay(400)
+            onClose()
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         Box(
             modifier = Modifier
@@ -77,7 +85,7 @@ fun VideoPlayer(
         }
 
         IconButton(
-            onClick = onClose,
+            onClick = { closing = true },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
