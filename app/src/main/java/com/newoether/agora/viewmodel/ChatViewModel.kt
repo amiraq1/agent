@@ -17,6 +17,7 @@ import com.newoether.agora.data.local.MessageEntity
 import com.newoether.agora.model.ChatConversation
 import com.newoether.agora.util.Constants
 import com.newoether.agora.util.SearchResultFormatter
+import com.newoether.agora.util.SnackbarEvent
 import com.newoether.agora.R
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.MessageSegment
@@ -161,8 +162,11 @@ class ChatViewModel(
     private val _isSyncingModels = MutableStateFlow(false)
     val isSyncingModels: StateFlow<Boolean> = _isSyncingModels.asStateFlow()
 
-    private val _snackbarMessage = MutableSharedFlow<String>()
+    private val _snackbarMessage = MutableSharedFlow<SnackbarEvent>()
     val snackbarMessage = _snackbarMessage.asSharedFlow()
+    fun emitSnackbar(message: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+        viewModelScope.launch { _snackbarMessage.emit(SnackbarEvent(message, actionLabel, onAction)) }
+    }
 
     private val _streamingMessage = MutableStateFlow<ChatMessage?>(null)
     private val _selectedChildren = MutableStateFlow<Map<String?, String>>(emptyMap())
@@ -491,7 +495,7 @@ class ChatViewModel(
 
     fun generateTitle(conversationId: String) {
         viewModelScope.launch {
-            _snackbarMessage.emit(appContext.getString(R.string.snackbar_generating_title))
+            _snackbarMessage.emit(SnackbarEvent(appContext.getString(R.string.snackbar_generating_title)))
             val conversation = chatDao.getConversation(conversationId) ?: return@launch
             val path = messages.value
             val firstUserMsg = path.firstOrNull { it.participant == Participant.USER } ?: return@launch
@@ -545,9 +549,9 @@ class ChatViewModel(
             title = title.trim().replace("\n", " ").take(60)
             if (title.isNotBlank()) {
                 renameConversation(conversationId, title)
-                _snackbarMessage.emit(appContext.getString(R.string.snackbar_title_generated))
+                _snackbarMessage.emit(SnackbarEvent(appContext.getString(R.string.snackbar_title_generated)))
             } else {
-                _snackbarMessage.emit(appContext.getString(R.string.snackbar_title_error))
+                _snackbarMessage.emit(SnackbarEvent(appContext.getString(R.string.snackbar_title_error)))
             }
         }
     }
@@ -976,7 +980,7 @@ class ChatViewModel(
                     app.getString(R.string.sync_failed_providers, failedProviders.joinToString())
                 else -> if (skippedCount > 0) app.getString(R.string.sync_no_providers) else app.getString(R.string.sync_completed)
             }
-            _snackbarMessage.emit(message)
+            _snackbarMessage.emit(SnackbarEvent(message))
         }
     }
 }

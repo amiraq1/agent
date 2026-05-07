@@ -26,8 +26,6 @@ private data class LanguageOption(val code: String, val label: String)
 fun SettingsLanguagePage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val appLanguage by viewModel.appLanguage.collectAsState()
     val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val restartMessage = stringResource(R.string.language_restart_message)
     val restartAction = stringResource(R.string.language_restart_action)
@@ -40,7 +38,6 @@ fun SettingsLanguagePage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.language_title), fontWeight = FontWeight.Bold) },
@@ -79,18 +76,14 @@ fun SettingsLanguagePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             val previous = appLanguage
                             viewModel.setAppLanguage(lang.code)
                             if (lang.code != previous) {
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = restartMessage,
-                                        actionLabel = restartAction,
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        activity?.let {
-                                            it.finish()
-                                            it.startActivity(it.intent)
-                                            it.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-                                        }
+                                viewModel.emitSnackbar(
+                                    message = restartMessage,
+                                    actionLabel = restartAction
+                                ) {
+                                    activity?.let {
+                                        it.finish()
+                                        it.startActivity(it.intent)
+                                        it.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
                                     }
                                 }
                             }

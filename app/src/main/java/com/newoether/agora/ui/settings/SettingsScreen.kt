@@ -78,22 +78,11 @@ private val categories = listOf(
 fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     val isSyncingModels by viewModel.isSyncingModels.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val fetchingModelsMessage = stringResource(R.string.snackbar_fetching_models)
 
     LaunchedEffect(isSyncingModels) {
         if (isSyncingModels) {
-            snackbarHostState.showSnackbar(
-                message = fetchingModelsMessage,
-                duration = SnackbarDuration.Short
-            )
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.snackbarMessage.collect { message ->
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
+            viewModel.emitSnackbar(fetchingModelsMessage)
         }
     }
 
@@ -174,11 +163,5 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
             }
         }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-        )
     }
 }

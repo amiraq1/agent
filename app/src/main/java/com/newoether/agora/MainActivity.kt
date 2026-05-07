@@ -164,9 +164,16 @@ fun MainNavigation(viewModel: ChatViewModel) {
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
-        viewModel.snackbarMessage.collect { message ->
+        viewModel.snackbarMessage.collect { event ->
             snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
         }
     }
     
