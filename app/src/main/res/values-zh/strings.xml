@@ -236,8 +236,8 @@
     <string name="result_label">结果：</string>
 
     <!-- Cost & Tokens -->
-    <string name="cost_tokens">消耗 %1$d Token</string>
-    <string name="total_tokens">总计：%1$d Token</string>
+    <string name="cost_tokens">消耗 %1$d Tokens</string>
+    <string name="total_tokens">总计：%1$d Tokens</string>
 
     <!-- General Actions -->
     <string name="action">操作</string>
