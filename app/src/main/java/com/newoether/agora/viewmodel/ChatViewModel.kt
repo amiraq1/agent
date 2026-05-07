@@ -1,6 +1,7 @@
 package com.newoether.agora.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -43,7 +44,8 @@ class ChatViewModel(
     application: Application,
     private val settingsManager: SettingsManager,
     private val chatDao: ChatDao,
-    val memoryManager: MemoryManager
+    val memoryManager: MemoryManager,
+    private val appContext: Context
 ) : AndroidViewModel(application) {
 
     private val generationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -481,7 +483,7 @@ class ChatViewModel(
 
     fun generateTitle(conversationId: String) {
         viewModelScope.launch {
-            _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_generating_title))
+            _snackbarMessage.emit(appContext.getString(R.string.snackbar_generating_title))
             val conversation = chatDao.getConversation(conversationId) ?: return@launch
             val path = messages.value
             val firstUserMsg = path.firstOrNull { it.participant == Participant.USER } ?: return@launch
@@ -535,9 +537,9 @@ class ChatViewModel(
             title = title.trim().replace("\n", " ").take(60)
             if (title.isNotBlank()) {
                 renameConversation(conversationId, title)
-                _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_title_generated))
+                _snackbarMessage.emit(appContext.getString(R.string.snackbar_title_generated))
             } else {
-                _snackbarMessage.emit(getApplication<Application>().getString(R.string.snackbar_title_error))
+                _snackbarMessage.emit(appContext.getString(R.string.snackbar_title_error))
             }
         }
     }
@@ -839,14 +841,14 @@ class ChatViewModel(
             val wasNewChat = _isNewChatMode.value
             if (wasNewChat) {
                 val newId = UUID.randomUUID().toString()
-                chatDao.upsertConversation(ChatEntity(id = newId, title = getApplication<Application>().getString(R.string.new_chat), modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = "", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId
             }
             if (currentId == null) {
                 val newId = UUID.randomUUID().toString()
-                chatDao.upsertConversation(ChatEntity(id = newId, title = getApplication<Application>().getString(R.string.new_chat), modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = "", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId

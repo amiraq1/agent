@@ -1,6 +1,7 @@
 package com.newoether.agora.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.newoether.agora.data.MemoryManager
@@ -11,12 +12,13 @@ class ChatViewModelFactory(
     private val application: Application,
     private val settingsManager: SettingsManager,
     private val chatDao: ChatDao,
-    private val memoryManager: MemoryManager
+    private val memoryManager: MemoryManager,
+    private val context: Context
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ChatViewModel(application, settingsManager, chatDao, memoryManager) as T
+            return ChatViewModel(application, settingsManager, chatDao, memoryManager, context) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

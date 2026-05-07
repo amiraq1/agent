@@ -762,7 +762,7 @@ class GenerationManager(
             val isCancelled = generationJob?.isCancelled == true
             currentStatus = if (isCancelled) MessageStatus.STOPPED else MessageStatus.ERROR
             if (!isCancelled) {
-                totalText = "Error: ${e.localizedMessage ?: app.getString(com.newoether.agora.R.string.unexpected_error)}"
+                totalText = "Error: ${e.localizedMessage ?: "An unexpected error occurred."}"
             }
         } finally {
             withContext(NonCancellable) {

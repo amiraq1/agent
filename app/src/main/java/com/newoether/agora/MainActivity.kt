@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                     val database = ChatDatabase.build(this)
-                    val factory = ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager)
+                    val factory = ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity)
                     val viewModel: ChatViewModel = viewModel(factory = factory)
                     MainNavigation(viewModel)
                 }
@@ -887,7 +887,7 @@ fun ChatApp(
                                     shape = CircleShape
                                 ) {
                                     Text(
-                                        text = conversation.title,
+                                        text = conversation.title.ifBlank { stringResource(R.string.new_chat) },
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                                         maxLines = 1,
                                         style = MaterialTheme.typography.bodyLarge,
