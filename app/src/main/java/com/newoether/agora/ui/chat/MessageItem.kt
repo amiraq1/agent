@@ -248,7 +248,7 @@ fun MessageItem(
             val modelId = message.modelName.removePrefix("models/").substringAfter(":")
             val provider = message.modelName.removePrefix("models/").substringBefore(":")
             modelAliases[message.modelName] ?: ("$modelId ($provider)")
-        } else "Unknown"
+        } else stringResource(R.string.unknown)
 
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },

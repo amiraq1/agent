@@ -216,6 +216,20 @@
     <string name="language_restart_message">Restart the app to take effect</string>
     <string name="language_restart_action">Restart</string>
 
+    <!-- Sync -->
+    <string name="sync_success_providers">Successfully synced %1$d provider(s)</string>
+    <string name="sync_partial">Synced: %1$s; Failed: %2$s</string>
+    <string name="sync_failed_providers">Failed to sync: %1$s</string>
+    <string name="sync_no_providers">No providers configured to sync</string>
+    <string name="sync_completed">Sync completed</string>
+
+    <!-- Memory Access -->
+    <string name="memory_access_title">ACCESS</string>
+
+    <!-- Errors -->
+    <string name="unexpected_error">An unexpected error occurred.</string>
+    <string name="unknown">Unknown</string>
+
     <!-- General -->
     <string name="back">Back</string>
     <string name="remove">Remove</string>

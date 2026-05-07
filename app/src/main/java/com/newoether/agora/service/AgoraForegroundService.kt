@@ -57,7 +57,7 @@ class AgoraForegroundService : Service() {
         )
 
         val notification = Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("Agora")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText("Generating response…")
             .setSmallIcon(R.drawable.neurology_24)
             .setOngoing(true)

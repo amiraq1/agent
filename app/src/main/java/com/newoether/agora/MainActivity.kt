@@ -983,7 +983,7 @@ fun ChatApp(
                             TopAppBar(
                                 modifier = Modifier.statusBarsPadding(),
                                 title = { 
-                                    val currentTitle = if (isNewChatMode) "Agora" else conversations.find { it.id == currentConversationId }?.title ?: "Agora"
+                                    val currentTitle = if (isNewChatMode) stringResource(R.string.app_name) else conversations.find { it.id == currentConversationId }?.title ?: stringResource(R.string.app_name)
                                     Column {
                                         if (isNewChatMode) {
                                             Text(currentTitle, fontWeight = FontWeight.Bold)

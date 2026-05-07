@@ -819,14 +819,14 @@ class ChatViewModel(
             val wasNewChat = _isNewChatMode.value
             if (wasNewChat) {
                 val newId = UUID.randomUUID().toString()
-                chatDao.upsertConversation(ChatEntity(id = newId, title = "New Chat", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = getApplication<Application>().getString(R.string.new_chat), modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId
             }
             if (currentId == null) {
                 val newId = UUID.randomUUID().toString()
-                chatDao.upsertConversation(ChatEntity(id = newId, title = "New Chat", modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
+                chatDao.upsertConversation(ChatEntity(id = newId, title = getApplication<Application>().getString(R.string.new_chat), modelId = currentActiveModel.value, systemPromptId = _pendingSystemPromptId.value))
                 _currentConversationId.value = newId
                 _isNewChatMode.value = false
                 currentId = newId
@@ -932,14 +932,15 @@ class ChatViewModel(
             _isSyncingModels.value = false
 
             // Construct result message
+            val app = getApplication<Application>()
             val message = when {
-                successProviders.isNotEmpty() && failedProviders.isEmpty() -> 
-                    "Successfully synced ${successProviders.size} provider(s)"
-                successProviders.isNotEmpty() && failedProviders.isNotEmpty() -> 
-                    "Synced: ${successProviders.joinToString()}; Failed: ${failedProviders.joinToString()}"
-                successProviders.isEmpty() && failedProviders.isNotEmpty() -> 
-                    "Failed to sync: ${failedProviders.joinToString()}"
-                else -> if (skippedCount > 0) "No providers configured to sync" else "Sync completed"
+                successProviders.isNotEmpty() && failedProviders.isEmpty() ->
+                    app.getString(R.string.sync_success_providers, successProviders.size)
+                successProviders.isNotEmpty() && failedProviders.isNotEmpty() ->
+                    app.getString(R.string.sync_partial, successProviders.joinToString(), failedProviders.joinToString())
+                successProviders.isEmpty() && failedProviders.isNotEmpty() ->
+                    app.getString(R.string.sync_failed_providers, failedProviders.joinToString())
+                else -> if (skippedCount > 0) app.getString(R.string.sync_no_providers) else app.getString(R.string.sync_completed)
             }
             _snackbarMessage.emit(message)
         }

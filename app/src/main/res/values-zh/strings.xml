@@ -174,6 +174,20 @@
     <string name="language_restart_message">重启应用以生效</string>
     <string name="language_restart_action">重启</string>
 
+    <!-- Sync -->
+    <string name="sync_success_providers">成功同步了 %1$d 个提供商</string>
+    <string name="sync_partial">已同步：%1$s；失败：%2$s</string>
+    <string name="sync_failed_providers">同步失败：%1$s</string>
+    <string name="sync_no_providers">没有配置的提供商可供同步</string>
+    <string name="sync_completed">同步完成</string>
+
+    <!-- Memory Access -->
+    <string name="memory_access_title">访问权限</string>
+
+    <!-- Errors -->
+    <string name="unexpected_error">发生了意外错误。</string>
+    <string name="unknown">未知</string>
+
     <!-- General -->
     <string name="back">返回</string>
     <string name="remove">移除</string>
