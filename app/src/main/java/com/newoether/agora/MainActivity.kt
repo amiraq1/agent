@@ -157,6 +157,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var fullScreenImageUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         viewModel.snackbarMessage.collect { message ->
@@ -176,6 +177,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     showSettings = true
                 },
                 onImageClick = { url ->
+                    focusManager.clearFocus()
                     fullScreenImageUrl = url
                 }
             )
