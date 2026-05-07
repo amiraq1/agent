@@ -175,6 +175,9 @@ class ChatViewModel(
     val activeEmbeddingModel = combine(embeddingModels, activeEmbeddingModelId) { models, id ->
         models.find { it.id == id }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val _cachingProgress = MutableStateFlow<Map<String, Pair<Int, Int>>>(emptyMap())
+    val cachingProgress: StateFlow<Map<String, Pair<Int, Int>>> = _cachingProgress.asStateFlow()
     val appLanguage = settingsManager.appLanguage.stateIn(viewModelScope, SharingStarted.Eagerly, "system")
     val webSearchEnabled = settingsManager.webSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val webSearchProvider = settingsManager.webSearchProvider.stateIn(viewModelScope, SharingStarted.Eagerly, "brave")
@@ -473,9 +476,13 @@ class ChatViewModel(
     fun setManualSearchMethod(method: String) { viewModelScope.launch { settingsManager.saveManualSearchMethod(method) } }
     fun addEmbeddingModel(config: EmbeddingModelConfig) {
         viewModelScope.launch {
+            val wasEmpty = embeddingModels.value.isEmpty()
             val models = embeddingModels.value.toMutableList()
             models.add(config)
             settingsManager.saveEmbeddingModels(models)
+            if (wasEmpty) {
+                settingsManager.setActiveEmbeddingModelId(config.id)
+            }
         }
     }
     fun deleteEmbeddingModel(id: String) {
@@ -486,6 +493,12 @@ class ChatViewModel(
             if (activeEmbeddingModelId.value == id && models.isNotEmpty()) {
                 settingsManager.setActiveEmbeddingModelId(models.first().id)
             }
+        }
+    }
+    fun renameEmbeddingModel(id: String, newName: String) {
+        viewModelScope.launch {
+            val models = embeddingModels.value.map { if (it.id == id) it.copy(name = newName) else it }
+            settingsManager.saveEmbeddingModels(models)
         }
     }
     fun setActiveEmbeddingModel(id: String) {
@@ -503,12 +516,15 @@ class ChatViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val model = embeddingModels.value.find { it.id == modelId } ?: return@launch
             val messages = chatDao.getAllMessagesForIndexing()
-            for ((index, msg) in messages.withIndex()) {
+            val nonBlank = messages.filter { it.text.isNotBlank() }
+            val total = nonBlank.size
+            var processed = 0
+            _cachingProgress.value = _cachingProgress.value + (modelId to (0 to total))
+            for (msg in nonBlank) {
                 val text = msg.text.take(8000)
-                if (text.isBlank()) continue
                 val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
-                    if (com.newoether.agora.api.LlamaEngine.isModelReady(model.localFilePath))
-                        com.newoether.agora.api.LlamaEngine.computeEmbedding(text, model.localFilePath)
+                    if (LlamaEngine.isModelReady(model.localFilePath))
+                        LlamaEngine.computeEmbedding(text, model.localFilePath)
                     else null
                 } else {
                     val apiKey = resolveEmbeddingApiKey() ?: return@launch
@@ -524,8 +540,11 @@ class ChatViewModel(
                         dimension = embedding.size
                     ))
                 }
+                processed++
+                _cachingProgress.value = _cachingProgress.value + (modelId to (processed to total))
             }
             settingsManager.markModelCached(modelId)
+            _cachingProgress.value = _cachingProgress.value - modelId
         }
     }
 

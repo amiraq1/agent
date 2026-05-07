@@ -7,11 +7,8 @@ object LlamaEngine {
     private const val TAG = "LlamaEngine"
 
     init {
-        try {
-            System.loadLibrary("agora_llama")
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Failed to load agora_llama native library", e)
-        }
+        System.loadLibrary("c++_shared")
+        System.loadLibrary("agora_llama")
     }
 
     private external fun nativeLoadModel(path: String): Long

@@ -16,7 +16,10 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ManageSearch
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,22 +49,19 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val manualSearchMethod by viewModel.manualSearchMethod.collectAsState()
     val embeddingModels by viewModel.embeddingModels.collectAsState()
     val activeEmbeddingModelId by viewModel.activeEmbeddingModelId.collectAsState()
+    val cachingProgress by viewModel.cachingProgress.collectAsState()
     var showRemoteDialog by remember { mutableStateOf(false) }
     var showLocalDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
-    var cachingModelId by remember { mutableStateOf<String?>(null) }
+    var showRenameDialog by remember { mutableStateOf<String?>(null) }
+    var showMenuForModel by remember { mutableStateOf<String?>(null) }
+    var renameText by remember { mutableStateOf("") }
     var remoteName by remember { mutableStateOf("") }
     var remoteModelName by remember { mutableStateOf("") }
     var remoteBaseUrl by remember { mutableStateOf("") }
     var localName by remember { mutableStateOf("") }
     var localFilePath by remember { mutableStateOf("") }
     var isImporting by remember { mutableStateOf(false) }
-
-    LaunchedEffect(embeddingModels) {
-        if (cachingModelId != null && embeddingModels.find { it.id == cachingModelId }?.cached == true) {
-            cachingModelId = null
-        }
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -153,7 +153,8 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 } else {
                     embeddingModels.forEach { model ->
                         val isActive = model.id == activeEmbeddingModelId
-                        val isCaching = cachingModelId == model.id
+                        val progress = cachingProgress[model.id]
+                        val isCaching = progress != null
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = { Text(model.name) },
@@ -161,7 +162,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 val typeLabel = if (model.type == com.newoether.agora.data.EmbeddingModelType.REMOTE)
                                     stringResource(R.string.embedding_type_remote)
                                 else stringResource(R.string.embedding_type_local)
-                                val cacheLabel = if (isCaching) stringResource(R.string.caching)
+                                val cacheLabel = if (isCaching) "${progress!!.first}/${progress.second}"
                                 else if (model.cached) stringResource(R.string.cached)
                                 else stringResource(R.string.not_cached)
                                 Text("$typeLabel · $cacheLabel")
@@ -174,20 +175,46 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             },
                             trailingContent = {
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                    if (!model.cached && !isCaching) {
+                                    if (!isCaching) {
                                         TextButton(onClick = {
-                                            cachingModelId = model.id
                                             viewModel.cacheMessagesForModel(model.id)
-                                        }) { Text(stringResource(R.string.cache_action)) }
+                                        }) { Text(if (model.cached) stringResource(R.string.recache_action) else stringResource(R.string.cache_action)) }
                                     }
                                     if (isCaching) {
+                                        val ratio = progress!!.first.toFloat() / progress.second.toFloat()
                                         CircularProgressIndicator(
+                                            progress = { ratio },
                                             modifier = Modifier.size(24.dp),
                                             strokeWidth = 2.dp
                                         )
                                     }
-                                    IconButton(onClick = { showDeleteDialog = model.id }) {
-                                        Icon(Icons.Default.Warning, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
+                                    Box {
+                                        IconButton(onClick = { showMenuForModel = model.id }) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                                        }
+                                        DropdownMenu(
+                                            expanded = showMenuForModel == model.id,
+                                            onDismissRequest = { showMenuForModel = null },
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.rename)) },
+                                                leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                                onClick = {
+                                                    showMenuForModel = null
+                                                    renameText = model.name
+                                                    showRenameDialog = model.id
+                                                }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                                onClick = {
+                                                    showMenuForModel = null
+                                                    showDeleteDialog = model.id
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             },
@@ -356,6 +383,34 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = null }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
+        if (showRenameDialog != null) {
+            val modelId = showRenameDialog!!
+            AlertDialog(
+                onDismissRequest = { showRenameDialog = null },
+                title = { Text(stringResource(R.string.rename)) },
+                text = {
+                    OutlinedTextField(
+                        value = renameText,
+                        onValueChange = { renameText = it },
+                        label = { Text(stringResource(R.string.model_name_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (renameText.isNotBlank()) {
+                            viewModel.renameEmbeddingModel(modelId, renameText)
+                            showRenameDialog = null
+                        }
+                    }) { Text(stringResource(R.string.save)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRenameDialog = null }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
