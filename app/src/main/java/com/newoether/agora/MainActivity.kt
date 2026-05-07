@@ -2,6 +2,7 @@ package com.newoether.agora
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.os.Build
@@ -82,6 +83,26 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val langCode = kotlinx.coroutines.runBlocking {
+            SettingsManager(newBase).appLanguage.first()
+        }
+        val locale = when (langCode) {
+            "zh" -> java.util.Locale("zh", "CN")
+            "en" -> java.util.Locale("en")
+            else -> null
+        }
+        if (locale != null) {
+            java.util.Locale.setDefault(locale)
+            val config = android.content.res.Configuration(newBase.resources.configuration)
+            config.setLocale(locale)
+            super.attachBaseContext(newBase.createConfigurationContext(config))
+        } else {
+            super.attachBaseContext(newBase)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)

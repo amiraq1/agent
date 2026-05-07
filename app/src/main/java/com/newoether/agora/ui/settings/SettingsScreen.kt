@@ -67,6 +67,7 @@ private val categories = listOf(
     SettingsCategory("models", R.string.settings_models, R.string.settings_models_desc, Icons.Default.Chat),
     SettingsCategory("context", R.string.settings_context, R.string.settings_context_desc, Icons.Default.Memory),
     SettingsCategory("websearch", R.string.settings_web_search, R.string.settings_web_search_desc, Icons.Default.Language),
+    SettingsCategory("language", R.string.language_title, R.string.language_desc, Icons.Default.Language),
     SettingsCategory("titlegen", R.string.settings_title_gen, R.string.settings_title_gen_desc, Icons.Default.Edit),
     SettingsCategory("memory", R.string.settings_memory, R.string.settings_memory_desc, Icons.Default.Description)
 )
@@ -120,6 +121,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 "models" -> SettingsModelsPage(viewModel, onBack = { selectedCategory = null })
                 "context" -> SettingsContextPage(viewModel, onBack = { selectedCategory = null })
                 "websearch" -> SettingsWebSearchPage(viewModel, onBack = { selectedCategory = null })
+                "language" -> SettingsLanguagePage(viewModel, onBack = { selectedCategory = null })
                 "titlegen" -> SettingsTitleGenPage(viewModel, onBack = { selectedCategory = null })
                 "memory" -> SettingsMemoryPage(viewModel, onBack = { selectedCategory = null })
                 else -> {

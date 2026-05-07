@@ -136,6 +136,7 @@ class ChatViewModel(
     val titleGenerationModel = settingsManager.titleGenerationModel.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val accessPastConversations = settingsManager.accessPastConversations.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val accessSavedMemories = settingsManager.accessSavedMemories.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val appLanguage = settingsManager.appLanguage.stateIn(viewModelScope, SharingStarted.Eagerly, "system")
     val webSearchEnabled = settingsManager.webSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val webSearchProvider = settingsManager.webSearchProvider.stateIn(viewModelScope, SharingStarted.Eagerly, "brave")
     val webSearchApiKey = settingsManager.webSearchApiKey.stateIn(viewModelScope, SharingStarted.Eagerly, "")
@@ -423,6 +424,7 @@ class ChatViewModel(
     fun setTitleGenerationModel(model: String?) { viewModelScope.launch { settingsManager.saveTitleGenerationModel(model) } }
     fun setAccessPastConversations(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessPastConversations(enabled) } }
     fun setAccessSavedMemories(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessSavedMemories(enabled) } }
+    fun setAppLanguage(language: String) { viewModelScope.launch { settingsManager.saveAppLanguage(language) } }
     fun setWebSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveWebSearchEnabled(enabled) } }
     fun setWebSearchProvider(provider: String) { viewModelScope.launch { settingsManager.saveWebSearchProvider(provider) } }
     fun setWebSearchApiKey(apiKey: String) { viewModelScope.launch { settingsManager.saveWebSearchApiKey(apiKey) } }

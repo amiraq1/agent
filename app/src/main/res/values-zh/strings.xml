@@ -167,6 +167,11 @@
     <string name="snackbar_title_generated">标题已生成。</string>
     <string name="snackbar_title_error">生成标题时遇到错误。</string>
 
+    <!-- Language -->
+    <string name="language_title">语言</string>
+    <string name="language_desc">更改应用显示语言</string>
+    <string name="language_system_default">跟随系统</string>
+
     <!-- General -->
     <string name="back">返回</string>
     <string name="remove">移除</string>
