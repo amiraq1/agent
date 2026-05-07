@@ -785,6 +785,21 @@ class ChatViewModel(
         }.ifBlank { null }
     }
 
+    private fun getFileName(context: android.content.Context, uri: android.net.Uri): String {
+        return try {
+            val cursor = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val idx = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) it.getString(idx) ?: uri.lastPathSegment ?: "unknown"
+                    else uri.lastPathSegment ?: "unknown"
+                } else uri.lastPathSegment ?: "unknown"
+            } ?: (uri.lastPathSegment ?: "unknown")
+        } catch (_: Exception) {
+            uri.lastPathSegment ?: "unknown"
+        }
+    }
+
     fun sendMessage(text: String, images: List<String> = emptyList()) {
         val modelId = currentActiveModel.value
         val providerName = getProviderForModel(modelId)
@@ -801,11 +816,20 @@ class ChatViewModel(
                     val mimeType = try { app.contentResolver.getType(android.net.Uri.parse(uri)) } catch (_: Exception) { null }
                     if (mimeType != null && !mimeType.startsWith("image/") && !mimeType.startsWith("video/")) {
                         try {
-                            app.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { stream ->
-                                val content = stream.bufferedReader().readText()
-                                if (content.isNotBlank()) {
-                                    fileContent += "\n\n--- File: ${java.io.File(uri).name} ---\n$content"
+                            // Only read text-based files, limit to 500KB
+                            val isText = mimeType.startsWith("text/") || mimeType == "application/json" || mimeType == "application/xml"
+                            if (isText) {
+                                app.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { stream ->
+                                    val content = stream.bufferedReader().readText().take(500_000)
+                                    if (content.isNotBlank()) {
+                                        val fileName = getFileName(app, android.net.Uri.parse(uri))
+                                        fileContent += "\n\n--- File: $fileName ---\n$content"
+                                    }
                                 }
+                            } else {
+                                // For other files, attach as a reference
+                                val fileName = getFileName(app, android.net.Uri.parse(uri))
+                                fileContent += "\n\n[Attached file: $fileName ($mimeType)]"
                             }
                         } catch (_: Exception) {}
                     } else {
