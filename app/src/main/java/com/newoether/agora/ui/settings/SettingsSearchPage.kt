@@ -63,6 +63,12 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var localName by remember { mutableStateOf("") }
     var localFilePath by remember { mutableStateOf("") }
     var isImporting by remember { mutableStateOf(false) }
+    var testStatus by remember { mutableStateOf<String?>(null) }
+    var isTesting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(embeddingModels.size) {
+        showMenuForModel = null
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -163,7 +169,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 val typeLabel = if (model.type == com.newoether.agora.data.EmbeddingModelType.REMOTE)
                                     stringResource(R.string.embedding_type_remote)
                                 else stringResource(R.string.embedding_type_local)
-                                val cacheLabel = if (isCaching) "${progress!!.first}/${progress.second}"
+                                val cacheLabel = if (isCaching) "${progress!!.second - progress!!.first} ${stringResource(R.string.not_cached)} (${progress!!.first}/${progress!!.second})"
                                 else if (model.cached) stringResource(R.string.cached)
                                 else stringResource(R.string.not_cached)
                                 Text("$typeLabel · $cacheLabel")
@@ -232,6 +238,8 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         remoteName = ""
                         remoteModelName = ""
                         remoteBaseUrl = ""
+                        testStatus = null
+                        isTesting = false
                         showRemoteDialog = true
                     }) { Text(stringResource(R.string.add_remote_model)) }
                     TextButton(onClick = {
@@ -286,7 +294,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
         if (showRemoteDialog) {
             AlertDialog(
-                onDismissRequest = { showRemoteDialog = false },
+                onDismissRequest = { showRemoteDialog = false; testStatus = null },
                 title = { Text(stringResource(R.string.add_remote_model)) },
                 text = {
                     Column {
@@ -318,19 +326,46 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        if (remoteName.isNotBlank() && remoteModelName.isNotBlank()) {
-                            viewModel.addEmbeddingModel(
-                                com.newoether.agora.data.EmbeddingModelConfig(
-                                    name = remoteName,
-                                    type = com.newoether.agora.data.EmbeddingModelType.REMOTE,
-                                    remoteModelName = remoteModelName,
-                                    remoteBaseUrl = remoteBaseUrl
-                                )
-                            )
-                            showRemoteDialog = false
+                    val scope = rememberCoroutineScope()
+                    TextButton(
+                        onClick = {
+                            if (remoteName.isBlank() || remoteModelName.isBlank()) return@TextButton
+                            isTesting = true
+                            testStatus = null
+                            scope.launch {
+                                val result = viewModel.testRemoteEmbedding(remoteModelName, remoteBaseUrl)
+                                if (result != null && result.startsWith("OK")) {
+                                    viewModel.addEmbeddingModel(
+                                        com.newoether.agora.data.EmbeddingModelConfig(
+                                            name = remoteName,
+                                            type = com.newoether.agora.data.EmbeddingModelType.REMOTE,
+                                            remoteModelName = remoteModelName,
+                                            remoteBaseUrl = remoteBaseUrl
+                                        )
+                                    )
+                                    showRemoteDialog = false
+                                } else {
+                                    testStatus = result ?: "Failed"
+                                }
+                                isTesting = false
+                            }
+                        },
+                        enabled = !isTesting && remoteName.isNotBlank() && remoteModelName.isNotBlank()
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                    }) { Text(stringResource(R.string.add)) }
+                        Text(stringResource(R.string.add))
+                    }
+                    testStatus?.let { status ->
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = status,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 },
                 dismissButton = {
                     TextButton(onClick = { showRemoteDialog = false }) { Text(stringResource(R.string.cancel)) }
@@ -361,7 +396,10 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
             }
             AlertDialog(
-                onDismissRequest = { showLocalDialog = false },
+                onDismissRequest = {
+                    if (localFilePath.isNotBlank()) File(localFilePath).delete()
+                    showLocalDialog = false
+                },
                 title = { Text(stringResource(R.string.add_local_model)) },
                 text = {
                     Column {
@@ -406,7 +444,10 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }) { Text(stringResource(R.string.add)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showLocalDialog = false }) { Text(stringResource(R.string.cancel)) }
+                    TextButton(onClick = {
+                        if (localFilePath.isNotBlank()) File(localFilePath).delete()
+                        showLocalDialog = false
+                    }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }

@@ -488,6 +488,10 @@ class ChatViewModel(
     }
     fun deleteEmbeddingModel(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            val model = embeddingModels.value.find { it.id == id }
+            if (model?.type == EmbeddingModelType.LOCAL && model.localFilePath.isNotBlank()) {
+                java.io.File(model.localFilePath).delete()
+            }
             chatDao.deleteEmbeddingsByModel(id)
             val models = embeddingModels.value.filter { it.id != id }
             settingsManager.saveEmbeddingModels(models)
@@ -503,6 +507,7 @@ class ChatViewModel(
         }
     }
     fun setActiveEmbeddingModel(id: String) {
+        if (id == activeEmbeddingModelId.value) return
         viewModelScope.launch {
             settingsManager.setActiveEmbeddingModelId(id)
             val model = embeddingModels.value.find { it.id == id }
@@ -516,19 +521,44 @@ class ChatViewModel(
     fun cacheMessagesForModel(modelId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val model = embeddingModels.value.find { it.id == modelId } ?: return@launch
-            val messages = chatDao.getAllMessagesForIndexing()
-            val nonBlank = messages.filter { it.text.isNotBlank() }
-            val total = nonBlank.size
-            var processed = 0
-            _cachingProgress.value = _cachingProgress.value + (modelId to (0 to total))
-            for (msg in nonBlank) {
+            if (model.cached) {
+                settingsManager.saveEmbeddingModels(embeddingModels.value.map { if (it.id == modelId) it.copy(cached = false) else it })
+                chatDao.deleteEmbeddingsByModel(modelId)
+            }
+            val allMessages = chatDao.getAllMessagesForIndexing().filter { it.text.isNotBlank() }
+            val existingIds = if (!model.cached) chatDao.getEmbeddedMessageIdsByModel(modelId).toSet() else emptySet()
+            val toProcess = if (!model.cached) allMessages.filter { it.id !in existingIds } else allMessages
+            val alreadyDone = allMessages.size - toProcess.size
+            val total = allMessages.size
+            if (total == 0) {
+                _snackbarMessage.emit(SnackbarEvent("No messages to cache."))
+                return@launch
+            }
+            if (toProcess.isEmpty()) {
+                settingsManager.markModelCached(modelId)
+                _snackbarMessage.emit(SnackbarEvent("All $total messages already cached."))
+                return@launch
+            }
+            var processed = alreadyDone
+            var succeeded = 0
+            _cachingProgress.value = _cachingProgress.value + (modelId to (alreadyDone to total))
+            for (msg in toProcess) {
+                if (embeddingModels.value.none { it.id == modelId }) {
+                    _cachingProgress.value = _cachingProgress.value - modelId
+                    return@launch // model was deleted
+                }
                 val text = msg.text.take(8000)
                 val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
                     if (LlamaEngine.isModelReady(model.localFilePath))
                         LlamaEngine.computeEmbedding(text, model.localFilePath)
                     else null
                 } else {
-                    val apiKey = resolveEmbeddingApiKey() ?: return@launch
+                    val apiKey = resolveEmbeddingApiKey()
+                    if (apiKey == null) {
+                        _cachingProgress.value = _cachingProgress.value - modelId
+                        _snackbarMessage.emit(SnackbarEvent("No API key configured."))
+                        return@launch
+                    }
                     val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
                     EmbeddingClient.computeEmbedding(text, apiKey, model.remoteModelName, baseUrl)
                 }
@@ -540,11 +570,21 @@ class ChatViewModel(
                         chunkText = text.take(500),
                         dimension = embedding.size
                     ))
+                    succeeded++
                 }
                 processed++
                 _cachingProgress.value = _cachingProgress.value + (modelId to (processed to total))
             }
-            settingsManager.markModelCached(modelId)
+            val failed = toProcess.size - succeeded
+            if (failed == 0) {
+                settingsManager.markModelCached(modelId)
+                _snackbarMessage.emit(SnackbarEvent("All $total messages cached."))
+            } else {
+                _snackbarMessage.emit(SnackbarEvent(
+                    "Cached $succeeded of ${toProcess.size}. ${failed} failed.",
+                    "Retry"
+                ) { cacheMessagesForModel(modelId) })
+            }
             _cachingProgress.value = _cachingProgress.value - modelId
         }
     }
@@ -670,6 +710,16 @@ class ChatViewModel(
     fun setWebSearchApiKey(apiKey: String) { viewModelScope.launch { settingsManager.saveWebSearchApiKey(apiKey) } }
     fun setWebSearchBaseUrl(url: String) { viewModelScope.launch { settingsManager.saveWebSearchBaseUrl(url) } }
     fun setRagThreshold(threshold: Float) { viewModelScope.launch { settingsManager.saveRagThreshold(threshold) } }
+    suspend fun testRemoteEmbedding(modelName: String, baseUrl: String): String? {
+        val apiKey = resolveEmbeddingApiKey() ?: return "No API key configured"
+        val url = baseUrl.ifBlank { resolveEmbeddingBaseUrl() }
+        return try {
+            val result = EmbeddingClient.computeEmbedding("test connection", apiKey, modelName, url)
+            if (result != null) "OK (dim=${result.size})" else "Failed"
+        } catch (e: Exception) {
+            e.message ?: "Error"
+        }
+    }
 
     fun createNewChat() {
         switchingJob?.cancel()

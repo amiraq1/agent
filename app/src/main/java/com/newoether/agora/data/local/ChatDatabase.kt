@@ -139,6 +139,9 @@ interface ChatDao {
     @Query("SELECT COUNT(*) FROM embeddings WHERE modelId = :modelId")
     suspend fun getEmbeddingCountByModel(modelId: String): Int
 
+    @Query("SELECT messageId FROM embeddings WHERE modelId = :modelId")
+    suspend fun getEmbeddedMessageIdsByModel(modelId: String): List<String>
+
     @Query("SELECT * FROM messages WHERE participant IN ('USER', 'MODEL') AND id NOT LIKE 'tool_%' AND id NOT LIKE 'result_%'")
     suspend fun getAllMessagesForIndexing(): List<MessageEntity>
 
