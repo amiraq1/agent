@@ -55,6 +55,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showLocalDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
     var showRenameDialog by remember { mutableStateOf<String?>(null) }
+    var showRecacheConfirm by remember { mutableStateOf<String?>(null) }
     var showMenuForModel by remember { mutableStateOf<String?>(null) }
     var renameText by remember { mutableStateOf("") }
     var remoteName by remember { mutableStateOf("") }
@@ -184,7 +185,11 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                     if (!isCaching) {
                                         TextButton(onClick = {
-                                            viewModel.cacheMessagesForModel(model.id)
+                                            if (model.cached) {
+                                                showRecacheConfirm = model.id
+                                            } else {
+                                                viewModel.cacheMessagesForModel(model.id)
+                                            }
                                         }) { Text(if (model.cached) stringResource(R.string.recache_action) else stringResource(R.string.cache_action)) }
                                     }
                                     if (isCaching) {
@@ -448,6 +453,24 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         if (localFilePath.isNotBlank()) File(localFilePath).delete()
                         showLocalDialog = false
                     }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
+        if (showRecacheConfirm != null) {
+            val modelId = showRecacheConfirm!!
+            AlertDialog(
+                onDismissRequest = { showRecacheConfirm = null },
+                title = { Text(stringResource(R.string.recache_confirm_title)) },
+                text = { Text(stringResource(R.string.recache_confirm_message)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.cacheMessagesForModel(modelId)
+                        showRecacheConfirm = null
+                    }) { Text(stringResource(R.string.recache_action)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRecacheConfirm = null }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }

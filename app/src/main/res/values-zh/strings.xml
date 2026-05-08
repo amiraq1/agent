@@ -226,6 +226,8 @@
     <string name="caching">缓存中…</string>
     <string name="cache_action">缓存</string>
     <string name="recache_action">重新缓存</string>
+    <string name="recache_confirm_title">重新缓存所有消息</string>
+    <string name="recache_confirm_message">这将删除所有已缓存的嵌入并重新处理每条消息。此操作不可撤销。</string>
     <string name="add_remote_model">添加远程模型</string>
     <string name="add_local_model">添加本地模型</string>
     <string name="model_name_label">名称</string>
