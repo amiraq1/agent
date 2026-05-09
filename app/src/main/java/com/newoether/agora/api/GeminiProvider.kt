@@ -2,7 +2,7 @@ package com.newoether.agora.api
 
 import android.util.Log
 import com.newoether.agora.model.ChatMessage
-import com.newoether.agora.api.util.keepToolPairs
+import com.newoether.agora.api.util.limitContext
 import com.newoether.agora.model.Participant
 import com.newoether.agora.util.Constants
 import kotlinx.coroutines.Dispatchers
@@ -152,11 +152,7 @@ class GeminiProvider : LlmProvider {
         val cleanModelName = config.modelId.removePrefix("models/")
         
         // Context windowing
-        val limitedPath = if (messages.size > config.maxContextWindow) {
-            keepToolPairs(messages.takeLast(config.maxContextWindow), messages)
-        } else {
-            messages
-        }
+        val limitedPath = limitContext(messages, config.maxContextWindow)
 
 
         val apiContents = limitedPath.flatMap { msg ->

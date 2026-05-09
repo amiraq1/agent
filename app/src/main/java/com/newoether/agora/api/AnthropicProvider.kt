@@ -4,7 +4,7 @@ import android.util.Log
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
 import com.newoether.agora.api.util.buildToolCallId
-import com.newoether.agora.api.util.keepToolPairs
+import com.newoether.agora.api.util.limitContext
 import com.newoether.agora.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -125,11 +125,7 @@ class AnthropicProvider : LlmProvider {
         val baseUrl = config.baseUrl?.trimEnd('/') ?: "https://api.anthropic.com/v1"
         val modelName = config.modelId
 
-        val limitedPath = if (messages.size > config.maxContextWindow) {
-            keepToolPairs(messages.takeLast(config.maxContextWindow), messages)
-        } else {
-            messages
-        }
+        val limitedPath = limitContext(messages, config.maxContextWindow)
 
         val apiMessages = limitedPath.flatMap { msg ->
             val entries = mutableListOf<AnthropicMessage>()

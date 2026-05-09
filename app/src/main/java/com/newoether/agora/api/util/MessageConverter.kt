@@ -157,3 +157,15 @@ fun keepToolPairs(limited: List<ChatMessage>, full: List<ChatMessage>): List<Cha
     }
     return result
 }
+
+fun limitContext(messages: List<ChatMessage>, maxUserMessages: Int): List<ChatMessage> {
+    val result = mutableListOf<ChatMessage>()
+    var userCount = 0
+    for (msg in messages.reversed()) {
+        result.add(0, msg)
+        val isTool = msg.id.startsWith(Constants.TOOL_MSG_PREFIX) || msg.id.startsWith(Constants.RESULT_MSG_PREFIX)
+        if (!isTool) userCount++
+        if (userCount >= maxUserMessages) break
+    }
+    return keepToolPairs(result, messages)
+}
