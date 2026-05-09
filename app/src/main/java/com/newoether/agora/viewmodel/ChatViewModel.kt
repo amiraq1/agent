@@ -580,7 +580,7 @@ class ChatViewModel(
             var succeeded = 0
             _cachingProgress.value = _cachingProgress.value + (modelId to (alreadyDone to total))
 
-            val batchSize = if (model.type == EmbeddingModelType.LOCAL) toProcess.size else 64
+            val batchSize = 8
             val batches = toProcess.chunked(batchSize)
             val apiKey = if (model.type == EmbeddingModelType.REMOTE) resolveEmbeddingApiKey() else null
             val baseUrl = if (model.type == EmbeddingModelType.REMOTE) model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() } else ""
@@ -615,8 +615,8 @@ class ChatViewModel(
                         succeeded++
                     }
                     processed++
+                    _cachingProgress.value = _cachingProgress.value + (modelId to (processed to total))
                 }
-                _cachingProgress.value = _cachingProgress.value + (modelId to (processed to total))
             }
             val failed = toProcess.size - succeeded
             if (failed == 0) {
