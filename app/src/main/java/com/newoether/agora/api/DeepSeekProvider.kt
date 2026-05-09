@@ -13,7 +13,7 @@ class DeepSeekProvider : BaseOpenAiProvider() {
         emit: suspend (StreamEvent) -> Unit
     ) {
         delta.reasoningContent?.let { reasoning ->
-            if (reasoning.isNotEmpty()) {
+            if (reasoning.isNotEmpty() && config.thinkingEnabled) {
                 emit(StreamEvent.ThoughtChunk(reasoning))
             }
         }

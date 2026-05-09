@@ -579,37 +579,43 @@ class ChatViewModel(
             var processed = alreadyDone
             var succeeded = 0
             _cachingProgress.value = _cachingProgress.value + (modelId to (alreadyDone to total))
-            for (msg in toProcess) {
+
+            val batchSize = if (model.type == EmbeddingModelType.LOCAL) toProcess.size else 64
+            val batches = toProcess.chunked(batchSize)
+            val apiKey = if (model.type == EmbeddingModelType.REMOTE) resolveEmbeddingApiKey() else null
+            val baseUrl = if (model.type == EmbeddingModelType.REMOTE) model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() } else ""
+
+            for (batch in batches) {
                 if (embeddingModels.value.none { it.id == modelId }) {
                     _cachingProgress.value = _cachingProgress.value - modelId
-                    return@launch // model was deleted
+                    return@launch
                 }
-                val text = msg.text.take(8000)
-                val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
+                val batchTexts = batch.map { it.text.take(8000) }
+                val embeddings: List<FloatArray?> = if (model.type == EmbeddingModelType.LOCAL) {
                     if (LlamaEngine.isModelReady(model.localFilePath))
-                        LlamaEngine.computeEmbedding(text, model.localFilePath)
-                    else null
+                        LlamaEngine.computeEmbeddings(batchTexts, model.localFilePath)
+                    else emptyList()
                 } else {
-                    val apiKey = resolveEmbeddingApiKey()
                     if (apiKey == null) {
                         _cachingProgress.value = _cachingProgress.value - modelId
                         _snackbarMessage.emit(SnackbarEvent("No API key configured."))
                         return@launch
                     }
-                    val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
-                    EmbeddingClient.computeEmbedding(text, apiKey, model.remoteModelName, baseUrl)
+                    EmbeddingClient.computeEmbeddings(batchTexts, apiKey, model.remoteModelName, baseUrl)
                 }
-                if (embedding != null) {
-                    chatDao.upsertEmbedding(EmbeddingEntity(
-                        messageId = msg.id,
-                        modelId = modelId,
-                        embedding = EmbeddingIndexer.floatsToBytes(embedding),
-                        chunkText = text.take(500),
-                        dimension = embedding.size
-                    ))
-                    succeeded++
+                for ((index, emb) in embeddings.withIndex()) {
+                    if (emb != null) {
+                        chatDao.upsertEmbedding(EmbeddingEntity(
+                            messageId = batch[index].id,
+                            modelId = modelId,
+                            embedding = EmbeddingIndexer.floatsToBytes(emb),
+                            chunkText = batchTexts[index].take(500),
+                            dimension = emb.size
+                        ))
+                        succeeded++
+                    }
+                    processed++
                 }
-                processed++
                 _cachingProgress.value = _cachingProgress.value + (modelId to (processed to total))
             }
             val failed = toProcess.size - succeeded
@@ -698,7 +704,20 @@ class ChatViewModel(
     }
 
     suspend fun semanticSearch(query: String, limit: Int = 20): List<Pair<MessageEntity, Float>> {
-        return generationManager.semanticSearch(query, limit)
+        val ctx = com.newoether.agora.viewmodel.GenerationContext(
+            accessSavedMemories = accessSavedMemories.value,
+            accessActiveMemory = accessActiveMemory.value,
+            accessPastConversations = accessPastConversations.value,
+            modelSearchMethod = modelSearchMethod.value,
+            activeEmbeddingConfig = activeEmbeddingModel.value,
+            embeddingApiKey = resolveEmbeddingApiKey() ?: "",
+            ragThreshold = ragThreshold.value,
+            webSearchEnabled = webSearchEnabled.value,
+            webSearchApiKey = webSearchApiKey.value,
+            webSearchProvider = webSearchProvider.value,
+            webSearchBaseUrl = webSearchBaseUrl.value
+        )
+        return generationManager.semanticSearch(query, limit, ctx)
     }
 
     private suspend fun resolveEmbedding(text: String): FloatArray? = withContext(Dispatchers.IO) {
@@ -1030,17 +1049,19 @@ class ChatViewModel(
                 baseUrl = providerBaseUrls.value[providerName]
             )
 
-            generationManager.accessSavedMemories = accessSavedMemories.value
-            generationManager.accessActiveMemory = accessActiveMemory.value
-            generationManager.modelSearchMethod = modelSearchMethod.value
-            generationManager.activeEmbeddingConfig = activeEmbeddingModel.value
-            generationManager.embeddingApiKey = resolveEmbeddingApiKey() ?: ""
-            generationManager.ragThreshold = ragThreshold.value
-            generationManager.accessPastConversations = accessPastConversations.value
-            generationManager.webSearchEnabled = webSearchEnabled.value
-            generationManager.webSearchApiKey = webSearchApiKey.value
-            generationManager.webSearchProvider = webSearchProvider.value
-            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
+            val genCtx = com.newoether.agora.viewmodel.GenerationContext(
+                accessSavedMemories = accessSavedMemories.value,
+                accessActiveMemory = accessActiveMemory.value,
+                accessPastConversations = accessPastConversations.value,
+                modelSearchMethod = modelSearchMethod.value,
+                activeEmbeddingConfig = activeEmbeddingModel.value,
+                embeddingApiKey = resolveEmbeddingApiKey() ?: "",
+                ragThreshold = ragThreshold.value,
+                webSearchEnabled = webSearchEnabled.value,
+                webSearchApiKey = webSearchApiKey.value,
+                webSearchProvider = webSearchProvider.value,
+                webSearchBaseUrl = webSearchBaseUrl.value
+            )
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,
@@ -1049,6 +1070,7 @@ class ChatViewModel(
                 replaceMessageId = messageId,
                 modelName = currentActiveModel.value,
                 config = config,
+                ctx = genCtx,
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
@@ -1119,17 +1141,19 @@ class ChatViewModel(
                 baseUrl = providerBaseUrls.value[providerName]
             )
 
-            generationManager.accessSavedMemories = accessSavedMemories.value
-            generationManager.accessActiveMemory = accessActiveMemory.value
-            generationManager.modelSearchMethod = modelSearchMethod.value
-            generationManager.activeEmbeddingConfig = activeEmbeddingModel.value
-            generationManager.embeddingApiKey = resolveEmbeddingApiKey() ?: ""
-            generationManager.ragThreshold = ragThreshold.value
-            generationManager.accessPastConversations = accessPastConversations.value
-            generationManager.webSearchEnabled = webSearchEnabled.value
-            generationManager.webSearchApiKey = webSearchApiKey.value
-            generationManager.webSearchProvider = webSearchProvider.value
-            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
+            val genCtx = com.newoether.agora.viewmodel.GenerationContext(
+                accessSavedMemories = accessSavedMemories.value,
+                accessActiveMemory = accessActiveMemory.value,
+                accessPastConversations = accessPastConversations.value,
+                modelSearchMethod = modelSearchMethod.value,
+                activeEmbeddingConfig = activeEmbeddingModel.value,
+                embeddingApiKey = resolveEmbeddingApiKey() ?: "",
+                ragThreshold = ragThreshold.value,
+                webSearchEnabled = webSearchEnabled.value,
+                webSearchApiKey = webSearchApiKey.value,
+                webSearchProvider = webSearchProvider.value,
+                webSearchBaseUrl = webSearchBaseUrl.value
+            )
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,
@@ -1138,6 +1162,7 @@ class ChatViewModel(
                 replaceMessageId = null,
                 modelName = currentActiveModel.value,
                 config = config,
+                ctx = genCtx,
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
@@ -1260,17 +1285,19 @@ class ChatViewModel(
                 baseUrl = providerBaseUrls.value[providerName]
             )
 
-            generationManager.accessSavedMemories = accessSavedMemories.value
-            generationManager.accessActiveMemory = accessActiveMemory.value
-            generationManager.modelSearchMethod = modelSearchMethod.value
-            generationManager.activeEmbeddingConfig = activeEmbeddingModel.value
-            generationManager.embeddingApiKey = resolveEmbeddingApiKey() ?: ""
-            generationManager.ragThreshold = ragThreshold.value
-            generationManager.accessPastConversations = accessPastConversations.value
-            generationManager.webSearchEnabled = webSearchEnabled.value
-            generationManager.webSearchApiKey = webSearchApiKey.value
-            generationManager.webSearchProvider = webSearchProvider.value
-            generationManager.webSearchBaseUrl = webSearchBaseUrl.value
+            val genCtx = com.newoether.agora.viewmodel.GenerationContext(
+                accessSavedMemories = accessSavedMemories.value,
+                accessActiveMemory = accessActiveMemory.value,
+                accessPastConversations = accessPastConversations.value,
+                modelSearchMethod = modelSearchMethod.value,
+                activeEmbeddingConfig = activeEmbeddingModel.value,
+                embeddingApiKey = resolveEmbeddingApiKey() ?: "",
+                ragThreshold = ragThreshold.value,
+                webSearchEnabled = webSearchEnabled.value,
+                webSearchApiKey = webSearchApiKey.value,
+                webSearchProvider = webSearchProvider.value,
+                webSearchBaseUrl = webSearchBaseUrl.value
+            )
             generationManager.generate(
                 conversationId = currentId,
                 modelMessageId = modelMessageId,
@@ -1279,6 +1306,7 @@ class ChatViewModel(
                 replaceMessageId = null,
                 modelName = currentActiveModel.value,
                 config = config,
+                ctx = genCtx,
                 generationJob = generationJob,
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },

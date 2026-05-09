@@ -56,6 +56,20 @@ data class GenerationConfig(
     val baseUrl: String?
 )
 
+data class GenerationContext(
+    val accessSavedMemories: Boolean = true,
+    val accessActiveMemory: Boolean = true,
+    val accessPastConversations: Boolean = true,
+    val modelSearchMethod: String = "keyword",
+    val activeEmbeddingConfig: com.newoether.agora.data.EmbeddingModelConfig? = null,
+    val embeddingApiKey: String = "",
+    val ragThreshold: Float = 0.5f,
+    val webSearchEnabled: Boolean = false,
+    val webSearchApiKey: String = "",
+    val webSearchProvider: String = "brave",
+    val webSearchBaseUrl: String = ""
+)
+
 class GenerationManager(
     private val app: Application,
     private val chatDao: ChatDao,
@@ -64,18 +78,7 @@ class GenerationManager(
     private val context: android.content.Context
 ) {
     private var generationId = 0
-    var accessSavedMemories: Boolean = true
-    var accessActiveMemory: Boolean = true
-    var accessPastConversations: Boolean = true
     var onMessagePersisted: ((messageId: String, text: String) -> Unit)? = null
-    var modelSearchMethod: String = "keyword"
-    var activeEmbeddingConfig: com.newoether.agora.data.EmbeddingModelConfig? = null
-    var embeddingApiKey: String = ""
-    var ragThreshold: Float = 0.5f
-    var webSearchEnabled: Boolean = false
-    var webSearchApiKey: String = ""
-    var webSearchProvider: String = "brave"
-    var webSearchBaseUrl: String = ""
 
     private fun getProviderInstance(name: String): LlmProvider =
         providers[name] ?: providers.values.first()
@@ -133,10 +136,10 @@ class GenerationManager(
         }
     }
 
-    fun buildMemoryTools(): List<ToolDefinition> {
-        if (!accessSavedMemories && !accessActiveMemory) return emptyList()
+    fun buildMemoryTools(ctx: GenerationContext): List<ToolDefinition> {
+        if (!ctx.accessSavedMemories && !ctx.accessActiveMemory) return emptyList()
         val tools = mutableListOf<ToolDefinition>()
-        if (accessSavedMemories) {
+        if (ctx.accessSavedMemories) {
             tools.addAll(listOf(
                 ToolDefinition(function = ToolFunction(
                     name = "list_memory_files",
@@ -187,7 +190,7 @@ class GenerationManager(
                 ))
             ))
         }
-        if (accessActiveMemory) {
+        if (ctx.accessActiveMemory) {
             tools.add(ToolDefinition(function = ToolFunction(
                 name = "update_active_memory",
                 description = "Update the active memory context. Use 'replace' to overwrite, 'append' to add to the end, or 'prepend' to add to the beginning.",
@@ -203,8 +206,8 @@ class GenerationManager(
         return tools
     }
 
-    fun buildWebSearchTool(): List<ToolDefinition> {
-        if (!webSearchEnabled) return emptyList()
+    fun buildWebSearchTool(ctx: GenerationContext): List<ToolDefinition> {
+        if (!ctx.webSearchEnabled) return emptyList()
         return listOf(
             ToolDefinition(function = ToolFunction(
                 name = "web_search",
@@ -220,8 +223,8 @@ class GenerationManager(
         )
     }
 
-    fun buildRagTool(): List<ToolDefinition> {
-        if (!accessPastConversations) return emptyList()
+    fun buildRagTool(ctx: GenerationContext): List<ToolDefinition> {
+        if (!ctx.accessPastConversations) return emptyList()
         return listOf(
             ToolDefinition(function = ToolFunction(
                 name = "search_conversations",
@@ -237,7 +240,7 @@ class GenerationManager(
         )
     }
 
-    private suspend fun executeSearchConversations(arguments: String): String {
+    private suspend fun executeSearchConversations(arguments: String, ctx: GenerationContext): String {
         val argsStr = arguments.ifBlank { "{}" }
         val args = Json.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(argsStr)
         val query = (args["query"] as? kotlinx.serialization.json.JsonPrimitive)?.content
@@ -245,8 +248,8 @@ class GenerationManager(
         val limit = ((args["limit"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 10).coerceIn(1, 20)
 
         return try {
-            val results: List<com.newoether.agora.data.local.MessageEntity> = if (modelSearchMethod == "rag" && activeEmbeddingConfig != null) {
-                semanticSearch(query, limit).map { it.first }
+            val results: List<com.newoether.agora.data.local.MessageEntity> = if (ctx.modelSearchMethod == "rag" && ctx.activeEmbeddingConfig != null) {
+                semanticSearch(query, limit, ctx).map { it.first }
             } else {
                 chatDao.searchMessages(query, limit)
             }
@@ -290,8 +293,8 @@ class GenerationManager(
         }
     }
 
-    suspend fun semanticSearch(query: String, limit: Int): List<Pair<com.newoether.agora.data.local.MessageEntity, Float>> = withContext(Dispatchers.IO) {
-        val config = activeEmbeddingConfig
+    suspend fun semanticSearch(query: String, limit: Int, ctx: GenerationContext): List<Pair<com.newoether.agora.data.local.MessageEntity, Float>> = withContext(Dispatchers.IO) {
+        val config = ctx.activeEmbeddingConfig
         if (config == null) {
             Log.w("AgoraVM", "GM RAG: no active embedding config")
             return@withContext emptyList()
@@ -303,7 +306,7 @@ class GenerationManager(
             }
             LlamaEngine.computeEmbedding(query, config.localFilePath)
         } else {
-            val apiKey = resolveEmbeddingApiKey()
+            val apiKey = resolveEmbeddingApiKey(ctx)
             if (apiKey == null) {
                 Log.w("AgoraVM", "GM RAG: no API key")
                 return@withContext emptyList()
@@ -330,7 +333,7 @@ class GenerationManager(
         }
         val best = scored.maxOfOrNull { it.second } ?: 0f
         Log.d("AgoraVM", "GM RAG: best cosine = ${"%.4f".format(best)}")
-        val filtered = scored.filter { it.second > ragThreshold }
+        val filtered = scored.filter { it.second > ctx.ragThreshold }
          .sortedByDescending { it.second }
          .take(limit)
         val scoreById = filtered.associate { it.first.messageId to it.second }
@@ -338,11 +341,11 @@ class GenerationManager(
         messages.mapNotNull { msg -> scoreById[msg.id]?.let { msg to it } }
     }
 
-    private fun resolveEmbeddingApiKey(): String? {
-        return embeddingApiKey.ifBlank { null }
+    private fun resolveEmbeddingApiKey(ctx: GenerationContext): String? {
+        return ctx.embeddingApiKey.ifBlank { null }
     }
 
-    private fun executeWebSearch(arguments: String): String {
+    private fun executeWebSearch(arguments: String, ctx: GenerationContext): String {
         val argsStr = arguments.ifBlank { "{}" }
         val args = Json.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(argsStr)
         val query = (args["query"] as? kotlinx.serialization.json.JsonPrimitive)?.content
@@ -350,13 +353,13 @@ class GenerationManager(
         val numResults = ((args["num_results"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 5).coerceIn(1, 10)
 
         return try {
-            val (url, requestHeaders) = when (webSearchProvider) {
+            val (url, requestHeaders) = when (ctx.webSearchProvider) {
                 "searxng" -> {
-                    val baseUrl = webSearchBaseUrl.ifBlank { "https://searx.be" }
+                    val baseUrl = ctx.webSearchBaseUrl.ifBlank { "https://searx.be" }
                     ("$baseUrl/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&format=json&engines=google,brave") to emptyMap<String, String>()
                 }
                 else -> {
-                    val apiKey = webSearchApiKey.ifBlank {
+                    val apiKey = ctx.webSearchApiKey.ifBlank {
                         return buildJsonObject { put("type", "web_search"); put("query", query); put("error", "no_api_key") }.toString()
                     }
                     ("https://api.search.brave.com/res/v1/web/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}&count=$numResults") to
@@ -404,7 +407,7 @@ class GenerationManager(
         }
     }
 
-    private suspend fun executeTool(name: String, arguments: String): String {
+    private suspend fun executeTool(name: String, arguments: String, ctx: GenerationContext): String {
         return try {
             val argsStr = arguments.ifBlank { "{}" }
             val args = Json.decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(argsStr)
@@ -441,8 +444,8 @@ class GenerationManager(
                     val mode = arg("mode").ifBlank { "replace" }
                     memoryManager.updateActiveMemory(arg("content"), mode)
                 }
-                "web_search" -> executeWebSearch(arguments)
-                "search_conversations" -> executeSearchConversations(arguments)
+                "web_search" -> executeWebSearch(arguments, ctx)
+                "search_conversations" -> executeSearchConversations(arguments, ctx)
                 else -> "Unknown tool: $name"
             }
         } catch (e: Exception) {
@@ -466,6 +469,7 @@ class GenerationManager(
         replaceMessageId: String?,
         modelName: String,
         config: GenerationConfig,
+        ctx: GenerationContext,
         generationJob: kotlinx.coroutines.Job?,
         onStreamUpdate: (ChatMessage) -> Unit,
         onLoadingChange: (Boolean) -> Unit,
@@ -522,9 +526,9 @@ class GenerationManager(
                     } else path
                 }
 
-            val memoryTools = buildMemoryTools()
-            val webSearchTool = buildWebSearchTool()
-            val ragTool = buildRagTool()
+            val memoryTools = buildMemoryTools(ctx)
+            val webSearchTool = buildWebSearchTool(ctx)
+            val ragTool = buildRagTool(ctx)
             val allTools = memoryTools + webSearchTool + ragTool
             val providerConfig = ProviderConfig(
                 apiKey = config.apiKey,
@@ -594,7 +598,7 @@ class GenerationManager(
                             currentThoughtBuf = StringBuilder()
                             currentThoughtSignature = null
                         }
-                        val result = executeTool(event.name, event.arguments)
+                        val result = executeTool(event.name, event.arguments, ctx)
                         val tcd = ToolCallData(event.name, event.arguments, result, event.signature)
                         if (toolCallData == null) toolCallData = tcd
                         toolCallDataList = toolCallDataList + tcd
@@ -610,7 +614,7 @@ class GenerationManager(
                             currentThoughtSignature = null
                         }
                         val tcds = event.calls.map { call ->
-                            val result = executeTool(call.name, call.arguments)
+                            val result = executeTool(call.name, call.arguments, ctx)
                             val ts = MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature)
                             segments.add(ts)
                             roundToolSegments.add(ts)
@@ -765,7 +769,7 @@ class GenerationManager(
                                 currentThoughtBuf = StringBuilder()
                                 currentThoughtSignature = null
                             }
-                            val result = executeTool(event.name, event.arguments)
+                            val result = executeTool(event.name, event.arguments, ctx)
                             val tcd = ToolCallData(event.name, event.arguments, result, event.signature)
                             if (toolCallData == null) toolCallData = tcd
                             toolCallDataList = toolCallDataList + tcd
@@ -781,7 +785,7 @@ class GenerationManager(
                                 currentThoughtSignature = null
                             }
                             val tcds = event.calls.map { call ->
-                                val result = executeTool(call.name, call.arguments)
+                                val result = executeTool(call.name, call.arguments, ctx)
                                 val ts = MessageSegment(type = "tool", toolName = call.name, toolArgs = call.arguments, toolResult = result, signature = call.signature)
                                 segments.add(ts)
                                 roundToolSegments.add(ts)

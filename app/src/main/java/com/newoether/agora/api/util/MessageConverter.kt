@@ -87,15 +87,27 @@ fun convertToOpenAiMessages(
             return@flatMap entries
         }
 
-        // result_ messages carry the tool result
-        if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX) && msg.toolCall != null) {
-            val tc = msg.toolCall!!
-            val toolId = buildToolCallId(tc.toolName, tc.arguments)
-            entries.add(OpenAiMessage(
-                role = "tool",
-                content = listOf(OpenAiContentPart(type = "text", text = tc.result)),
-                toolCallId = toolId
-            ))
+        // result_ messages carry the tool result(s)
+        if (msg.id.startsWith(Constants.RESULT_MSG_PREFIX)) {
+            val toolSegs = msg.segments?.filter { it.type == "tool" }
+            if (!toolSegs.isNullOrEmpty()) {
+                for (seg in toolSegs) {
+                    val toolId = buildToolCallId(seg.toolName ?: "", seg.toolArgs ?: "{}")
+                    entries.add(OpenAiMessage(
+                        role = "tool",
+                        content = listOf(OpenAiContentPart(type = "text", text = seg.toolResult ?: "")),
+                        toolCallId = toolId
+                    ))
+                }
+            } else if (msg.toolCall != null) {
+                val tc = msg.toolCall!!
+                val toolId = buildToolCallId(tc.toolName, tc.arguments)
+                entries.add(OpenAiMessage(
+                    role = "tool",
+                    content = listOf(OpenAiContentPart(type = "text", text = tc.result)),
+                    toolCallId = toolId
+                ))
+            }
             return@flatMap entries
         }
 

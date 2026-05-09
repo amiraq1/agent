@@ -193,6 +193,18 @@ class AnthropicProvider : LlmProvider {
 
             val parts = mutableListOf<AnthropicContentPart>()
 
+            // Add images
+            for (imagePath in msg.images) {
+                val encoded = com.newoether.agora.api.util.encodeImageToBase64(imagePath)
+                if (encoded != null) {
+                    val (mimeType, base64) = encoded
+                    parts.add(AnthropicContentPart(
+                        type = "image",
+                        source = AnthropicImageSource(mediaType = mimeType, data = base64)
+                    ))
+                }
+            }
+
             // Thinking blocks omitted from history: Anthropic requires a valid signature
             // for every thinking block sent back in a multi-turn request. Signatures are
             // available during streaming but may not survive segment reconstruction, so

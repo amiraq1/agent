@@ -10,8 +10,10 @@ import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -32,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
 import com.newoether.agora.data.ApiKeyEntry
@@ -211,6 +214,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         var topP by remember { mutableStateOf("0.9") }
                         var maxTokens by remember { mutableStateOf("4096") }
                         var idError by remember { mutableStateOf<String?>(null) }
+                        var formError by remember { mutableStateOf<String?>(null) }
                         val fm = LocalFocusManager.current
                         val idRegex = remember { Regex("^[a-z0-9._-]+\$") }
 
@@ -250,6 +254,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = nCtx,
                                         onValueChange = { nCtx = it },
                                         label = { Text(stringResource(R.string.local_ctx_size)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -257,6 +262,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = temperature,
                                         onValueChange = { temperature = it },
                                         label = { Text(stringResource(R.string.local_temperature)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -264,6 +270,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = topP,
                                         onValueChange = { topP = it },
                                         label = { Text(stringResource(R.string.local_top_p)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -271,13 +278,20 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = maxTokens,
                                         onValueChange = { maxTokens = it },
                                         label = { Text(stringResource(R.string.local_max_tokens)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.fillMaxWidth()
                                     )
+                                    formError?.let { err ->
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             },
                             confirmButton = {
                                 TextButton(onClick = {
                                     val id = modelId.trim()
+                                    idError = null
+                                    formError = null
                                     if (id.isBlank()) {
                                         idError = "ID is required"
                                         return@TextButton
@@ -290,15 +304,35 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         idError = "This ID is already in use"
                                         return@TextButton
                                     }
+                                    val nCtxVal = nCtx.toIntOrNull()
+                                    if (nCtxVal == null || nCtxVal <= 0) {
+                                        formError = "Context size must be a positive integer"
+                                        return@TextButton
+                                    }
+                                    val tempVal = temperature.toFloatOrNull()
+                                    if (tempVal == null || tempVal < 0f || tempVal > 2f) {
+                                        formError = "Temperature must be 0–2"
+                                        return@TextButton
+                                    }
+                                    val topPVal = topP.toFloatOrNull()
+                                    if (topPVal == null || topPVal < 0f || topPVal > 1f) {
+                                        formError = "Top P must be 0–1"
+                                        return@TextButton
+                                    }
+                                    val maxTokVal = maxTokens.toIntOrNull()
+                                    if (maxTokVal == null || maxTokVal <= 0) {
+                                        formError = "Max tokens must be a positive integer"
+                                        return@TextButton
+                                    }
                                     val path = copiedFilePath ?: return@TextButton
                                     val config = com.newoether.agora.data.LocalChatModelConfig(
                                         modelId = id,
                                         alias = modelAlias.ifBlank { id },
                                         localFilePath = path,
-                                        nCtx = nCtx.toIntOrNull() ?: 2048,
-                                        temperature = temperature.toFloatOrNull() ?: 0.7f,
-                                        topP = topP.toFloatOrNull() ?: 0.9f,
-                                        maxTokens = maxTokens.toIntOrNull() ?: 4096
+                                        nCtx = nCtxVal,
+                                        temperature = tempVal,
+                                        topP = topPVal,
+                                        maxTokens = maxTokVal
                                     )
                                     viewModel.addLocalChatModel(config)
                                     showAddDialog = false
@@ -326,6 +360,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         var editTopP by remember { mutableStateOf(model.topP.toString()) }
                         var editMaxTokens by remember { mutableStateOf(model.maxTokens.toString()) }
                         var editIdError by remember { mutableStateOf<String?>(null) }
+                        var editFormError by remember { mutableStateOf<String?>(null) }
                         val fm = LocalFocusManager.current
                         val idRegex = remember { Regex("^[a-z0-9._-]+\$") }
                         AlertDialog(
@@ -358,6 +393,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = editNCtx,
                                         onValueChange = { editNCtx = it },
                                         label = { Text(stringResource(R.string.local_ctx_size)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -365,6 +401,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = editTemp,
                                         onValueChange = { editTemp = it },
                                         label = { Text(stringResource(R.string.local_temperature)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -372,6 +409,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = editTopP,
                                         onValueChange = { editTopP = it },
                                         label = { Text(stringResource(R.string.local_top_p)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -379,13 +417,20 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         value = editMaxTokens,
                                         onValueChange = { editMaxTokens = it },
                                         label = { Text(stringResource(R.string.local_max_tokens)) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         modifier = Modifier.fillMaxWidth()
                                     )
+                                    editFormError?.let { err ->
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             },
                             confirmButton = {
                                 TextButton(onClick = {
                                     val id = editModelId.trim()
+                                    editIdError = null
+                                    editFormError = null
                                     if (id.isBlank()) {
                                         editIdError = "ID is required"
                                         return@TextButton
@@ -398,12 +443,29 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         editIdError = "This ID is already in use"
                                         return@TextButton
                                     }
+                                    val nCtxVal = editNCtx.toIntOrNull()
+                                    if (nCtxVal == null || nCtxVal <= 0) {
+                                        editFormError = "Context size must be a positive integer"
+                                        return@TextButton
+                                    }
+                                    val tempVal = editTemp.toFloatOrNull()
+                                    if (tempVal == null || tempVal < 0f || tempVal > 2f) {
+                                        editFormError = "Temperature must be 0–2"
+                                        return@TextButton
+                                    }
+                                    val topPVal = editTopP.toFloatOrNull()
+                                    if (topPVal == null || topPVal < 0f || topPVal > 1f) {
+                                        editFormError = "Top P must be 0–1"
+                                        return@TextButton
+                                    }
+                                    val maxTokVal = editMaxTokens.toIntOrNull()
+                                    if (maxTokVal == null || maxTokVal <= 0) {
+                                        editFormError = "Max tokens must be a positive integer"
+                                        return@TextButton
+                                    }
                                     viewModel.updateLocalChatModel(
                                         model.id, id, editAlias.ifBlank { id },
-                                        editNCtx.toIntOrNull() ?: model.nCtx,
-                                        editTemp.toFloatOrNull() ?: model.temperature,
-                                        editTopP.toFloatOrNull() ?: model.topP,
-                                        editMaxTokens.toIntOrNull() ?: model.maxTokens
+                                        nCtxVal, tempVal, topPVal, maxTokVal
                                     )
                                     showEditDialog = null
                                 }) { Text(stringResource(R.string.save)) }
@@ -443,6 +505,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
 
                 LaunchedEffect(baseUrlState.text) {
+                    kotlinx.coroutines.delay(500)
                     viewModel.setProviderBaseUrl(viewingProvider, baseUrlState.text.toString())
                 }
 
@@ -576,7 +639,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // API Key Dialog
     showKeyDialog?.let { entry ->
         var name by remember { mutableStateOf(entry.name) }
-        val keyState = rememberTextFieldState(entry.key)
+        var key by remember { mutableStateOf(entry.key) }
         val isEdit = apiKeys.any { it.id == entry.id }
 
         AlertDialog(
@@ -595,8 +658,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
                         OutlinedTextField(
-                            state = keyState,
+                            value = key,
+                            onValueChange = { key = it },
                             label = { Text("${entry.provider} API Key") },
+                            visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -604,7 +669,6 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val key = keyState.text.toString()
                     if (name.isNotBlank() && key.isNotBlank()) {
                         if (isEdit) viewModel.updateApiKey(entry.id, name, key) else viewModel.addApiKey(name, key, entry.provider)
                         showKeyDialog = null

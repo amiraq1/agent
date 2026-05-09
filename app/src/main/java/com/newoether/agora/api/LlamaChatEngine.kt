@@ -1,14 +1,11 @@
 package com.newoether.agora.api
 
 import android.util.Log
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.io.File
 
@@ -79,11 +76,9 @@ class LlamaChatEngine(
         maxTokens: Int = 4096
     ): Flow<String> = callbackFlow {
         if (nativeHandle == 0L) {
-            close(Exception("Model not loaded"))
+            close(RuntimeException("Model not loaded"))
             return@callbackFlow
         }
-
-        var errorMessage: String? = null
 
         val callback = object : NativeChatCallback {
             override fun onToken(token: String) {
@@ -95,12 +90,12 @@ class LlamaChatEngine(
             }
 
             override fun onError(message: String) {
-                errorMessage = message
-                close()
+                Log.e(TAG, "Generation error: $message")
+                close(RuntimeException(message))
             }
         }
 
-        val job = launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             try {
                 nativeChatGenerate(nativeHandle, prompt, temperature, topP, maxTokens, callback)
             } catch (e: Exception) {
@@ -109,10 +104,8 @@ class LlamaChatEngine(
             }
         }
 
-        job.join()
-
-        if (errorMessage != null) {
-            Log.e(TAG, "Generation error: $errorMessage")
+        awaitClose {
+            nativeChatCancel(nativeHandle)
         }
     }
 

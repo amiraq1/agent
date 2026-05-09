@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +61,8 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showRenameDialog by remember { mutableStateOf<String?>(null) }
     var showRecacheConfirm by remember { mutableStateOf<String?>(null) }
     var showMenuForModel by remember { mutableStateOf<String?>(null) }
+    var localThreshold by remember { mutableFloatStateOf(ragThreshold) }
+    LaunchedEffect(ragThreshold) { localThreshold = ragThreshold }
     var renameText by remember { mutableStateOf("") }
     var remoteName by remember { mutableStateOf("") }
     var remoteModelName by remember { mutableStateOf("") }
@@ -290,14 +293,15 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "≥ ${"%.2f".format(ragThreshold)}",
+                                text = "≥ ${"%.2f".format(localThreshold)}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                             Slider(
-                                value = ragThreshold,
-                                onValueChange = { viewModel.setRagThreshold(it) },
+                                value = localThreshold,
+                                onValueChange = { localThreshold = it },
+                                onValueChangeFinished = { viewModel.setRagThreshold(localThreshold) },
                                 valueRange = 0f..1f,
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                             )
