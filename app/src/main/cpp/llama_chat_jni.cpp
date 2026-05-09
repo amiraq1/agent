@@ -57,8 +57,6 @@ Java_com_newoether_agora_api_LlamaChatEngine_nativeChatLoadModel(
     ctx_params.embeddings   = false;
     ctx_params.pooling_type = LLAMA_POOLING_TYPE_NONE;
     ctx_params.n_ctx = n_ctx;
-    ctx_params.n_batch = std::min(n_ctx, 512);
-    ctx_params.n_ubatch = std::min(n_ctx, 512);
     ctx_params.no_perf = false;
 
     handle->ctx = llama_init_from_model(handle->model, ctx_params);
@@ -227,26 +225,33 @@ Java_com_newoether_agora_api_LlamaChatEngine_nativeChatGenerate(
     LOGD("Generating: prompt_len=%zu, n_tokens=%d, max_tokens=%d",
          prompt_text.size(), n_tokens, max_tokens);
 
-    // Prefill: create batch with all prompt tokens
-    llama_batch batch = llama_batch_init(n_tokens, 0, 1);
-    for (int i = 0; i < n_tokens; i++) {
-        batch.token[i]    = tokens[i];
-        batch.pos[i]      = i;
-        batch.n_seq_id[i] = 1;
-        batch.seq_id[i][0]= 0;
-        batch.logits[i]   = 0;
-    }
-    batch.logits[n_tokens - 1] = 1; // only need logits for last token
-    batch.n_tokens = n_tokens;
+    // Prefill: split prompt into n_batch-sized chunks to avoid
+    // exceeding the context's batch limit (crashes llama_decode).
+    int32_t n_batch = llama_n_batch(handle->ctx);
+    int32_t processed = 0;
+    while (processed < n_tokens) {
+        int32_t chunk = std::min(n_batch, n_tokens - processed);
+        llama_batch batch = llama_batch_init(chunk, 0, 1);
+        for (int i = 0; i < chunk; i++) {
+            int32_t idx = processed + i;
+            batch.token[i]    = tokens[idx];
+            batch.pos[i]      = idx;
+            batch.n_seq_id[i] = 1;
+            batch.seq_id[i][0]= 0;
+            batch.logits[i]   = (idx == n_tokens - 1) ? 1 : 0;
+        }
+        batch.n_tokens = chunk;
 
-    if (llama_decode(handle->ctx, batch) != 0) {
-        LOGE("Prefill decode failed");
+        if (llama_decode(handle->ctx, batch) != 0) {
+            LOGE("Prefill decode failed at token %d/%d", processed, n_tokens);
+            llama_batch_free(batch);
+            env->CallVoidMethod(callback, on_error, env->NewStringUTF("Prefill decode failed"));
+            env->DeleteLocalRef(cb_class);
+            return -1;
+        }
         llama_batch_free(batch);
-        env->CallVoidMethod(callback, on_error, env->NewStringUTF("Prefill decode failed"));
-        env->DeleteLocalRef(cb_class);
-        return -1;
+        processed += chunk;
     }
-    llama_batch_free(batch);
 
     // Set up sampler chain
     auto sparams = llama_sampler_chain_default_params();
