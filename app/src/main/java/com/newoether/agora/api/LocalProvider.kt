@@ -52,14 +52,11 @@ class LocalProvider(
         // Convert messages to chat template messages
         val templateMessages = buildTemplateMessages(messages, config.systemPrompt)
 
-        // Apply chat template to get prompt string
+        // Apply chat template to get prompt string, fall back to simple format
         val prompt = engine.applyTemplate(templateMessages, addAss = true)
-        if (prompt == null) {
-            emit(StreamEvent.Error("Failed to format prompt with chat template"))
-            return@flow
-        }
+            ?: buildSimplePrompt(templateMessages)
 
-        Log.d(TAG, "Generated prompt: ${prompt.take(200)}...")
+        Log.d(TAG, "Generated prompt (${prompt.length} chars): ${prompt.take(200)}...")
 
         // Generate tokens with think tag parsing
         var totalTokens = 0
@@ -181,6 +178,15 @@ class LocalProvider(
         }
 
         return result
+    }
+
+    private fun buildSimplePrompt(messages: List<ChatTemplateMessage>): String {
+        val sb = StringBuilder()
+        for (msg in messages) {
+            sb.append("${msg.role}: ${msg.content}\n")
+        }
+        sb.append("assistant: ")
+        return sb.toString()
     }
 
     override suspend fun fetchModels(apiKey: String, baseUrl: String?): List<String> {
