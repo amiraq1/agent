@@ -53,7 +53,9 @@ data class GenerationConfig(
     val codeExecutionEnabled: Boolean,
     val googleSearchEnabled: Boolean,
     val thinkingEnabled: Boolean,
-    val baseUrl: String?
+    val baseUrl: String?,
+    val userPrepend: String? = null,
+    val userPostpend: String? = null
 )
 
 data class GenerationContext(
@@ -453,6 +455,15 @@ class GenerationManager(
         }
     }
 
+    private fun applyUserTemplate(messages: List<ChatMessage>, prepend: String?, postpend: String?): List<ChatMessage> {
+        if (prepend == null && postpend == null) return messages
+        return messages.map { msg ->
+            if (msg.participant == Participant.USER) {
+                msg.copy(text = (prepend ?: "") + msg.text + (postpend ?: ""))
+            } else msg
+        }
+    }
+
     private fun buildLiveSegments(flushed: List<MessageSegment>, buf: StringBuilder, signature: String? = null): List<MessageSegment>? {
         val result = flushed.toMutableList()
         if (buf.isNotEmpty()) {
@@ -553,7 +564,9 @@ class GenerationManager(
                 googleSearchEnabled = config.googleSearchEnabled,
                 thinkingEnabled = config.thinkingEnabled,
                 baseUrl = config.baseUrl,
-                tools = allTools
+                tools = allTools,
+                userPrepend = config.userPrepend,
+                userPostpend = config.userPostpend
             )
 
             var toolCallData: ToolCallData? = null
@@ -562,7 +575,8 @@ class GenerationManager(
 
             var lastEmitMs = 0L
 
-            provider.generateResponse(currentPath, providerConfig).collect { event ->
+            val apiPath = applyUserTemplate(currentPath, config.userPrepend, config.userPostpend)
+            provider.generateResponse(apiPath, providerConfig).collect { event ->
                 when (event) {
                     is StreamEvent.TextChunk -> {
                         if (currentStatus == MessageStatus.THINKING) {
@@ -738,7 +752,8 @@ class GenerationManager(
 
                 lastEmitMs = 0L
 
-                provider.generateResponse(toolPath, providerConfig).collect { event ->
+                val apiToolPath = applyUserTemplate(toolPath, config.userPrepend, config.userPostpend)
+                provider.generateResponse(apiToolPath, providerConfig).collect { event ->
                     when (event) {
                         is StreamEvent.TextChunk -> {
                             if (currentStatus == MessageStatus.THINKING) {

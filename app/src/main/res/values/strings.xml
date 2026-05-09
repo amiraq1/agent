@@ -138,6 +138,19 @@
     <string name="prompts_content_hint">System Prompt</string>
     <string name="prompts_delete_title">Delete System Instruction?</string>
     <string name="prompts_delete_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+    <string name="template_edit_title">Edit Template</string>
+    <string name="template_add_title">New Template</string>
+    <string name="template_title_required">Title is required</string>
+    <string name="template_tab_system">System Prompt</string>
+    <string name="template_tab_prepend">User Prepend</string>
+    <string name="template_tab_postpend">User Postpend</string>
+    <string name="template_empty_hint">No items. Add text or variables below.</string>
+    <string name="template_add_text">Add Text</string>
+    <string name="template_add_variable">Add Variable</string>
+    <string name="template_preview">Preview</string>
+    <string name="template_preview_empty">(empty)</string>
+    <string name="template_variable_picker_title">Choose Variable</string>
+    <string name="template_custom_text_label">Text</string>
 
     <!-- Settings - Models Page -->
     <string name="models_title">Models</string>

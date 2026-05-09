@@ -25,7 +25,9 @@ data class ProviderConfig(
     val googleSearchEnabled: Boolean = false,
     val thinkingEnabled: Boolean = true,
     val baseUrl: String? = null,
-    val tools: List<ToolDefinition>? = null
+    val tools: List<ToolDefinition>? = null,
+    val userPrepend: String? = null,
+    val userPostpend: String? = null
 )
 
 @Serializable

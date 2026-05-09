@@ -14,6 +14,8 @@ import com.newoether.agora.data.EmbeddingModelType
 import com.newoether.agora.data.LocalChatModelConfig
 import com.newoether.agora.data.MemoryManager
 import com.newoether.agora.data.SettingsManager
+import com.newoether.agora.data.PredefinedVariables
+import com.newoether.agora.data.PromptTemplateItem
 import com.newoether.agora.data.SystemPromptEntry
 import com.newoether.agora.api.LlamaEngine
 import com.newoether.agora.data.local.ChatDao
@@ -481,9 +483,19 @@ class ChatViewModel(
     }
     fun setActiveApiKey(provider: String, id: String) { viewModelScope.launch { settingsManager.setActiveApiKeyId(provider, id) } }
 
-    fun addSystemPrompt(title: String, content: String) {
+    fun addSystemPrompt(
+        title: String,
+        systemItems: List<PromptTemplateItem>,
+        userPrependItems: List<PromptTemplateItem>,
+        userPostpendItems: List<PromptTemplateItem>
+    ) {
         viewModelScope.launch {
-            val newList = systemPrompts.value + SystemPromptEntry(title = title, content = content)
+            val newList = systemPrompts.value + SystemPromptEntry(
+                title = title,
+                systemItems = systemItems,
+                userPrependItems = userPrependItems,
+                userPostpendItems = userPostpendItems
+            )
             settingsManager.saveSystemPrompts(newList)
             if (activeSystemPromptId.value == null) settingsManager.setActiveSystemPromptId(newList.last().id)
         }
@@ -495,9 +507,22 @@ class ChatViewModel(
             if (activeSystemPromptId.value == id) settingsManager.setActiveSystemPromptId(newList.firstOrNull()?.id)
         }
     }
-    fun updateSystemPrompt(id: String, title: String, content: String) {
+    fun updateSystemPrompt(
+        id: String,
+        title: String,
+        systemItems: List<PromptTemplateItem>,
+        userPrependItems: List<PromptTemplateItem>,
+        userPostpendItems: List<PromptTemplateItem>
+    ) {
         viewModelScope.launch {
-            val newList = systemPrompts.value.map { if (it.id == id) it.copy(title = title, content = content) else it }
+            val newList = systemPrompts.value.map {
+                if (it.id == id) it.copy(
+                    title = title,
+                    systemItems = systemItems,
+                    userPrependItems = userPrependItems,
+                    userPostpendItems = userPostpendItems
+                ) else it
+            }
             settingsManager.saveSystemPrompts(newList)
         }
     }
@@ -1047,17 +1072,19 @@ class ChatViewModel(
                     modelName = currentActiveModel.value
                 ))
             }
-            val effectiveSystemPrompt = buildEffectiveSystemPrompt(currentId)
+            val resolved = buildEffectiveSystemPrompt(currentId)
             val config = GenerationConfig(
                 providerName = providerName,
                 modelId = modelId.substringAfter(":"),
                 apiKey = activeKey,
-                effectiveSystemPrompt = effectiveSystemPrompt,
+                effectiveSystemPrompt = resolved.systemPrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
-                baseUrl = providerBaseUrls.value[providerName]
+                baseUrl = providerBaseUrls.value[providerName],
+                userPrepend = resolved.userPrepend,
+                userPostpend = resolved.userPostpend
             )
 
             val genCtx = com.newoether.agora.viewmodel.GenerationContext(
@@ -1139,17 +1166,19 @@ class ChatViewModel(
                 text = "", thoughts = null, status = MessageStatus.SENDING, participant = Participant.MODEL, timestamp = startTime,
                 modelName = currentActiveModel.value
             ))
-            val effectiveSystemPrompt = buildEffectiveSystemPrompt(currentId)
+            val resolved = buildEffectiveSystemPrompt(currentId)
             val config = GenerationConfig(
                 providerName = providerName,
                 modelId = modelId.substringAfter(":"),
                 apiKey = activeKey,
-                effectiveSystemPrompt = effectiveSystemPrompt,
+                effectiveSystemPrompt = resolved.systemPrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
-                baseUrl = providerBaseUrls.value[providerName]
+                baseUrl = providerBaseUrls.value[providerName],
+                userPrepend = resolved.userPrepend,
+                userPostpend = resolved.userPostpend
             )
 
             val genCtx = com.newoether.agora.viewmodel.GenerationContext(
@@ -1183,22 +1212,50 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun buildEffectiveSystemPrompt(currentId: String): String? {
+    private data class ResolvedPrompt(
+        val systemPrompt: String?,
+        val userPrepend: String?,
+        val userPostpend: String?
+    )
+
+    private suspend fun buildEffectiveSystemPrompt(currentId: String): ResolvedPrompt {
         val conversation = chatDao.getConversation(currentId)
         val targetPromptId = conversation?.systemPromptId ?: activeSystemPromptId.value
-        val activePrompt = systemPrompts.value.find { it.id == targetPromptId }?.content
+        val entry = systemPrompts.value.find { it.id == targetPromptId }
         val activeMemory = memoryManager.getActiveMemory()
         val includeActiveMemory = accessActiveMemory.value
-        return buildString {
+        val modelId = currentActiveModel.value.substringAfter(":")
+
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+        val dateSdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val now = java.util.Date()
+
+        val runtimeValues = mapOf(
+            PredefinedVariables.TIME to sdf.format(now),
+            PredefinedVariables.DATE to dateSdf.format(now),
+            PredefinedVariables.MODEL_ID to modelId,
+            PredefinedVariables.ACTIVE_MEMORY to if (includeActiveMemory && activeMemory.isNotBlank()) activeMemory else ""
+        )
+
+        if (entry != null) {
+            val systemItems = entry.resolvedSystemItems
+            return ResolvedPrompt(
+                systemPrompt = PredefinedVariables.compile(systemItems, runtimeValues).ifBlank { null },
+                userPrepend = PredefinedVariables.compile(entry.userPrependItems, runtimeValues).ifBlank { null },
+                userPostpend = PredefinedVariables.compile(entry.userPostpendItems, runtimeValues).ifBlank { null }
+            )
+        }
+
+        // No template selected: legacy behavior (active memory only)
+        val systemPrompt = buildString {
             if (includeActiveMemory && activeMemory.isNotBlank()) {
                 append("[Active Memory]\n")
                 append(activeMemory)
                 append("\n\n")
             }
-            if (!activePrompt.isNullOrBlank()) {
-                append(activePrompt)
-            }
         }.ifBlank { null }
+
+        return ResolvedPrompt(systemPrompt, null, null)
     }
 
     private fun getFileName(context: android.content.Context, uri: android.net.Uri): String {
@@ -1283,17 +1340,19 @@ class ChatViewModel(
             ))
             triggerScrollToMessage(userMessageId)
 
-            val effectiveSystemPrompt = buildEffectiveSystemPrompt(currentId)
+            val resolved = buildEffectiveSystemPrompt(currentId)
             val config = GenerationConfig(
                 providerName = providerName,
                 modelId = modelId.substringAfter(":"),
                 apiKey = activeKey,
-                effectiveSystemPrompt = effectiveSystemPrompt,
+                effectiveSystemPrompt = resolved.systemPrompt,
                 maxContextWindow = maxContextWindow.value,
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
-                baseUrl = providerBaseUrls.value[providerName]
+                baseUrl = providerBaseUrls.value[providerName],
+                userPrepend = resolved.userPrepend,
+                userPostpend = resolved.userPostpend
             )
 
             val genCtx = com.newoether.agora.viewmodel.GenerationContext(

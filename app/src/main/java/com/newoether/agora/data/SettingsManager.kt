@@ -29,8 +29,16 @@ data class ApiKeyEntry(
 data class SystemPromptEntry(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
-    val content: String
-)
+    val content: String = "",
+    val systemItems: List<PromptTemplateItem> = emptyList(),
+    val userPrependItems: List<PromptTemplateItem> = emptyList(),
+    val userPostpendItems: List<PromptTemplateItem> = emptyList()
+) {
+    val resolvedSystemItems: List<PromptTemplateItem>
+        get() = if (systemItems.isNotEmpty()) systemItems
+        else if (content.isNotBlank()) listOf(PromptTemplateItem(type = PromptItemType.CUSTOM, value = content))
+        else emptyList()
+}
 
 class SettingsManager(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
