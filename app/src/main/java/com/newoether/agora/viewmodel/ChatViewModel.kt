@@ -615,6 +615,8 @@ class ChatViewModel(
             // Auto-enable the model so it appears in the picker
             val modelPrefixedId = "Local:${config.id}"
             settingsManager.saveEnabledModels(enabledModels.value + modelPrefixedId)
+            // Set alias so the models page shows the user-configured name
+            settingsManager.saveModelAliases(modelAliases.value + (modelPrefixedId to config.name))
         }
     }
     fun deleteLocalChatModel(id: String) {
@@ -634,12 +636,22 @@ class ChatViewModel(
             val updatedAvailable = settingsManager.availableModels.first().toMutableMap()
             updatedAvailable["Local"] = models.map { "Local:${it.id}" }
             settingsManager.saveAvailableModels("Local", updatedAvailable["Local"] ?: emptyList())
+            // Remove alias
+            settingsManager.saveModelAliases(modelAliases.value - modelPrefixedId)
         }
     }
-    fun renameLocalChatModel(id: String, newName: String) {
+    fun updateLocalChatModel(
+        id: String, newName: String, nCtx: Int, temperature: Float, topP: Float, maxTokens: Int
+    ) {
         viewModelScope.launch {
-            val models = localChatModels.value.map { if (it.id == id) it.copy(name = newName) else it }
+            val models = localChatModels.value.map {
+                if (it.id == id) it.copy(name = newName, nCtx = nCtx, temperature = temperature, topP = topP, maxTokens = maxTokens)
+                else it
+            }
             settingsManager.saveLocalChatModels(models)
+            // Update alias
+            val modelPrefixedId = "Local:$id"
+            settingsManager.saveModelAliases(modelAliases.value + (modelPrefixedId to newName))
         }
     }
     fun setActiveLocalChatModel(id: String) {

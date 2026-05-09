@@ -2,6 +2,7 @@ package com.newoether.agora.api
 
 import android.content.Context
 import android.util.Log
+import com.newoether.agora.api.util.StreamingThinkTagParser
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
@@ -60,8 +61,9 @@ class LocalProvider(
 
         Log.d(TAG, "Generated prompt: ${prompt.take(200)}...")
 
-        // Generate tokens
+        // Generate tokens with think tag parsing
         var totalTokens = 0
+        val thinkParser = StreamingThinkTagParser()
         try {
             engine.generate(
                 prompt = prompt,
@@ -74,8 +76,17 @@ class LocalProvider(
                     return@collect
                 }
                 totalTokens++
-                emit(StreamEvent.TextChunk(token))
+                thinkParser.feed(
+                    content = token,
+                    thinkingEnabled = config.thinkingEnabled,
+                    onText = { emit(StreamEvent.TextChunk(it)) },
+                    onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+                )
             }
+            thinkParser.flush(
+                onText = { emit(StreamEvent.TextChunk(it)) },
+                onThought = { emit(StreamEvent.ThoughtChunk(it)) }
+            )
         } catch (e: kotlinx.coroutines.CancellationException) {
             engine.cancel()
             emit(StreamEvent.Error("Generation cancelled"))

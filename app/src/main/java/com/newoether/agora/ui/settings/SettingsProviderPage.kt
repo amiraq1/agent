@@ -49,6 +49,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showKeyDialog by remember { mutableStateOf<ApiKeyEntry?>(null) }
     var showDeleteKeyConfirm by remember { mutableStateOf<ApiKeyEntry?>(null) }
     var showProviderDialog by remember { mutableStateOf(false) }
+    val localChatModels by viewModel.localChatModels.collectAsState()
 
     val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router", "Local")
 
@@ -98,12 +99,11 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
                 if (viewingProvider == "Local") {
                     // Local chat model management
-                    val localModels by viewModel.localChatModels.collectAsState()
                     val activeLocalId by viewModel.activeLocalChatModelId.collectAsState()
                     val context = LocalContext.current
                     val scope = rememberCoroutineScope()
                     var showAddDialog by remember { mutableStateOf(false) }
-                    var showRenameDialog by remember { mutableStateOf<com.newoether.agora.data.LocalChatModelConfig?>(null) }
+                    var showEditDialog by remember { mutableStateOf<com.newoether.agora.data.LocalChatModelConfig?>(null) }
                     var showDeleteConfirm by remember { mutableStateOf<com.newoether.agora.data.LocalChatModelConfig?>(null) }
                     var importingModel by remember { mutableStateOf(false) }
                     var copiedFilePath by remember { mutableStateOf<String?>(null) }
@@ -135,7 +135,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     ListItem(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         headlineContent = { Text(stringResource(R.string.local_chat_models)) },
-                        supportingContent = { Text(stringResource(R.string.local_chat_models_count, localModels.size)) },
+                        supportingContent = { Text(stringResource(R.string.local_chat_models_count, localChatModels.size)) },
                         leadingContent = {
                             Icon(
                                 Icons.Default.AutoAwesome,
@@ -145,7 +145,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     )
 
-                    localModels.forEach { model ->
+                    localChatModels.forEach { model ->
                         var showMenu by remember { mutableStateOf(false) }
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -170,9 +170,9 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.rename)) },
+                                            text = { Text(stringResource(R.string.edit)) },
                                             leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                            onClick = { showMenu = false; showRenameDialog = model }
+                                            onClick = { showMenu = false; showEditDialog = model }
                                         )
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
@@ -292,29 +292,75 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                     }
 
-                    // Rename dialog
-                    showRenameDialog?.let { model ->
-                        var newName by remember { mutableStateOf(model.name) }
+                    // Edit dialog
+                    showEditDialog?.let { model ->
+                        var editName by remember { mutableStateOf(model.name) }
+                        var editNCtx by remember { mutableStateOf(model.nCtx.toString()) }
+                        var editTemp by remember { mutableStateOf(model.temperature.toString()) }
+                        var editTopP by remember { mutableStateOf(model.topP.toString()) }
+                        var editMaxTokens by remember { mutableStateOf(model.maxTokens.toString()) }
+                        val fm = LocalFocusManager.current
                         AlertDialog(
-                            onDismissRequest = { showRenameDialog = null },
-                            title = { Text(stringResource(R.string.models_rename)) },
+                            onDismissRequest = { showEditDialog = null },
+                            title = { Text(stringResource(R.string.edit)) },
                             text = {
-                                OutlinedTextField(
-                                    value = newName,
-                                    onValueChange = { newName = it },
-                                    label = { Text(stringResource(R.string.model_name_label)) },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    OutlinedTextField(
+                                        value = editName,
+                                        onValueChange = { editName = it },
+                                        label = { Text(stringResource(R.string.model_name_label)) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = editNCtx,
+                                        onValueChange = { editNCtx = it },
+                                        label = { Text(stringResource(R.string.local_ctx_size)) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = editTemp,
+                                        onValueChange = { editTemp = it },
+                                        label = { Text(stringResource(R.string.local_temperature)) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = editTopP,
+                                        onValueChange = { editTopP = it },
+                                        label = { Text(stringResource(R.string.local_top_p)) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = editMaxTokens,
+                                        onValueChange = { editMaxTokens = it },
+                                        label = { Text(stringResource(R.string.local_max_tokens)) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             },
                             confirmButton = {
                                 TextButton(onClick = {
-                                    if (newName.isNotBlank()) {
-                                        viewModel.renameLocalChatModel(model.id, newName)
-                                        showRenameDialog = null
+                                    if (editName.isNotBlank()) {
+                                        viewModel.updateLocalChatModel(
+                                            model.id, editName,
+                                            editNCtx.toIntOrNull() ?: model.nCtx,
+                                            editTemp.toFloatOrNull() ?: model.temperature,
+                                            editTopP.toFloatOrNull() ?: model.topP,
+                                            editMaxTokens.toIntOrNull() ?: model.maxTokens
+                                        )
+                                        showEditDialog = null
                                     }
                                 }) { Text(stringResource(R.string.save)) }
                             },
-                            dismissButton = { TextButton(onClick = { showRenameDialog = null }) { Text(stringResource(R.string.cancel)) } }
+                            dismissButton = { TextButton(onClick = { showEditDialog = null }) { Text(stringResource(R.string.cancel)) } }
                         )
                     }
 
@@ -445,7 +491,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     providers.forEach { p ->
                         val isConfigured = when (p) {
                             "Ollama" -> !providerBaseUrls[p].isNullOrBlank()
-                            "Local" -> true
+                            "Local" -> localChatModels.isNotEmpty()
                             else -> apiKeys.any { it.provider == p }
                         }
 
