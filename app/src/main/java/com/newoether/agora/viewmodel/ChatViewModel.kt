@@ -68,6 +68,10 @@ class ChatViewModel(
                 ) { cacheMessagesForModel(active.id) })
             }
         }
+        // Clean up orphaned embeddings (messages that no longer exist)
+        viewModelScope.launch(Dispatchers.IO) {
+            chatDao.deleteOrphanedEmbeddings()
+        }
         // Sync local chat models into available models
         viewModelScope.launch {
             settingsManager.localChatModels.collect { models ->
@@ -694,45 +698,7 @@ class ChatViewModel(
     }
 
     suspend fun semanticSearch(query: String, limit: Int = 20): List<Pair<MessageEntity, Float>> {
-        val activeModel = activeEmbeddingModel.value
-        if (activeModel == null) {
-            Log.w("AgoraVM", "RAG search: no active embedding model")
-            return emptyList()
-        }
-        Log.d("AgoraVM", "RAG search: using model '${activeModel.name}' (${activeModel.type})")
-        val queryEmbedding = resolveEmbedding(query)
-        if (queryEmbedding == null) {
-            Log.w("AgoraVM", "RAG search: failed to compute query embedding")
-            return emptyList()
-        }
-        Log.d("AgoraVM", "RAG search: query embedding dim=${queryEmbedding.size}")
-
-        val all = chatDao.getEmbeddingsByModel(activeModel.id)
-        Log.d("AgoraVM", "RAG search: found ${all.size} stored embeddings for model ${activeModel.id}")
-        if (all.isEmpty()) return emptyList()
-
-        val scored = all.map {
-            val stored = EmbeddingIndexer.bytesToFloats(it.embedding)
-            it to EmbeddingIndexer.cosineSimilarity(queryEmbedding, stored)
-        }
-        val bestScore = scored.maxOfOrNull { it.second } ?: 0f
-        Log.d("AgoraVM", "RAG search: best cosine similarity = ${"%.4f".format(bestScore)}")
-        val threshold = ragThreshold.value
-        val filtered = scored.filter { it.second > threshold }
-         .sortedByDescending { it.second }
-         .take(limit)
-
-        if (filtered.isEmpty()) {
-            Log.w("AgoraVM", "RAG search: no results above threshold (best=$bestScore)")
-            return emptyList()
-        }
-        Log.d("AgoraVM", "RAG search: returning ${filtered.size} results")
-        val scoreById = filtered.associate { it.first.messageId to it.second }
-        val messages = chatDao.getMessagesByIds(filtered.map { it.first.messageId })
-        val messageById = messages.associateBy { it.id }
-        return filtered.mapNotNull { (entity, score) ->
-            messageById[entity.messageId]?.let { it to score }
-        }
+        return generationManager.semanticSearch(query, limit)
     }
 
     private suspend fun resolveEmbedding(text: String): FloatArray? = withContext(Dispatchers.IO) {
@@ -782,12 +748,13 @@ class ChatViewModel(
                 return@launch
             }
             Log.d("AgoraVM", "RAG index: indexing $messageId with model '${model.name}'")
+            val toEmbed = text.take(8000)
             val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
                 if (!LlamaEngine.isModelReady(model.localFilePath)) {
                     Log.w("AgoraVM", "RAG index: local model not ready, skipping")
                     return@launch
                 }
-                LlamaEngine.computeEmbedding(text, model.localFilePath)
+                LlamaEngine.computeEmbedding(toEmbed, model.localFilePath)
             } else {
                 val apiKey = resolveEmbeddingApiKey()
                 if (apiKey == null) {
@@ -795,7 +762,7 @@ class ChatViewModel(
                     return@launch
                 }
                 val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
-                EmbeddingClient.computeEmbedding(text, apiKey, model.remoteModelName, baseUrl)
+                EmbeddingClient.computeEmbedding(toEmbed, apiKey, model.remoteModelName, baseUrl)
             }
             if (embedding != null) {
                 chatDao.upsertEmbedding(EmbeddingEntity(

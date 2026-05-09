@@ -1,39 +1,9 @@
 package com.newoether.agora.data
 
-import com.newoether.agora.api.EmbeddingClient
-import com.newoether.agora.data.local.ChatDao
-import com.newoether.agora.data.local.EmbeddingEntity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 object EmbeddingIndexer {
-
-    suspend fun indexMessage(
-        messageId: String,
-        text: String,
-        apiKey: String,
-        model: String,
-        baseUrl: String,
-        modelId: String,
-        chatDao: ChatDao
-    ): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val toEmbed = text.take(8000) // truncate for embedding models
-            val embedding = EmbeddingClient.computeEmbedding(toEmbed, apiKey, model, baseUrl) ?: return@withContext false
-            chatDao.upsertEmbedding(EmbeddingEntity(
-                messageId = messageId,
-                modelId = modelId,
-                embedding = floatsToBytes(embedding),
-                chunkText = toEmbed.take(500),
-                dimension = embedding.size
-            ))
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
 
     fun floatsToBytes(floats: FloatArray): ByteArray {
         val buffer = ByteBuffer.allocate(floats.size * 4).order(ByteOrder.BIG_ENDIAN)

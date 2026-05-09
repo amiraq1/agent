@@ -245,8 +245,8 @@ class GenerationManager(
         val limit = ((args["limit"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 10).coerceIn(1, 20)
 
         return try {
-            val results = if (modelSearchMethod == "rag" && activeEmbeddingConfig != null) {
-                semanticSearch(query, limit)
+            val results: List<com.newoether.agora.data.local.MessageEntity> = if (modelSearchMethod == "rag" && activeEmbeddingConfig != null) {
+                semanticSearch(query, limit).map { it.first }
             } else {
                 chatDao.searchMessages(query, limit)
             }
@@ -290,7 +290,7 @@ class GenerationManager(
         }
     }
 
-    private suspend fun semanticSearch(query: String, limit: Int): List<com.newoether.agora.data.local.MessageEntity> = withContext(Dispatchers.IO) {
+    suspend fun semanticSearch(query: String, limit: Int): List<Pair<com.newoether.agora.data.local.MessageEntity, Float>> = withContext(Dispatchers.IO) {
         val config = activeEmbeddingConfig
         if (config == null) {
             Log.w("AgoraVM", "GM RAG: no active embedding config")
@@ -333,8 +333,9 @@ class GenerationManager(
         val filtered = scored.filter { it.second > ragThreshold }
          .sortedByDescending { it.second }
          .take(limit)
-        val messageById = chatDao.getMessagesByIds(filtered.map { it.first.messageId }).associateBy { it.id }
-        filtered.mapNotNull { (entity, _) -> messageById[entity.messageId] }
+        val scoreById = filtered.associate { it.first.messageId to it.second }
+        val messages = chatDao.getMessagesByIds(filtered.map { it.first.messageId })
+        messages.mapNotNull { msg -> scoreById[msg.id]?.let { msg to it } }
     }
 
     private fun resolveEmbeddingApiKey(): String? {
