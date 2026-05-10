@@ -1241,10 +1241,15 @@ class ChatViewModel(
 
         if (entry != null) {
             val systemItems = entry.resolvedSystemItems
+            // Prepend/postpend keep {time}/{date} as placeholders — resolved per message in applyUserTemplate
+            val perMsgValues = mapOf(
+                PredefinedVariables.MODEL_ID to modelId,
+                PredefinedVariables.ACTIVE_MEMORY to if (includeActiveMemory && activeMemory.isNotBlank()) activeMemory else ""
+            )
             return ResolvedPrompt(
                 systemPrompt = PredefinedVariables.compile(systemItems, runtimeValues).ifBlank { null },
-                userPrepend = PredefinedVariables.compile(entry.userPrependItems, runtimeValues).ifBlank { null },
-                userPostpend = PredefinedVariables.compile(entry.userPostpendItems, runtimeValues).ifBlank { null }
+                userPrepend = PredefinedVariables.compile(entry.userPrependItems, perMsgValues, emptyMap()).ifBlank { null },
+                userPostpend = PredefinedVariables.compile(entry.userPostpendItems, perMsgValues, emptyMap()).ifBlank { null }
             )
         }
 

@@ -552,9 +552,15 @@ class GenerationManager(
 
     private fun applyUserTemplate(messages: List<ChatMessage>, prepend: String?, postpend: String?): List<ChatMessage> {
         if (prepend == null && postpend == null) return messages
+        val timeSdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+        val dateSdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
         return messages.map { msg ->
-            if (msg.participant == Participant.USER) {
-                msg.copy(text = (prepend ?: "") + msg.text + (postpend ?: ""))
+            if (msg.participant == Participant.USER && msg.text.isNotEmpty()) {
+                val ts = java.util.Date(msg.timestamp)
+                val rp = prepend?.replace("{time}", timeSdf.format(ts))?.replace("{date}", dateSdf.format(ts)) ?: ""
+                val ra = postpend?.replace("{time}", timeSdf.format(ts))?.replace("{date}", dateSdf.format(ts)) ?: ""
+                if (rp.isEmpty() && ra.isEmpty()) msg
+                else msg.copy(text = rp + msg.text + ra)
             } else msg
         }
     }
