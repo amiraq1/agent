@@ -298,7 +298,9 @@ fun SystemPromptEditorPage(
         val targetIndex = insertAtIndex
         ModalBottomSheet(
             onDismissRequest = { showVariablePicker = false; insertAtIndex = -1 },
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            containerColor = MaterialTheme.colorScheme.background,
+            tonalElevation = 0.dp
         ) {
             Text(
                 text = stringResource(R.string.template_variable_picker_title),
