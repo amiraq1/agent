@@ -557,8 +557,8 @@ class GenerationManager(
         return messages.map { msg ->
             if (msg.participant == Participant.USER && msg.text.isNotEmpty()) {
                 val ts = java.util.Date(msg.timestamp)
-                val rp = prepend?.replace("{time}", timeSdf.format(ts))?.replace("{date}", dateSdf.format(ts)) ?: ""
-                val ra = postpend?.replace("{time}", timeSdf.format(ts))?.replace("{date}", dateSdf.format(ts)) ?: ""
+                val rp = prepend?.replace("{sent_time}", timeSdf.format(ts))?.replace("{sent_date}", dateSdf.format(ts)) ?: ""
+                val ra = postpend?.replace("{sent_time}", timeSdf.format(ts))?.replace("{sent_date}", dateSdf.format(ts)) ?: ""
                 if (rp.isEmpty() && ra.isEmpty()) msg
                 else msg.copy(text = rp + msg.text + ra)
             } else msg

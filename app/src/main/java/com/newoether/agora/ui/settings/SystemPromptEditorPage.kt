@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Info
@@ -40,8 +41,10 @@ import com.newoether.agora.data.PromptTemplateItem
 import com.newoether.agora.data.SystemPromptEntry
 
 private fun variableDisplayName(key: String): String = when (key) {
-    PredefinedVariables.TIME -> "Time"
-    PredefinedVariables.DATE -> "Date"
+    PredefinedVariables.TIME -> "Current Time"
+    PredefinedVariables.DATE -> "Current Date"
+    PredefinedVariables.SENT_TIME -> "Send Time"
+    PredefinedVariables.SENT_DATE -> "Send Date"
     PredefinedVariables.ACTIVE_MEMORY -> "Active Memory"
     PredefinedVariables.MODEL_ID -> "Model ID"
     else -> key
@@ -50,6 +53,8 @@ private fun variableDisplayName(key: String): String = when (key) {
 private fun variableIcon(key: String): ImageVector = when (key) {
     PredefinedVariables.TIME -> Icons.Default.Schedule
     PredefinedVariables.DATE -> Icons.Default.CalendarMonth
+    PredefinedVariables.SENT_TIME -> Icons.Default.History
+    PredefinedVariables.SENT_DATE -> Icons.Default.CalendarMonth
     PredefinedVariables.ACTIVE_MEMORY -> Icons.Default.Memory
     PredefinedVariables.MODEL_ID -> Icons.Default.Info
     else -> Icons.Default.Info
@@ -300,7 +305,8 @@ fun SystemPromptEditorPage(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            for (key in PredefinedVariables.ALL) {
+            val availableVars = if (selectedTab == 0) PredefinedVariables.ALL.filter { it !in PredefinedVariables.PER_MESSAGE_VARS } else PredefinedVariables.ALL
+            for (key in availableVars) {
                 ListItem(
                     headlineContent = { Text(variableDisplayName(key)) },
                     supportingContent = { Text("{${key}}") },

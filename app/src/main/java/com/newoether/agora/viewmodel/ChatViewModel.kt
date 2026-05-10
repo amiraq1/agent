@@ -1235,17 +1235,16 @@ class ChatViewModel(
         val runtimeValues = mapOf(
             PredefinedVariables.TIME to sdf.format(now),
             PredefinedVariables.DATE to dateSdf.format(now),
+            PredefinedVariables.SENT_TIME to sdf.format(now),
+            PredefinedVariables.SENT_DATE to dateSdf.format(now),
             PredefinedVariables.MODEL_ID to modelId,
             PredefinedVariables.ACTIVE_MEMORY to if (includeActiveMemory && activeMemory.isNotBlank()) activeMemory else ""
         )
 
         if (entry != null) {
             val systemItems = entry.resolvedSystemItems
-            // Prepend/postpend keep {time}/{date} as placeholders — resolved per message in applyUserTemplate
-            val perMsgValues = mapOf(
-                PredefinedVariables.MODEL_ID to modelId,
-                PredefinedVariables.ACTIVE_MEMORY to if (includeActiveMemory && activeMemory.isNotBlank()) activeMemory else ""
-            )
+            // Prepend/postpend: {sent_time}/{sent_date} stay as placeholders resolved per-message in applyUserTemplate
+            val perMsgValues = runtimeValues.filterKeys { it !in PredefinedVariables.PER_MESSAGE_VARS }
             return ResolvedPrompt(
                 systemPrompt = PredefinedVariables.compile(systemItems, runtimeValues).ifBlank { null },
                 userPrepend = PredefinedVariables.compile(entry.userPrependItems, perMsgValues, emptyMap()).ifBlank { null },

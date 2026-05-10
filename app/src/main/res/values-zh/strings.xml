@@ -118,7 +118,7 @@
     <string name="template_add_text">添加文本</string>
     <string name="template_add_variable">添加变量</string>
     <string name="template_preview">预览</string>
-    <string name="template_preview_empty">（空白）</string>
+    <string name="template_preview_empty">（空）</string>
     <string name="template_variable_picker_title">选择变量</string>
     <string name="template_custom_text_label">文本</string>
     <string name="template_insert_title">插入项目</string>
