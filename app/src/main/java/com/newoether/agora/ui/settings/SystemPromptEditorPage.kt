@@ -386,13 +386,31 @@ private fun TemplateItemRow(
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null
 ) {
-    when (item.type) {
-        PromptItemType.CUSTOM -> {
-            var text by remember(item.id) { mutableStateOf(item.value) }
+    val hasActions = onMoveUp != null || onMoveDown != null
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (hasActions) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                horizontalArrangement = Arrangement.End
             ) {
+                if (onMoveUp != null) {
+                    IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up), modifier = Modifier.size(18.dp))
+                    }
+                }
+                if (onMoveDown != null) {
+                    IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down), modifier = Modifier.size(18.dp))
+                    }
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete), modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+        when (item.type) {
+            PromptItemType.CUSTOM -> {
+                var text by remember(item.id) { mutableStateOf(item.value) }
                 OutlinedTextField(
                     value = text,
                     onValueChange = { newValue ->
@@ -400,65 +418,45 @@ private fun TemplateItemRow(
                         onChange(item.copy(value = newValue))
                     },
                     label = { Text(stringResource(R.string.template_custom_text_label)) },
-                    modifier = Modifier.weight(1f)
+                    trailingIcon = if (!hasActions) {
+                        { IconButton(onClick = onDelete) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete)) } }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Column(modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
-                    if (onMoveUp != null) {
-                        IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up))
-                        }
-                    }
-                    if (onMoveDown != null) {
-                        IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down))
-                        }
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
-                    }
-                }
             }
-        }
-        PromptItemType.PREDEFINED -> {
-            ElevatedCard(
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
+            PromptItemType.PREDEFINED -> {
+                ElevatedCard(
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        variableIcon(item.value),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp).padding(top = 2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f).padding(top = 2.dp)) {
-                        Text(
-                            text = variableDisplayName(item.value),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)
+                    ) {
+                        Icon(
+                            variableIcon(item.value),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
                         )
-                        Text(
-                            text = "{${item.value}}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    }
-                    if (onMoveUp != null) {
-                        IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = variableDisplayName(item.value),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "{${item.value}}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         }
-                    }
-                    if (onMoveDown != null) {
-                        IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down))
+                        if (!hasActions) {
+                            IconButton(onClick = onDelete) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
+                            }
                         }
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
                     }
                 }
             }
