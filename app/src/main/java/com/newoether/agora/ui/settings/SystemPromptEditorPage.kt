@@ -386,26 +386,23 @@ private fun TemplateItemRow(
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null
 ) {
-    val hasActions = onMoveUp != null || onMoveDown != null
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (hasActions) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                if (onMoveUp != null) {
-                    IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up), modifier = Modifier.size(18.dp))
-                    }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            if (onMoveUp != null) {
+                IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up), modifier = Modifier.size(18.dp))
                 }
-                if (onMoveDown != null) {
-                    IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down), modifier = Modifier.size(18.dp))
-                    }
+            }
+            if (onMoveDown != null) {
+                IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down), modifier = Modifier.size(18.dp))
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete), modifier = Modifier.size(18.dp))
-                }
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete), modifier = Modifier.size(18.dp))
             }
         }
         when (item.type) {
@@ -418,9 +415,6 @@ private fun TemplateItemRow(
                         onChange(item.copy(value = newValue))
                     },
                     label = { Text(stringResource(R.string.template_custom_text_label)) },
-                    trailingIcon = if (!hasActions) {
-                        { IconButton(onClick = onDelete) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete)) } }
-                    } else null,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -451,11 +445,6 @@ private fun TemplateItemRow(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
-                        }
-                        if (!hasActions) {
-                            IconButton(onClick = onDelete) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
-                            }
                         }
                     }
                 }
