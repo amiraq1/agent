@@ -397,13 +397,42 @@ class GenerationManager(
             } ?: return buildJsonObject { put("type", "web_search"); put("query", query); put("error", "no_response") }.toString()
 
             val json: Map<String, kotlinx.serialization.json.JsonElement> = Json.decodeFromString(body)
+
+            // Tavily: rich response with answer, full content, and scores
+            if (ctx.webSearchProvider == "tavily") {
+                val resultsArray = json["results"]?.jsonArray
+                    ?: return buildJsonObject { put("type", "web_search"); put("query", query); put("error", "no_results") }.toString()
+                if (resultsArray.isEmpty())
+                    return buildJsonObject { put("type", "web_search"); put("query", query); put("error", "no_results") }.toString()
+                val answer = (json["answer"] as? JsonPrimitive)?.content
+                val rawResults = buildJsonArray {
+                    for (element in resultsArray) {
+                        val obj = element.jsonObject
+                        add(buildJsonObject {
+                            put("title", (obj["title"] as? JsonPrimitive)?.content ?: "")
+                            put("url", (obj["url"] as? JsonPrimitive)?.content ?: "")
+                            put("content", (obj["content"] as? JsonPrimitive)?.content ?: "")
+                            val score = (obj["score"] as? JsonPrimitive)?.content?.toFloatOrNull()
+                            if (score != null) put("score", score)
+                        })
+                    }
+                }
+                return buildJsonObject {
+                    put("type", "web_search")
+                    put("query", query)
+                    if (!answer.isNullOrBlank()) put("answer", answer)
+                    put("results", rawResults)
+                }.toString()
+            }
+
+            // Serper, Brave, SearXNG: normalized {title, url, description}
             val resultsArray = when {
-                json.containsKey("organic") -> json["organic"]?.jsonArray   // Serper
+                json.containsKey("organic") -> json["organic"]?.jsonArray
                 json.containsKey("web") -> {
                     val web = json["web"]?.jsonObject
                     web?.get("results")?.jsonArray
                 }
-                json.containsKey("results") -> json["results"]?.jsonArray  // Tavily, SearXNG
+                json.containsKey("results") -> json["results"]?.jsonArray
                 else -> null
             } ?: return buildJsonObject { put("type", "web_search"); put("query", query); put("error", "no_results") }.toString()
 
