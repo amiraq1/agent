@@ -20,8 +20,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Serializable
 internal data class ApiGenerateContentRequest(
@@ -245,11 +243,9 @@ class GeminiProvider : LlmProvider {
             entries
         }
 
-        val sdf = SimpleDateFormat("MMMM d, yyyy, HH:mm", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("GMT+8")
-        }
-        val timeInfo = "Current Time: ${sdf.format(Date())} (UTC+8)\n\n"
-        val systemInstruction = ApiRequestContent(parts = listOf(ApiRequestPart(text = timeInfo + (config.systemPrompt ?: ""))))
+        val systemInstruction = if (!config.systemPrompt.isNullOrBlank()) {
+            ApiRequestContent(parts = listOf(ApiRequestPart(text = config.systemPrompt)))
+        } else null
 
         val tools = mutableListOf<ApiTool>()
         if (config.codeExecutionEnabled) tools.add(ApiTool(codeExecution = JsonObject(emptyMap())))
