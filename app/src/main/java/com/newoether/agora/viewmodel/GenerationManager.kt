@@ -381,6 +381,7 @@ class GenerationManager(
                         put("query", query)
                         put("max_results", numResults)
                         put("search_depth", "advanced")
+                        put("include_answer", true)
                     }),
                     emptyMap()
                 )
