@@ -1,5 +1,6 @@
 package com.newoether.agora.ui.settings
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -62,6 +63,7 @@ private fun variableIcon(key: String): ImageVector = when (key) {
     else -> Icons.Default.Info
 }
 
+@SuppressLint("UnusedContentLambdaTargetStateParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SystemPromptEditorPage(
@@ -115,7 +117,7 @@ fun SystemPromptEditorPage(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(if (isEdit) stringResource(R.string.template_edit_title) else stringResource(R.string.template_add_title)) },
+                title = { Text(if (isEdit) stringResource(R.string.prompts_edit_title) else stringResource(R.string.prompts_add_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -210,12 +212,7 @@ fun SystemPromptEditorPage(
 
             // Tab content
             AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = {
-                    val dir = if (targetState > initialState) 1 else -1
-                    (fadeIn(tween(200)) + slideInVertically(tween(200)) { it * dir })
-                        .togetherWith(fadeOut(tween(200)) + slideOutVertically(tween(200)) { it * -dir })
-                }
+                targetState = selectedTab
             ) {
                 Column {
                     if (currentItems.isEmpty()) {
