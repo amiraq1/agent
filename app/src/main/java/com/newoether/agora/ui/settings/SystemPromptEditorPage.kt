@@ -196,24 +196,6 @@ fun SystemPromptEditorPage(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Add buttons at top
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = {
-                    currentItems.add(PromptTemplateItem(type = PromptItemType.CUSTOM, value = ""))
-                }) {
-                    Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.template_add_text))
-                }
-                FilledTonalButton(onClick = { showVariablePicker = true }) {
-                    Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.template_add_variable))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
             HorizontalDivider()
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -251,9 +233,9 @@ fun SystemPromptEditorPage(
                     for (i in currentItems.indices) {
                         val item = currentItems[i]
 
-                        // Insert button above each item
                         InsertBetweenButton(
-                            onClick = { insertAtIndex = i }
+                            onInsertText = { currentItems.add(i, PromptTemplateItem(type = PromptItemType.CUSTOM, value = "")) },
+                            onInsertVariable = { insertAtIndex = i; showVariablePicker = true }
                         )
 
                         AnimatedVisibility(
@@ -271,9 +253,9 @@ fun SystemPromptEditorPage(
                         }
                     }
 
-                    // Insert button at the end
                     InsertBetweenButton(
-                        onClick = { insertAtIndex = currentItems.size }
+                        onInsertText = { currentItems.add(PromptTemplateItem(type = PromptItemType.CUSTOM, value = "")) },
+                        onInsertVariable = { insertAtIndex = currentItems.size; showVariablePicker = true }
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -311,49 +293,11 @@ fun SystemPromptEditorPage(
         }
     }
 
-    // Insert dropdown
-    if (insertAtIndex >= 0) {
-        AlertDialog(
-            onDismissRequest = { insertAtIndex = -1 },
-            title = { Text(stringResource(R.string.template_insert_title)) },
-            text = {
-                Column {
-                    TextButton(
-                        onClick = {
-                            currentItems.add(insertAtIndex, PromptTemplateItem(type = PromptItemType.CUSTOM, value = ""))
-                            insertAtIndex = -1
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(stringResource(R.string.template_add_text), modifier = Modifier.weight(1f))
-                    }
-                    TextButton(
-                        onClick = {
-                            showVariablePicker = true
-                            insertAtIndex = -1
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(stringResource(R.string.template_add_variable), modifier = Modifier.weight(1f))
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { insertAtIndex = -1 }) { Text(stringResource(R.string.provider_cancel)) }
-            }
-        )
-    }
-
     // Variable picker bottom sheet
     if (showVariablePicker) {
         val targetIndex = insertAtIndex
         ModalBottomSheet(
-            onDismissRequest = { showVariablePicker = false },
+            onDismissRequest = { showVariablePicker = false; insertAtIndex = -1 },
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         ) {
             Text(
@@ -388,28 +332,48 @@ fun SystemPromptEditorPage(
 }
 
 @Composable
-private fun InsertBetweenButton(onClick: () -> Unit) {
-    var hovered by remember { mutableStateOf(false) }
+private fun InsertBetweenButton(
+    onInsertText: () -> Unit,
+    onInsertVariable: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
             .height(24.dp)
-            .clickable { onClick() }
     ) {
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         )
-        FilledTonalIconButton(
-            onClick = onClick,
-            modifier = Modifier.size(20.dp)
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = stringResource(R.string.template_insert_title),
-                modifier = Modifier.size(12.dp)
-            )
+        Box {
+            FilledTonalIconButton(
+                onClick = { expanded = true },
+                modifier = Modifier.size(20.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = stringResource(R.string.template_insert_title),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.template_add_text)) },
+                    leadingIcon = { Icon(Icons.Default.TextFields, null) },
+                    onClick = { expanded = false; onInsertText() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.template_add_variable)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null) },
+                    onClick = { expanded = false; onInsertVariable() }
+                )
+            }
         }
     }
 }
@@ -425,32 +389,35 @@ private fun TemplateItemRow(
     when (item.type) {
         PromptItemType.CUSTOM -> {
             var text by remember(item.id) { mutableStateOf(item.value) }
-            OutlinedTextField(
-                value = text,
-                onValueChange = { newValue ->
-                    text = newValue
-                    onChange(item.copy(value = newValue))
-                },
-                label = { Text(stringResource(R.string.template_custom_text_label)) },
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (onMoveUp != null) {
-                            IconButton(onClick = onMoveUp) {
-                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up))
-                            }
-                        }
-                        if (onMoveDown != null) {
-                            IconButton(onClick = onMoveDown) {
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down))
-                            }
-                        }
-                        IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { newValue ->
+                        text = newValue
+                        onChange(item.copy(value = newValue))
+                    },
+                    label = { Text(stringResource(R.string.template_custom_text_label)) },
+                    modifier = Modifier.weight(1f)
+                )
+                Column(modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
+                    if (onMoveUp != null) {
+                        IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up))
                         }
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    if (onMoveDown != null) {
+                        IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down))
+                        }
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
+                    }
+                }
+            }
         }
         PromptItemType.PREDEFINED -> {
             ElevatedCard(
@@ -458,17 +425,17 @@ private fun TemplateItemRow(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                     modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
                 ) {
                     Icon(
                         variableIcon(item.value),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp).padding(top = 2.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.weight(1f).padding(top = 2.dp)) {
                         Text(
                             text = variableDisplayName(item.value),
                             style = MaterialTheme.typography.bodyLarge,
@@ -481,16 +448,16 @@ private fun TemplateItemRow(
                         )
                     }
                     if (onMoveUp != null) {
-                        IconButton(onClick = onMoveUp) {
+                        IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.template_move_up))
                         }
                     }
                     if (onMoveDown != null) {
-                        IconButton(onClick = onMoveDown) {
+                        IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.template_move_down))
                         }
                     }
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_delete))
                     }
                 }
