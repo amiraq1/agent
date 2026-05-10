@@ -178,7 +178,7 @@ private fun toolSummary(seg: MessageSegment): String {
         "web_fetch" -> {
             val url = argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }
             if (isError) stringResource(R.string.tool_web_fetch_failed)
-            else if (content.isNotEmpty()) stringResource(R.string.tool_web_fetch_done)
+            else if (content.isNotEmpty()) stringResource(R.string.tool_web_fetch_done, url?.take(60)?.ifEmpty { "page" } ?: "page")
             else if (url != null) stringResource(R.string.tool_web_fetching, url.take(40)) else stringResource(R.string.tool_web_fetch_default)
         }
         "search_conversations" -> {
@@ -214,7 +214,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
         "list_memory_files" -> stringResource(R.string.tool_lookup_default)
         "update_active_memory" -> stringResource(R.string.tool_update_active_default)
         "web_search" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_web_search_done) }
-        "web_fetch" -> stringResource(R.string.tool_web_fetch_done)
+        "web_fetch" -> stringResource(R.string.tool_web_fetch_done, argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }?.take(60)?.ifEmpty { "page" } ?: "page")
         "search_conversations" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_conversation_search_done) }
         else -> stringResource(R.string.tool_done)
     }
