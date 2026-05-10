@@ -1248,16 +1248,7 @@ class ChatViewModel(
             )
         }
 
-        // No template selected: legacy behavior (active memory only)
-        val systemPrompt = buildString {
-            if (includeActiveMemory && activeMemory.isNotBlank()) {
-                append("[Active Memory]\n")
-                append(activeMemory)
-                append("\n\n")
-            }
-        }.ifBlank { null }
-
-        return ResolvedPrompt(systemPrompt, null, null)
+        return ResolvedPrompt(null, null, null)
     }
 
     private fun getFileName(context: android.content.Context, uri: android.net.Uri): String {
