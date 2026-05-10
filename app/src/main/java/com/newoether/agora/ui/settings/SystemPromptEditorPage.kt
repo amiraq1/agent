@@ -305,7 +305,7 @@ fun SystemPromptEditorPage(
         ) {
             Text(
                 text = stringResource(R.string.template_variable_picker_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
