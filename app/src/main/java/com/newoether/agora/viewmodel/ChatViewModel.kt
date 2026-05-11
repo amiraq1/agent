@@ -1016,6 +1016,25 @@ class ChatViewModel(
             stopGeneration()
         }
         viewModelScope.launch(Dispatchers.IO) {
+            // Delete image files for all messages in this conversation
+            val messagesWithImages = chatDao.getMessagesForConversation(id).first()
+                .filter { it.images.isNotEmpty() }
+            val imagesDir = java.io.File(getApplication<Application>().filesDir, "images")
+            for (msg in messagesWithImages) {
+                for (imgPath in msg.images) {
+                    try {
+                        val uri = android.net.Uri.parse(imgPath)
+                        if (uri.scheme == "file") {
+                            java.io.File(uri.path!!).delete()
+                        } else {
+                            // Also try matching by filename prefix in imagesDir
+                            val msgPrefix = "${msg.id}_"
+                            imagesDir.listFiles()?.filter { it.name.startsWith(msgPrefix) }?.forEach { it.delete() }
+                            break
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
             chatDao.deleteEmbeddingsByConversation(id)
             chatDao.deleteMessagesByConversation(id)
             chatDao.deleteConversation(id)

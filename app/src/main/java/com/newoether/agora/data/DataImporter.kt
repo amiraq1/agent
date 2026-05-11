@@ -52,6 +52,17 @@ class DataImporter(
         val errors: List<String> = emptyList()
     )
 
+    private fun detectImageExtension(bytes: ByteArray): String {
+        if (bytes.size < 4) return "jpg"
+        return when {
+            bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "jpg"
+            bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() -> "png"
+            bytes[0] == 0x47.toByte() && bytes[1] == 0x49.toByte() -> "gif"
+            bytes[0] == 0x52.toByte() && bytes[1] == 0x49.toByte() -> "webp"
+            else -> "jpg"
+        }
+    }
+
     private fun readAllEntries(uri: Uri): Map<String, ByteArray> {
         val entries = mutableMapOf<String, ByteArray>()
         // Copy SAF content to temp file so we can use ZipFile (more reliable than ZipInputStream)
@@ -177,20 +188,20 @@ class DataImporter(
                         val imagesDir = java.io.File(context.filesDir, "images")
                         imagesDir.mkdirs()
                         val imageEntries = entries.filter { it.key.startsWith("images/") }
-                        val restoredImages = mutableMapOf<String, MutableList<String>>() // messageId -> new URIs
+                        val restoredImages = mutableMapOf<String, MutableList<String>>() // messageId -> file paths
                         for ((path, bytes) in imageEntries) {
                             // path format: images/<messageId>/<index>
                             val parts = path.removePrefix("images/").split("/")
                             if (parts.size == 2) {
                                 val msgId = parts[0]
-                                val imgFile = java.io.File(imagesDir, "${msgId}_${parts[1]}")
+                                val ext = detectImageExtension(bytes)
+                                val imgFile = java.io.File(imagesDir, "${msgId}_${parts[1]}.$ext")
                                 imgFile.writeBytes(bytes)
-                                val newUri = Uri.fromFile(imgFile).toString()
-                                restoredImages.getOrPut(msgId) { mutableListOf() }.add(newUri)
+                                restoredImages.getOrPut(msgId) { mutableListOf() }.add(imgFile.absolutePath)
                             }
                         }
 
-                        // Update message entities with restored image URIs
+                        // Update message entities with restored image paths
                         val finalMsgEntities = msgEntities.map { msg ->
                             val imgs = restoredImages[msg.id]
                             if (imgs != null) msg.copy(images = imgs) else msg
