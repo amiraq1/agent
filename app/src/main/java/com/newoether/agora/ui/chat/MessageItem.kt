@@ -1159,12 +1159,11 @@ private fun RecomposeSafeMarkdown(
             withFrameNanos { }
             val startNs = withFrameNanos { it }
             val durationNs = 200_000_000L
-            val easing = LinearEasing
             while (true) {
                 val nowNs = withFrameNanos { it }
-                val raw = ((nowNs - startNs).toFloat() / durationNs).coerceIn(0f, 1f)
-                transitionAlpha = easing.transform(raw)
-                if (raw >= 1f) break
+                val progress = ((nowNs - startNs).toFloat() / durationNs).coerceAtMost(1f)
+                transitionAlpha = progress
+                if (progress >= 1f) break
             }
             stableText = content
             showNewLayer = false
