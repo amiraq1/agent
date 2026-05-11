@@ -197,7 +197,7 @@ class DataImporter(
                                 val ext = detectImageExtension(bytes)
                                 val imgFile = java.io.File(imagesDir, "${msgId}_${parts[1]}.$ext")
                                 imgFile.writeBytes(bytes)
-                                restoredImages.getOrPut(msgId) { mutableListOf() }.add(imgFile.absolutePath)
+                                restoredImages.getOrPut(msgId) { mutableListOf() }.add(imgFile.toURI().toString())
                             }
                         }
 
