@@ -15,7 +15,7 @@ import com.newoether.agora.R
 class AgoraForegroundService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "agora_generation"
+        const val CHANNEL_ID = "agora_generation_v2"
         const val NOTIFICATION_ID = 1
 
         fun start(context: Context) {
@@ -33,6 +33,10 @@ class AgoraForegroundService : Service() {
         }
 
         fun createChannel(context: Context) {
+            // Remove old channel so the new IMPORTANCE_MIN takes effect
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.deleteNotificationChannel("agora_generation")
+
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Generation",
@@ -42,7 +46,6 @@ class AgoraForegroundService : Service() {
                 setShowBadge(false)
                 setSound(null, null)
             }
-            val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
 
@@ -70,7 +73,7 @@ class AgoraForegroundService : Service() {
             val notification = Notification.Builder(context, "agora_completed")
                 .setContentTitle(context.getString(R.string.agora_responded))
                 .setContentText(preview)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .setStyle(Notification.BigTextStyle().bigText(preview))
@@ -93,7 +96,7 @@ class AgoraForegroundService : Service() {
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText("Generating response…")
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .build()
