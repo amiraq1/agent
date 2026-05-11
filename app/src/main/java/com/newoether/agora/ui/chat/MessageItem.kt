@@ -1199,7 +1199,7 @@ private fun RecomposeSafeMarkdown(
         if (isStreaming && content.isNotEmpty() && showNewLayer) {
             withFrameNanos { }
             val startNs = withFrameNanos { it }
-            val durationNs = 200_000_000L
+            val durationNs = 400_000_000L
             while (true) {
                 val nowNs = withFrameNanos { it }
                 val progress = ((nowNs - startNs).toFloat() / durationNs).coerceAtMost(1f)
