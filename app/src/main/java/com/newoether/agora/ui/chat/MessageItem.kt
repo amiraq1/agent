@@ -1172,17 +1172,25 @@ private fun RecomposeSafeMarkdown(
     }
 
     Box(modifier = modifier) {
-        // Stable layer: previous content at full opacity, identical rendering
-        if (showNewLayer && stableText.isNotEmpty()) {
-            render(stableText)
-        }
-        // Live layer: current content, fades in during transition
+        // Live layer: current content, fades in during transition.
+        // Rendered FIRST so it establishes the Box height.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(if (showNewLayer) transitionAlpha else 1f)
         ) {
             render(content)
+        }
+        // Stable layer: previous content at full opacity. Always in the tree
+        // (alpha=0 when idle) so it never triggers a new layout entry during transition.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (showNewLayer && stableText.isNotEmpty()) 1f else 0f)
+        ) {
+            if (stableText.isNotEmpty()) {
+                render(stableText)
+            }
         }
     }
 }
