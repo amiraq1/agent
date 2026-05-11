@@ -112,6 +112,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     leadingContent = {
                         Icon(Icons.Default.Upload, null, tint = MaterialTheme.colorScheme.primary)
                     },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { showExportDialog = true }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
@@ -121,6 +122,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     leadingContent = {
                         Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                     },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/zip", "*/*")) }
                 )
             }
@@ -228,7 +230,7 @@ private fun ExportDataDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.data_export_title)) },
+        title = { Text(stringResource(R.string.data_export_title), fontWeight = FontWeight.Normal) },
         text = {
             Column {
                 CheckRow(exportConversations, { exportConversations = it },
@@ -305,7 +307,7 @@ private fun ImportPreviewDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.import_preview_title), fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.import_preview_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
