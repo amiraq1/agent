@@ -619,12 +619,17 @@ fun MessageItem(
                         thinkingContentMaxHeightPx = 0
                     }
 
-                    // Double-buffer for main text: old content stays visible while new renders
+                    // Double-buffer: render previous text as Markdown behind the new Markdown
+                    // layer during transition. Both use identical typography for seamless crossfade.
                     var mainStableText by remember { mutableStateOf(debouncedText) }
                     var mainShowNewLayer by remember { mutableStateOf(false) }
                     var mainTransitionAlpha by remember { mutableFloatStateOf(1f) }
 
-                    if (mainStableText != debouncedText && isStreaming && debouncedText.isNotEmpty()) {
+                    if (!isStreaming) {
+                        mainStableText = debouncedText
+                        mainShowNewLayer = false
+                        mainTransitionAlpha = 1f
+                    } else if (mainStableText != debouncedText && debouncedText.isNotEmpty()) {
                         mainShowNewLayer = true
                         mainTransitionAlpha = 0f
                     }
@@ -993,17 +998,17 @@ fun MessageItem(
                                 }
                                 .bringIntoViewResponder(noOpResponder)
                         ) {
-                            // Double-buffer stable layer: plain text of previous content
-                            // shown at full opacity behind the Markdown during transition
+                            // Double-buffer stable layer: Markdown of previous content
+                            // rendered identically behind the new layer during transition
                             if (mainShowNewLayer && mainStableText.isNotEmpty() && !isError) {
-                                SelectionContainer {
-                                    Text(
-                                        text = mainStableText.escapeThinkTags(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = textColor,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                Markdown(
+                                    content = mainStableText.escapeThinkTags(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    typography = customTypography,
+                                    padding = customMarkdownPadding,
+                                    components = customMarkdownComponents,
+                                    imageTransformer = latexImageTransformer
+                                )
                             }
                             Box(
                                 modifier = Modifier
