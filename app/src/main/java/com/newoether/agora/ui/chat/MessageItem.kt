@@ -1150,8 +1150,14 @@ private fun RecomposeSafeMarkdown(
         showNewLayer = false
         transitionAlpha = 1f
     } else if (stableText != content && content.isNotEmpty()) {
-        showNewLayer = true
-        transitionAlpha = 0f
+        // Only crossfade if there's previous content to show behind
+        if (stableText.isNotEmpty()) {
+            showNewLayer = true
+            transitionAlpha = 0f
+        } else {
+            // First appearance — show immediately, no crossfade
+            stableText = content
+        }
     }
 
     LaunchedEffect(content) {
