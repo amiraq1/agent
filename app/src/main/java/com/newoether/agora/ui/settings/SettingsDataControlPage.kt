@@ -48,6 +48,8 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val isExporting = exportProgress != null
     val isImporting = importProgress != null
 
+    LaunchedEffect(Unit) { viewModel.refreshDataCounts() }
+
     // Capture export selections so they survive the SAF picker flow
     var pendingExportCategories by remember { mutableStateOf<Set<DataExporter.ExportCategory>>(emptySet()) }
     var pendingExportIncludeApiKeys by remember { mutableStateOf(false) }
@@ -103,7 +105,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             // Export card
-            SettingsGroup(title = "") {
+            SettingsGroup(title = stringResource(R.string.settings_data_control)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.data_export_title)) },
                     supportingContent = { Text(stringResource(R.string.data_export_subtitle)) },
@@ -226,7 +228,7 @@ private fun ExportDataDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.data_export_title), fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.data_export_title)) },
         text = {
             Column {
                 CheckRow(exportConversations, { exportConversations = it },
@@ -394,6 +396,10 @@ private fun StrategyChip(label: String, selected: Boolean, onClick: () -> Unit) 
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     )
 }
