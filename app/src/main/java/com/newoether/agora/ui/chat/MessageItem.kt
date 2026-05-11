@@ -587,8 +587,10 @@ fun MessageItem(
                         }
                     }
 
-                    var debouncedText by remember(message.status) { mutableStateOf(message.text) }
-                    if (isStreaming) {
+                    var debouncedText by remember { mutableStateOf(message.text) }
+                    if (!isStreaming) {
+                        debouncedText = message.text
+                    } else {
                         var lastUpdateMs by remember { mutableLongStateOf(0L) }
                         var flushJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
                         LaunchedEffect(message.text) {
@@ -607,8 +609,6 @@ fun MessageItem(
                                 }
                             }
                         }
-                    } else {
-                        debouncedText = message.text
                     }
 
                     // Level 1: anti-shrink for text and thinking content
