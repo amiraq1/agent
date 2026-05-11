@@ -1213,23 +1213,23 @@ private fun RecomposeSafeMarkdown(
     }
 
     Box(modifier = modifier) {
-        // Stable layer: previous content at full opacity. Rendered underneath
-        // so the live layer on top receives touch events (table scroll, selection).
+        // Stable layer: previous content, fades out during transition.
+        val stableAlpha = if (showNewLayer && stableText.isNotEmpty()) 1f - transitionAlpha else 0f
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .alpha(if (showNewLayer && stableText.isNotEmpty()) 1f else 0f)
+                .alpha(stableAlpha)
         ) {
             if (stableText.isNotEmpty()) {
                 render(stableText)
             }
         }
-        // Live layer: current content, fades in during transition. On top
-        // for hit-testing so table scroll and text selection work.
+        // Live layer: current content, fades in during transition.
+        val liveAlpha = if (showNewLayer) transitionAlpha else 1f
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .alpha(if (showNewLayer) transitionAlpha else 1f)
+                .alpha(liveAlpha)
         ) {
             render(content)
         }
