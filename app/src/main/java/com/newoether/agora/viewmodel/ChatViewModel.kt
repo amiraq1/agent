@@ -1036,7 +1036,7 @@ class ChatViewModel(
         val messageToRegenerate = _allMessages.value.find { it.id == messageId } ?: return
         val parentId = messageToRegenerate.parentId ?: return
         val isErrorOrStopped = messageToRegenerate.status == MessageStatus.ERROR || messageToRegenerate.status == MessageStatus.STOPPED
-        val isLatest = _allMessages.value.none { it.parentId == messageId }
+        val isLatest = _allMessages.value.none { it.parentId == messageId && !it.id.startsWith(Constants.TOOL_MSG_PREFIX) && !it.id.startsWith(Constants.RESULT_MSG_PREFIX) }
         // Error/stopped: purge and replace in-place. Normal: create new branch.
         val modelMessageId = if (isErrorOrStopped && isLatest) messageId else UUID.randomUUID().toString()
         val startTime = System.currentTimeMillis() + 1
