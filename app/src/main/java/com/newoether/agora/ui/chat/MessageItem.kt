@@ -1205,19 +1205,14 @@ private fun RecomposeSafeMarkdown(
         }
     }
 
-    if (crossfading) {
-        Box(modifier = modifier) {
-            // Stable layer: always at full opacity behind
-            Box(modifier = Modifier.fillMaxWidth().alpha(1f)) {
+    // Always two-layer structure — never switch tree shape, only alpha
+    Box(modifier = modifier) {
+        if (stableText.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().alpha(if (crossfading) 1f else 0f)) {
                 render(stableText)
             }
-            // Live layer: fades in on top
-            Box(modifier = Modifier.fillMaxWidth().alpha(transitionAlpha)) {
-                render(content)
-            }
         }
-    } else {
-        Box(modifier = modifier) {
+        Box(modifier = Modifier.fillMaxWidth().alpha(if (crossfading) transitionAlpha else 1f)) {
             render(content)
         }
     }
