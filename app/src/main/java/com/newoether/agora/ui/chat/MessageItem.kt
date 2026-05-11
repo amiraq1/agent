@@ -1185,7 +1185,10 @@ private fun RecomposeSafeMarkdown(
         transitionAlpha = 1f
     }
 
-    if (crossfading) {
+    if (crossfading && transitionAlpha >= 1f) {
+        // Only snap on the FIRST frame (alpha == 1f from idle state).
+        // The LaunchedEffect then drives alpha upward; if we reset every
+        // frame the animation would be stuck at 0.
         transitionAlpha = 0f
     }
 
