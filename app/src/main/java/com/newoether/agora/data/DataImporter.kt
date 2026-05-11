@@ -219,11 +219,13 @@ class DataImporter(
                             finalMsgEntities.forEach { chatDao.upsertMessage(it) }
                             conversationsImported = data.conversations.size
                         } else {
-                            // MERGE: upsert conversations, skip existing messages
+                            // MERGE: upsert conversations, insert new messages,
+                            // and update existing messages that have restored images
                             convEntities.forEach { chatDao.upsertConversation(it) }
                             val existingIds = chatDao.findExistingMessageIds(finalMsgEntities.map { it.id })
                             val existingSet = existingIds.toSet()
                             finalMsgEntities.filter { it.id !in existingSet }.forEach { chatDao.upsertMessage(it) }
+                            finalMsgEntities.filter { it.id in existingSet && it.images.isNotEmpty() }.forEach { chatDao.upsertMessage(it) }
                             conversationsImported = data.conversations.size
                         }
                     }
