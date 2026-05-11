@@ -1510,15 +1510,11 @@ class ChatViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val exporter = DataExporter(getApplication(), chatDao, settingsManager, memoryManager)
-                val result = exporter.export(uri, categories, includeApiKeys) { progress ->
+                exporter.export(uri, categories, includeApiKeys) { progress ->
                     _exportProgress.value = progress
                 }
                 _exportProgress.value = null
-                val msg = if (result.imagesExported > 0)
-                    getApplication<android.app.Application>().getString(R.string.export_success_with_images, result.imagesExported)
-                else
-                    getApplication<android.app.Application>().getString(R.string.export_success)
-                _snackbarMessage.emit(SnackbarEvent(msg))
+                _snackbarMessage.emit(SnackbarEvent(getApplication<android.app.Application>().getString(R.string.export_success)))
             } catch (e: Exception) {
                 _exportProgress.value = null
                 _snackbarMessage.emit(SnackbarEvent(
