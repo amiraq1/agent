@@ -11,7 +11,7 @@ import java.util.UUID
 
 object PdfPageRenderer {
     private const val MAX_PAGES = 5
-    private const val SCALE_FACTOR = 0.5f
+    private const val TARGET_LONG_EDGE = 1536
 
     fun renderAsImages(context: Context, uri: Uri): List<String> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return emptyList()
@@ -23,10 +23,11 @@ object PdfPageRenderer {
         val pageCount = minOf(renderer.pageCount, MAX_PAGES)
         for (i in 0 until pageCount) {
             val page = renderer.openPage(i)
-            val scaledWidth = (page.width * SCALE_FACTOR).toInt()
-            val scaledHeight = (page.height * SCALE_FACTOR).toInt()
+            val scale = TARGET_LONG_EDGE.toFloat() / maxOf(page.width, page.height)
+            val scaledWidth = (page.width * scale).toInt().coerceAtLeast(1)
+            val scaledHeight = (page.height * scale).toInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(
-                scaledWidth.coerceAtLeast(1), scaledHeight.coerceAtLeast(1),
+                scaledWidth, scaledHeight,
                 Bitmap.Config.ARGB_8888
             )
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)

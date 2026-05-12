@@ -349,32 +349,10 @@ fun ChatBottomBar(
                                     }
                                 }
                                 isPdf -> {
-                                    Box(
-                                        modifier = thumbModifier
-                                            .background(Color(0xFFE53935).copy(alpha = 0.1f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.AttachFile,
-                                            stringResource(R.string.file),
-                                            tint = Color(0xFFE53935),
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
+                                    FileThumbnail(fileName = null, isPdf = true, modifier = thumbModifier)
                                 }
                                 isFile -> {
-                                    Box(
-                                        modifier = thumbModifier
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.AttachFile,
-                                            stringResource(R.string.file),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
+                                    FileThumbnail(fileName = attachment.fileName ?: uriStr, isPdf = false, modifier = thumbModifier)
                                 }
                                 else -> {
                                     coil.compose.AsyncImage(

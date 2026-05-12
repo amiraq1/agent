@@ -1335,9 +1335,6 @@ class ChatViewModel(
         }
     }
 
-    private fun supportsNativePdf(providerName: String): Boolean =
-        providerName in setOf("Anthropic", "Google", "OpenAI", "DeepSeek", "Qwen", "Open Router")
-
     fun sendMessage(text: String, images: List<String> = emptyList(), attachments: List<SelectedAttachment> = emptyList()) {
         val modelId = currentActiveModel.value
         val providerName = getProviderForModel(modelId)
@@ -1352,7 +1349,6 @@ class ChatViewModel(
             val mediaUris = mutableListOf<String>()
             val directPaths = mutableListOf<String>()
             val sliceConfigs = mutableMapOf<String, GenerationManager.VideoSliceConfig>()
-            var fileContent = ""
             val metaItems = mutableListOf<com.newoether.agora.model.AttachmentItem>()
             var nextImageIndex = 0
 
@@ -1368,7 +1364,7 @@ class ChatViewModel(
                                 val content = stream.bufferedReader().readText().take(500_000)
                                 if (content.isNotBlank()) {
                                     val fileName = getFileName(app, android.net.Uri.parse(uri))
-                                    fileContent += "\n\n--- File: $fileName ---\n$content"
+                                    // Legacy file content stored in text (pre-attachmentMeta)
                                 }
                             }
                         }
@@ -1435,57 +1431,40 @@ class ChatViewModel(
                         }
                     }
                     "file" -> {
+                        var textContent: String? = null
                         try {
                             app.contentResolver.openInputStream(android.net.Uri.parse(att.uri))?.use { stream ->
                                 val content = stream.bufferedReader().readText().take(500_000)
                                 if (content.isNotBlank()) {
                                     val fileName = att.fileName ?: getFileName(app, android.net.Uri.parse(att.uri))
-                                    fileContent += "\n\n--- File: $fileName ---\n$content"
+                                    textContent = "\n\n--- File: $fileName ---\n$content"
                                 }
                             }
                         } catch (_: Exception) {}
                         metaItems.add(com.newoether.agora.model.AttachmentItem(
                             originalUri = att.uri, type = "file",
-                            fileName = att.fileName, mimeType = att.mimeType
+                            fileName = att.fileName, mimeType = att.mimeType,
+                            textContent = textContent
                         ))
                     }
                     "pdf" -> {
-                        if (supportsNativePdf(providerName)) {
-                            val pdfFile = java.io.File(app.filesDir, "pdf_${java.util.UUID.randomUUID()}.pdf")
-                            try {
-                                app.contentResolver.openInputStream(android.net.Uri.parse(att.uri))?.use { input ->
-                                    pdfFile.outputStream().use { input.copyTo(it) }
-                                }
-                                metaItems.add(com.newoether.agora.model.AttachmentItem(
-                                    originalUri = att.uri, type = "pdf",
-                                    fileName = att.fileName, mimeType = "application/pdf",
-                                    imageIndex = nextImageIndex
-                                ))
-                                directPaths.add(pdfFile.absolutePath)
-                                nextImageIndex++
-                            } catch (_: Exception) {
-                                _snackbarMessage.emit(SnackbarEvent(app.getString(R.string.pdf_copy_failed)))
-                            }
-                        } else {
-                            val pagePaths = com.newoether.agora.util.PdfPageRenderer.renderAsImages(app, android.net.Uri.parse(att.uri))
-                            if (pagePaths.isEmpty()) {
-                                _snackbarMessage.emit(SnackbarEvent(app.getString(R.string.pdf_render_failed)))
-                                continue
-                            }
-                            metaItems.add(com.newoether.agora.model.AttachmentItem(
-                                originalUri = att.uri, type = "pdf",
-                                fileName = att.fileName, mimeType = "application/pdf",
-                                imageIndex = nextImageIndex, pageCount = pagePaths.size,
-                                warning = "PDF rendered as images - provider may not support PDF"
-                            ))
-                            directPaths.addAll(pagePaths)
-                            nextImageIndex += pagePaths.size
+                        val pagePaths = com.newoether.agora.util.PdfPageRenderer.renderAsImages(app, android.net.Uri.parse(att.uri))
+                        if (pagePaths.isEmpty()) {
+                            _snackbarMessage.emit(SnackbarEvent(app.getString(R.string.pdf_render_failed)))
+                            continue
                         }
+                        metaItems.add(com.newoether.agora.model.AttachmentItem(
+                            originalUri = att.uri, type = "pdf",
+                            fileName = att.fileName, mimeType = "application/pdf",
+                            imageIndex = nextImageIndex, pageCount = pagePaths.size
+                        ))
+                        directPaths.addAll(pagePaths)
+                        nextImageIndex += pagePaths.size
                     }
                 }
             }
 
-            val finalText = if (fileContent.isNotBlank()) text + fileContent else text
+            val finalText = text
             val processedImages = if (mediaUris.isNotEmpty()) generationManager.processImages(mediaUris, sliceConfigs) else emptyList()
             val allImages = processedImages + directPaths
 

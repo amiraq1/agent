@@ -47,7 +47,7 @@ object FileValidator {
             }
         } catch (_: Exception) { null }
 
-        if (fileSize != null && fileSize > MAX_SIZE)
+        if (fileSize != null && fileSize > MAX_SIZE && mimeType != "application/pdf")
             return Result(false, Error.TOO_LARGE, mimeType)
 
         return Result(true, mimeType = mimeType)

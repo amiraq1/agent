@@ -691,7 +691,12 @@ class GenerationManager(
                 val toolCall = segs?.lastOrNull { s -> s.type == "tool" }?.let { s ->
                     ToolCallData(s.toolName ?: "", s.toolArgs ?: "{}", s.toolResult ?: "")
                 }
-                ChatMessage(id = it.id, parentId = it.parentId, text = it.text, images = it.images, thoughts = it.thoughts, thoughtTitle = it.thoughtTitle, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs, segments = segs, toolCall = toolCall)
+                val meta = it.attachmentMeta?.let { json -> try { Json.decodeFromString<com.newoether.agora.model.AttachmentMeta>(json) } catch (_: Exception) { null } }
+                val combinedText = if (meta != null && it.participant == Participant.USER) {
+                    val fileContent = meta.items.mapNotNull { it.textContent }.joinToString("")
+                    it.text + fileContent
+                } else it.text
+                ChatMessage(id = it.id, parentId = it.parentId, text = combinedText, images = it.images, thoughts = it.thoughts, thoughtTitle = it.thoughtTitle, tokenCount = it.tokenCount, status = it.status, participant = it.participant, timestamp = it.timestamp, thoughtTimeMs = it.thoughtTimeMs, segments = segs, toolCall = toolCall)
             }.filter { it.participant != Participant.ERROR }
                 .let { path ->
                     if (isRegenerate && replaceMessageId != null) {

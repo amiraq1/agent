@@ -222,18 +222,13 @@ class GeminiProvider : LlmProvider {
             if (msg.text.isNotEmpty()) {
                 parts.add(ApiRequestPart(text = msg.text))
             }
-            for ((index, imagePath) in msg.images.withIndex()) {
+            for (imagePath in msg.images) {
                 try {
                     val file = File(imagePath)
                     if (file.exists()) {
                         val bytes = file.readBytes()
                         val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                        val metaItem = msg.attachmentMeta?.items?.getOrNull(index)
-                        val mimeType = when {
-                            metaItem?.type == "pdf" -> "application/pdf"
-                            imagePath.endsWith(".png", true) -> "image/png"
-                            else -> "image/jpeg"
-                        }
+                        val mimeType = if (imagePath.endsWith(".png", true)) "image/png" else "image/jpeg"
                         parts.add(ApiRequestPart(inlineData = ApiInlineData(mimeType = mimeType, data = base64)))
                     }
                 } catch (e: Exception) {

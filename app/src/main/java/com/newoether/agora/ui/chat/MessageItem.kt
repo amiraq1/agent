@@ -467,13 +467,14 @@ fun MessageItem(
                                 val meta = remember(message.attachmentMeta) {
                                     message.attachmentMeta
                                 }
-                                // Build display items: skip non-first video frames, add meta-only items (files/PDFs without imageIndex)
+                                // Build display items: skip non-first video/PDF frames, add meta-only items
                                 val displayItems = remember(message.images, meta) {
                                     val skipIndices = mutableSetOf<Int>()
                                     if (meta != null) {
                                         for (item in meta.items) {
-                                            if (item.type == "video" && item.imageIndex != null && (item.pageCount ?: 1) > 1) {
-                                                for (i in item.imageIndex + 1 until item.imageIndex + (item.pageCount ?: 1)) {
+                                            val count = item.pageCount ?: 1
+                                            if (item.imageIndex != null && count > 1 && (item.type == "video" || item.type == "pdf")) {
+                                                for (i in item.imageIndex + 1 until item.imageIndex + count) {
                                                     skipIndices.add(i)
                                                 }
                                             }
@@ -517,19 +518,14 @@ fun MessageItem(
 
                                         if (isFileType) {
                                             val fileName = metaItem?.fileName ?: imagePath.substringAfterLast("/")
-                                            val ext = fileName.substringAfterLast('.', "").uppercase().take(4).ifEmpty { "TXT" }
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
-                                                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
-                                                    Text(ext, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                                                }
+                                                FileThumbnail(fileName = fileName, isPdf = false, modifier = Modifier.size(64.dp))
                                                 Text(fileName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                                             }
                                         } else if (isPdf) {
                                             val fileName = metaItem?.fileName ?: imagePath.substringAfterLast("/")
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
-                                                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFE53935).copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                                                    Text("PDF", style = MaterialTheme.typography.labelMedium, color = Color(0xFFE53935), fontWeight = FontWeight.SemiBold)
-                                                }
+                                                FileThumbnail(fileName = null, isPdf = true, modifier = Modifier.size(64.dp))
                                                 Text(fileName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                                                 if (metaItem?.warning != null) {
                                                     Text(metaItem.warning!!, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935), maxLines = 1, overflow = TextOverflow.Ellipsis)
