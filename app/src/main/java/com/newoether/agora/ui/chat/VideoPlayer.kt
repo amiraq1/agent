@@ -57,12 +57,23 @@ fun VideoPlayer(
     var durationMs by remember { mutableLongStateOf(0L) }
     var controlsVisible by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
+    var autoHideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    fun showControlsTemporarily() {
-        controlsVisible = true
-        scope.launch {
-            delay(3000)
+    fun scheduleAutoHide() {
+        autoHideJob?.cancel()
+        autoHideJob = scope.launch {
+            delay(4000)
             if (isPlaying) controlsVisible = false
+        }
+    }
+
+    fun toggleControls() {
+        if (controlsVisible) {
+            controlsVisible = false
+            autoHideJob?.cancel()
+        } else {
+            controlsVisible = true
+            scheduleAutoHide()
         }
     }
 
@@ -122,7 +133,8 @@ fun VideoPlayer(
 
     LaunchedEffect(contentReady) {
         if (contentReady) {
-            showControlsTemporarily()
+            controlsVisible = true
+            scheduleAutoHide()
         }
     }
 
@@ -146,7 +158,7 @@ fun VideoPlayer(
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
-                ) { showControlsTemporarily() }
+                ) { toggleControls() }
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -167,8 +179,16 @@ fun VideoPlayer(
             ) {
                 IconButton(
                     onClick = {
-                        if (isPlaying) player.pause() else player.play()
-                        showControlsTemporarily()
+                        if (isPlaying) {
+                            player.pause()
+                        } else {
+                            if (currentPositionMs >= durationMs - 500) {
+                                player.seekTo(0)
+                            }
+                            player.play()
+                        }
+                        controlsVisible = true
+                        scheduleAutoHide()
                     },
                     modifier = Modifier
                         .size(72.dp)
@@ -223,12 +243,24 @@ fun VideoPlayer(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp)
             ) {
+                // Time label
+                Text(
+                    "${formatTime(currentPositionMs)} / ${formatTime(durationMs)}",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(Modifier.height(4.dp))
+
                 // Seekbar
                 Slider(
                     value = progress,
-                    onValueChange = { player.seekTo((it * durationMs).roundToLong()) },
+                    onValueChange = { player.seekTo((it * durationMs).roundToLong()); controlsVisible = true },
+                    onValueChangeFinished = { scheduleAutoHide() },
                     modifier = Modifier.fillMaxWidth(),
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
@@ -236,23 +268,6 @@ fun VideoPlayer(
                         inactiveTrackColor = Color.White.copy(alpha = 0.3f)
                     )
                 )
-
-                // Time labels
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        formatTime(currentPositionMs),
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        formatTime(durationMs),
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 12.sp
-                    )
-                }
             }
         }
     }
