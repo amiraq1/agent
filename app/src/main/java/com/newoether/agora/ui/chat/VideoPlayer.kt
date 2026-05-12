@@ -1,6 +1,7 @@
 package com.newoether.agora.ui.chat
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -41,6 +42,10 @@ fun VideoPlayer(
         targetValue = if (contentReady && !closing) 1f else 0f,
         animationSpec = tween(400)
     )
+
+    BackHandler(enabled = contentReady && !closing) {
+        closing = true
+    }
 
     val player = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -96,6 +101,7 @@ fun VideoPlayer(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
+                .alpha(alpha)
                 .padding(16.dp)
                 .background(Color.Black.copy(alpha = 0.3f), CircleShape)
         ) {
