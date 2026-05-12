@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.api.util.StreamingThinkTagParser
 import com.newoether.agora.api.util.convertToOpenAiMessages
 import com.newoether.agora.api.util.limitContext
@@ -82,8 +82,8 @@ abstract class BaseOpenAiProvider : LlmProvider {
 
         try {
             val requestBodyJson = json.encodeToString(OpenAiChatRequest.serializer(), request)
-            Log.d("AgoraAPI", "[$name] REQ → $baseUrl/chat/completions | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
-            Log.d("AgoraAPI", "[$name] BODY: ${requestBodyJson.take(4000)}")
+            DebugLog.d("AgoraAPI", "[$name] REQ → $baseUrl/chat/completions | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
+            DebugLog.d("AgoraAPI", "[$name] BODY: ${requestBodyJson.take(4000)}")
 
             val headers = mutableMapOf("Content-Type" to "application/json")
             if (config.apiKey.isNotEmpty()) headers["Authorization"] = "Bearer ${config.apiKey}"
@@ -147,7 +147,7 @@ abstract class BaseOpenAiProvider : LlmProvider {
                             )
                         }
                     } catch (e: Exception) {
-                        Log.e("AgoraAPI", "Parse error: ${e.message}", e)
+                        DebugLog.e("AgoraAPI", "Parse error: ${e.message}", e)
                     }
                 }
 
@@ -161,7 +161,7 @@ abstract class BaseOpenAiProvider : LlmProvider {
                 }
             } else {
                 val errorRaw = handle.errorBody ?: "Unknown error"
-                Log.e("AgoraAPI", "[$name] ERR ${handle.code}: $errorRaw")
+                DebugLog.e("AgoraAPI", "[$name] ERR ${handle.code}: $errorRaw")
                 val errorMessage = try {
                     val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
                     "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
@@ -193,13 +193,13 @@ abstract class BaseOpenAiProvider : LlmProvider {
                 "$effectiveBaseUrl/models",
                 mapOf("Authorization" to "Bearer $apiKey")
             ) ?: run {
-                Log.e("AgoraAPI", "Failed to fetch $name models: empty response")
+                DebugLog.e("AgoraAPI", "Failed to fetch $name models: empty response")
                 return@withContext emptyList()
             }
             json.decodeFromString<OpenAiModelListResponse>(responseText)
                 .data.map { it.id }.sorted()
         } catch (e: Exception) {
-            Log.e("AgoraAPI", "Failed to fetch $name models", e)
+            DebugLog.e("AgoraAPI", "Failed to fetch $name models", e)
             emptyList()
         }
     }

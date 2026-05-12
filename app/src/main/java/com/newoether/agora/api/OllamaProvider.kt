@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.api.util.StreamingThinkTagParser
 import com.newoether.agora.api.util.buildToolCallId
 import com.newoether.agora.api.util.limitContext
@@ -167,8 +167,8 @@ class OllamaProvider : LlmProvider {
                 headers["Authorization"] = "Bearer ${config.apiKey}"
             }
             val requestBodyJson = json.encodeToString(OllamaChatRequest.serializer(), requestBody)
-            Log.d("AgoraAPI", "[Ollama] REQ → $baseUrl/api/chat | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
-            Log.d("AgoraAPI", "[Ollama] BODY: ${requestBodyJson.take(4000)}")
+            DebugLog.d("AgoraAPI", "[Ollama] REQ → $baseUrl/api/chat | model=${config.modelId} | msgs=${apiMessages.size} | tools=${config.tools?.size ?: 0}")
+            DebugLog.d("AgoraAPI", "[Ollama] BODY: ${requestBodyJson.take(4000)}")
             val handle = HttpClient.streamPost(url, requestBodyJson, headers)
             try {
                 if (handle.code == 200) {
@@ -232,7 +232,7 @@ class OllamaProvider : LlmProvider {
                                 emit(StreamEvent.UsageUpdate(total))
                             }
                         } catch (e: Exception) {
-                            Log.e("AgoraAPI", "Parse error: ${e.message}")
+                            DebugLog.e("AgoraAPI", "Parse error: ${e.message}")
                         }
                     }
                     if (!currentCoroutineContext().isActive) {
@@ -240,7 +240,7 @@ class OllamaProvider : LlmProvider {
                     }
                 } else {
                     val errorRaw = handle.errorBody ?: "Unknown error"
-                    Log.e("AgoraAPI", "[Ollama] ERR ${handle.code}: $errorRaw")
+                    DebugLog.e("AgoraAPI", "[Ollama] ERR ${handle.code}: $errorRaw")
                     val errorMessage = try {
                         val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
                         "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
@@ -269,13 +269,13 @@ class OllamaProvider : LlmProvider {
         try {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: "http://localhost:11434"
             val responseText = HttpClient.fetchModels("$effectiveBaseUrl/api/tags") ?: run {
-                Log.e("AgoraAPI", "Failed to fetch Ollama models: empty response")
+                DebugLog.e("AgoraAPI", "Failed to fetch Ollama models: empty response")
                 return@withContext emptyList()
             }
             val json = Json { ignoreUnknownKeys = true }
             json.decodeFromString<OllamaTagsResponse>(responseText).models.map { it.name }
         } catch (e: Exception) {
-            Log.e("AgoraAPI", "Ollama fetch failed: ${e.message}", e)
+            DebugLog.e("AgoraAPI", "Ollama fetch failed: ${e.message}", e)
             emptyList()
         }
     }

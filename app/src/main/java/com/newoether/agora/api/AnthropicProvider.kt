@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.Participant
 import com.newoether.agora.api.util.buildToolCallId
@@ -300,8 +300,8 @@ class AnthropicProvider : LlmProvider {
             headers["x-api-key"] = config.apiKey
             headers["anthropic-version"] = "2023-06-01"
             val requestBodyJson = json.encodeToString(AnthropicRequest.serializer(), requestBody)
-            Log.d("AgoraAPI", "[Anthropic] REQ → $baseUrl/messages | model=$modelName | msgs=${apiMessages.size} | thinking=${thinking != null} | tools=${anthropicTools?.size ?: 0}")
-            Log.d("AgoraAPI", "[Anthropic] BODY: ${requestBodyJson.take(4000)}")
+            DebugLog.d("AgoraAPI", "[Anthropic] REQ → $baseUrl/messages | model=$modelName | msgs=${apiMessages.size} | thinking=${thinking != null} | tools=${anthropicTools?.size ?: 0}")
+            DebugLog.d("AgoraAPI", "[Anthropic] BODY: ${requestBodyJson.take(4000)}")
             val handle = HttpClient.streamPost(url, requestBodyJson, headers)
             try {
                 if (handle.code == 200) {
@@ -379,7 +379,7 @@ class AnthropicProvider : LlmProvider {
                                     }
                                 }
                             } catch (e: Exception) {
-                                Log.e("AgoraAPI", "Parse error: ${e.message}", e)
+                                DebugLog.e("AgoraAPI", "Parse error: ${e.message}", e)
                             }
                         }
                     }
@@ -388,7 +388,7 @@ class AnthropicProvider : LlmProvider {
                     }
                 } else {
                     val errorRaw = handle.errorBody ?: "Unknown error"
-                    Log.e("AgoraAPI", "[Anthropic] ERR ${handle.code}: $errorRaw")
+                    DebugLog.e("AgoraAPI", "[Anthropic] ERR ${handle.code}: $errorRaw")
                     val errorMessage = try {
                         val errorJson = json.decodeFromString<OpenAiErrorResponse>(errorRaw)
                         "Error ${errorJson.error.code ?: handle.code} (${errorJson.error.type ?: "UNKNOWN"}): ${errorJson.error.message}"
@@ -420,12 +420,12 @@ class AnthropicProvider : LlmProvider {
                 "$effectiveBaseUrl/models",
                 mapOf("x-api-key" to apiKey, "anthropic-version" to "2023-06-01")
             ) ?: run {
-                Log.e("AgoraAPI", "Failed to fetch Anthropic models: empty response")
+                DebugLog.e("AgoraAPI", "Failed to fetch Anthropic models: empty response")
                 return@withContext emptyList()
             }
             json.decodeFromString<AnthropicModelsResponse>(responseText).data.map { it.id }
         } catch (e: Exception) {
-            Log.e("AgoraAPI", "Failed to fetch Anthropic models", e)
+            DebugLog.e("AgoraAPI", "Failed to fetch Anthropic models", e)
             emptyList()
         }
     }

@@ -3,7 +3,7 @@ package com.newoether.agora.viewmodel
 import android.app.Application
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -792,24 +792,24 @@ class ChatViewModel(
     private suspend fun resolveEmbedding(text: String): FloatArray? = withContext(Dispatchers.IO) {
         val model = activeEmbeddingModel.value
         if (model == null) {
-            Log.w("AgoraVM", "resolveEmbedding: no active model")
+            DebugLog.w("AgoraVM", "resolveEmbedding: no active model")
             return@withContext null
         }
         if (model.type == EmbeddingModelType.LOCAL) {
             if (!LlamaEngine.isModelReady(model.localFilePath)) {
-                Log.w("AgoraVM", "resolveEmbedding: local model not ready at ${model.localFilePath}")
+                DebugLog.w("AgoraVM", "resolveEmbedding: local model not ready at ${model.localFilePath}")
                 return@withContext null
             }
-            Log.d("AgoraVM", "resolveEmbedding: using local model ${model.name}")
+            DebugLog.d("AgoraVM", "resolveEmbedding: using local model ${model.name}")
             LlamaEngine.computeEmbedding(text, model.localFilePath)
         } else {
             val apiKey = resolveEmbeddingApiKey()
             if (apiKey == null) {
-                Log.w("AgoraVM", "resolveEmbedding: no API key available")
+                DebugLog.w("AgoraVM", "resolveEmbedding: no API key available")
                 return@withContext null
             }
             val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
-            Log.d("AgoraVM", "resolveEmbedding: calling ${model.remoteModelName} @ $baseUrl")
+            DebugLog.d("AgoraVM", "resolveEmbedding: calling ${model.remoteModelName} @ $baseUrl")
             EmbeddingClient.computeEmbedding(text, apiKey, model.remoteModelName, baseUrl)
         }
     }
@@ -832,21 +832,21 @@ class ChatViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val model = activeEmbeddingModel.value
             if (model == null) {
-                Log.d("AgoraVM", "RAG index: no active model, skipping $messageId")
+                DebugLog.d("AgoraVM", "RAG index: no active model, skipping $messageId")
                 return@launch
             }
-            Log.d("AgoraVM", "RAG index: indexing $messageId with model '${model.name}'")
+            DebugLog.d("AgoraVM", "RAG index: indexing $messageId with model '${model.name}'")
             val toEmbed = text.take(8000)
             val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
                 if (!LlamaEngine.isModelReady(model.localFilePath)) {
-                    Log.w("AgoraVM", "RAG index: local model not ready, skipping")
+                    DebugLog.w("AgoraVM", "RAG index: local model not ready, skipping")
                     return@launch
                 }
                 LlamaEngine.computeEmbedding(toEmbed, model.localFilePath)
             } else {
                 val apiKey = resolveEmbeddingApiKey()
                 if (apiKey == null) {
-                    Log.w("AgoraVM", "RAG index: no API key, skipping")
+                    DebugLog.w("AgoraVM", "RAG index: no API key, skipping")
                     return@launch
                 }
                 val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
@@ -860,7 +860,7 @@ class ChatViewModel(
                     chunkText = text.take(500),
                     dimension = embedding.size
                 ))
-                Log.d("AgoraVM", "RAG index: stored embedding (dim=${embedding.size}) for $messageId")
+                DebugLog.d("AgoraVM", "RAG index: stored embedding (dim=${embedding.size}) for $messageId")
             }
         }
     }
@@ -979,10 +979,10 @@ class ChatViewModel(
             try {
                 provider.generateResponse(titlePrompt, config).collect { event ->
                     if (event is StreamEvent.TextChunk) title += event.text
-                    else if (event is StreamEvent.Error) Log.e("AgoraVM", "Title generation error: ${event.message}")
+                    else if (event is StreamEvent.Error) DebugLog.e("AgoraVM", "Title generation error: ${event.message}")
                 }
             } catch (e: Exception) {
-                Log.e("AgoraVM", "Title generation failed for provider=$providerName model=$modelId", e)
+                DebugLog.e("AgoraVM", "Title generation failed for provider=$providerName model=$modelId", e)
                 return@launch
             }
 

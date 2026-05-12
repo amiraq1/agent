@@ -1,7 +1,7 @@
 package com.newoether.agora.viewmodel
 
 import android.app.Application
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.api.LlmProvider
 import com.newoether.agora.api.ProviderConfig
 import com.newoether.agora.api.StreamEvent
@@ -340,19 +340,19 @@ class GenerationManager(
     suspend fun semanticSearch(query: String, limit: Int, ctx: GenerationContext): List<Pair<com.newoether.agora.data.local.MessageEntity, Float>> = withContext(Dispatchers.IO) {
         val config = ctx.activeEmbeddingConfig
         if (config == null) {
-            Log.w("AgoraVM", "GM RAG: no active embedding config")
+            DebugLog.w("AgoraVM", "GM RAG: no active embedding config")
             return@withContext emptyList()
         }
         val queryEmbedding = if (config.type == com.newoether.agora.data.EmbeddingModelType.LOCAL) {
             if (!LlamaEngine.isModelReady(config.localFilePath)) {
-                Log.w("AgoraVM", "GM RAG: local model not ready")
+                DebugLog.w("AgoraVM", "GM RAG: local model not ready")
                 return@withContext emptyList()
             }
             LlamaEngine.computeEmbedding(query, config.localFilePath)
         } else {
             val apiKey = resolveEmbeddingApiKey(ctx)
             if (apiKey == null) {
-                Log.w("AgoraVM", "GM RAG: no API key")
+                DebugLog.w("AgoraVM", "GM RAG: no API key")
                 return@withContext emptyList()
             }
             EmbeddingClient.computeEmbedding(
@@ -363,12 +363,12 @@ class GenerationManager(
             )
         }
         if (queryEmbedding == null) {
-            Log.w("AgoraVM", "GM RAG: failed to compute query embedding")
+            DebugLog.w("AgoraVM", "GM RAG: failed to compute query embedding")
             return@withContext emptyList()
         }
 
         val all = chatDao.getEmbeddingsByModel(config.id)
-        Log.d("AgoraVM", "GM RAG: ${all.size} stored embeddings, query dim=${queryEmbedding.size}")
+        DebugLog.d("AgoraVM", "GM RAG: ${all.size} stored embeddings, query dim=${queryEmbedding.size}")
         if (all.isEmpty()) return@withContext emptyList()
 
         val scored = all.map {
@@ -376,7 +376,7 @@ class GenerationManager(
             it to EmbeddingIndexer.cosineSimilarity(queryEmbedding, stored)
         }
         val best = scored.maxOfOrNull { it.second } ?: 0f
-        Log.d("AgoraVM", "GM RAG: best cosine = ${"%.4f".format(best)}")
+        DebugLog.d("AgoraVM", "GM RAG: best cosine = ${"%.4f".format(best)}")
         val filtered = scored.filter { it.second > ctx.ragThreshold }
          .sortedByDescending { it.second }
          .take(limit)
@@ -1069,7 +1069,7 @@ class GenerationManager(
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("AgoraVM", "Failed to persist message to DB", e)
+                    DebugLog.e("AgoraVM", "Failed to persist message to DB", e)
                 }
                 if (generationId == myGenerationId) {
                     onStreamClear()

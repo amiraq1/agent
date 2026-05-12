@@ -112,6 +112,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        com.newoether.agora.util.DebugLog.init(this)
         AgoraForegroundService.createChannel(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

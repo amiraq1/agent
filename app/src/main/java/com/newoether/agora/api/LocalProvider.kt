@@ -1,7 +1,7 @@
 package com.newoether.agora.api
 
 import android.content.Context
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.api.util.StreamingThinkTagParser
 import com.newoether.agora.data.SettingsManager
 import com.newoether.agora.model.ChatMessage
@@ -55,7 +55,7 @@ class LocalProvider(
         val prompt = engine.applyTemplate(templateMessages, addAss = true)
             ?: buildPrompt(templateMessages)
 
-        Log.d(TAG, "Generated prompt (${prompt.length} chars): ${prompt.take(200)}...")
+        DebugLog.d(TAG, "Generated prompt (${prompt.length} chars): ${prompt.take(200)}...")
 
         // Generate tokens with think tag parsing
         var totalTokens = 0
@@ -88,7 +88,7 @@ class LocalProvider(
             emit(StreamEvent.Error("Generation cancelled"))
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Generation failed", e)
+            DebugLog.e(TAG, "Generation failed", e)
             emit(StreamEvent.Error("Generation failed: ${e.message}"))
             return@flow
         }

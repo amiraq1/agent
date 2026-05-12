@@ -1,7 +1,7 @@
 package com.newoether.agora.api
 
 import okhttp3.MediaType.Companion.toMediaType
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -42,7 +42,7 @@ object HttpClient {
         return response.use {
             if (it.isSuccessful) it.body?.string()
             else {
-                android.util.Log.e("HttpClient", "POST $url failed: ${it.code} ${it.body?.string()}")
+                DebugLog.e("HttpClient", "POST $url failed: ${it.code} ${it.body?.string()}")
                 null
             }
         }

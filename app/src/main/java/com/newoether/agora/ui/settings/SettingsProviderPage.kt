@@ -1,6 +1,6 @@
 package com.newoether.agora.ui.settings
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -127,7 +127,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     copiedFilePath = destFile.absolutePath
                                     showAddDialog = true
                                 } catch (e: Exception) {
-                                    android.util.Log.e("SettingsProvider", "Failed to import GGUF", e)
+                                    DebugLog.e("SettingsProvider", "Failed to import GGUF", e)
                                 } finally {
                                     importingModel = false
                                 }

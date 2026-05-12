@@ -1,6 +1,6 @@
 package com.newoether.agora.api.util
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.api.OpenAiContentPart
 import com.newoether.agora.api.OpenAiImageUrl
 import com.newoether.agora.api.OpenAiMessage
@@ -29,7 +29,7 @@ fun encodeImageToBase64(imagePath: String): Pair<String, String>? {
         val mimeType = if (imagePath.endsWith(".png", ignoreCase = true)) "image/png" else "image/jpeg"
         mimeType to base64
     } catch (e: Exception) {
-        Log.e("AgoraAPI", "Failed to encode image: $imagePath", e)
+        DebugLog.e("AgoraAPI", "Failed to encode image: $imagePath", e)
         null
     }
 }

@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -47,15 +47,15 @@ class LlamaChatEngine(
 
     fun load(): Boolean {
         if (!File(modelPath).exists()) {
-            Log.e(TAG, "Model file not found: $modelPath")
+            DebugLog.e(TAG, "Model file not found: $modelPath")
             return false
         }
         nativeHandle = nativeChatLoadModel(modelPath, nCtx)
         if (nativeHandle == 0L) {
-            Log.e(TAG, "Failed to load model: $modelPath")
+            DebugLog.e(TAG, "Failed to load model: $modelPath")
             return false
         }
-        Log.d(TAG, "Model loaded: $modelPath, nCtx=$nCtx")
+        DebugLog.d(TAG, "Model loaded: $modelPath, nCtx=$nCtx")
         return true
     }
 
@@ -90,7 +90,7 @@ class LlamaChatEngine(
             }
 
             override fun onError(message: String) {
-                Log.e(TAG, "Generation error: $message")
+                DebugLog.e(TAG, "Generation error: $message")
                 close(RuntimeException(message))
             }
         }
@@ -99,7 +99,7 @@ class LlamaChatEngine(
             try {
                 nativeChatGenerate(nativeHandle, prompt, temperature, topP, maxTokens, callback)
             } catch (e: Exception) {
-                Log.e(TAG, "nativeChatGenerate crashed", e)
+                DebugLog.e(TAG, "nativeChatGenerate crashed", e)
                 close(e)
             }
         }
@@ -125,7 +125,7 @@ class LlamaChatEngine(
         if (nativeHandle != 0L) {
             nativeChatFreeModel(nativeHandle)
             nativeHandle = 0L
-            Log.d(TAG, "Model closed: $modelPath")
+            DebugLog.d(TAG, "Model closed: $modelPath")
         }
     }
 

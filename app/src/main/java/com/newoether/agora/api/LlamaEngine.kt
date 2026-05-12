@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import java.io.File
 
 object LlamaEngine {
@@ -24,20 +24,20 @@ object LlamaEngine {
         val start = System.currentTimeMillis()
         val handle = nativeLoadModel(modelPath)
         if (handle == 0L) {
-            Log.e(TAG, "Failed to load model (${System.currentTimeMillis() - start}ms): $modelPath")
+            DebugLog.e(TAG, "Failed to load model (${System.currentTimeMillis() - start}ms): $modelPath")
             return null
         }
-        Log.d(TAG, "Model loaded in ${System.currentTimeMillis() - start}ms, dim=${nativeGetEmbeddingDim(handle)}")
+        DebugLog.d(TAG, "Model loaded in ${System.currentTimeMillis() - start}ms, dim=${nativeGetEmbeddingDim(handle)}")
         return try {
             val embd = nativeComputeEmbedding(handle, text)
             if (embd == null) {
-                Log.e(TAG, "nativeComputeEmbedding returned null for text len=${text.length}")
+                DebugLog.e(TAG, "nativeComputeEmbedding returned null for text len=${text.length}")
             } else {
-                Log.d(TAG, "Embedding computed: dim=${embd.size}, elapsed=${System.currentTimeMillis() - start}ms")
+                DebugLog.d(TAG, "Embedding computed: dim=${embd.size}, elapsed=${System.currentTimeMillis() - start}ms")
             }
             embd
         } catch (e: Exception) {
-            Log.e(TAG, "Embedding computation crashed", e)
+            DebugLog.e(TAG, "Embedding computation crashed", e)
             null
         } finally {
             nativeFreeModel(handle)

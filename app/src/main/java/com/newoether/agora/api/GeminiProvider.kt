@@ -1,6 +1,6 @@
 package com.newoether.agora.api
 
-import android.util.Log
+import com.newoether.agora.util.DebugLog
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.api.util.limitContext
 import com.newoether.agora.model.Participant
@@ -237,7 +237,7 @@ class GeminiProvider : LlmProvider {
                         parts.add(ApiRequestPart(inlineData = ApiInlineData(mimeType = mimeType, data = base64)))
                     }
                 } catch (e: Exception) {
-                    Log.e("AgoraAPI", "Failed to encode image: $imagePath", e)
+                    DebugLog.e("AgoraAPI", "Failed to encode image: $imagePath", e)
                 }
             }
             if (parts.isEmpty()) parts.add(ApiRequestPart(text = ""))
@@ -329,8 +329,8 @@ class GeminiProvider : LlmProvider {
 
             val headers = mapOf("Content-Type" to "application/json")
             val requestJson = json.encodeToString(ApiGenerateContentRequest.serializer(), requestBody)
-            Log.d("AgoraAPI", "[Gemini] REQ → $finalUrlString | model=$cleanModelName | msgs=${apiContents.size} | thinking=${config.thinkingEnabled} | tools=${tools.size}")
-            Log.d("AgoraAPI", "[Gemini] BODY: ${requestJson.take(4000)}")
+            DebugLog.d("AgoraAPI", "[Gemini] REQ → $finalUrlString | model=$cleanModelName | msgs=${apiContents.size} | thinking=${config.thinkingEnabled} | tools=${tools.size}")
+            DebugLog.d("AgoraAPI", "[Gemini] BODY: ${requestJson.take(4000)}")
             val handle = HttpClient.streamPost(finalUrlString, requestJson, headers)
             try {
                 if (handle.code == 200) {
@@ -418,7 +418,7 @@ class GeminiProvider : LlmProvider {
                                         emit(StreamEvent.UsageUpdate(metadata.totalTokenCount ?: 0, metadata.thoughtsTokenCount ?: 0))
                                     }
                                 } catch (e: Exception) {
-                                    Log.e("AgoraAPI", "Parse error: ${e.message}", e)
+                                    DebugLog.e("AgoraAPI", "Parse error: ${e.message}", e)
                                 }
                             }
                         }
@@ -428,7 +428,7 @@ class GeminiProvider : LlmProvider {
                     }
                 } else {
                     val errorRaw = handle.errorBody ?: "Unknown error (Code: ${handle.code})"
-                    Log.e("AgoraAPI", "[Gemini] ERR ${handle.code}: $errorRaw")
+                    DebugLog.e("AgoraAPI", "[Gemini] ERR ${handle.code}: $errorRaw")
                     val errorMessage = try {
                         val errorJson = json.decodeFromString<ApiErrorResponse>(errorRaw)
                         val code = errorJson.error.code ?: handle.code
@@ -466,7 +466,7 @@ class GeminiProvider : LlmProvider {
             }
 
             val responseText = HttpClient.fetchModels(finalUrlString) ?: run {
-                Log.e("AgoraAPI", "Failed to fetch Gemini models: empty response")
+                DebugLog.e("AgoraAPI", "Failed to fetch Gemini models: empty response")
                 return@withContext emptyList()
             }
             val json = Json { ignoreUnknownKeys = true }
