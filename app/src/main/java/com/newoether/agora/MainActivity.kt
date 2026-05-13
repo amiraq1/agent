@@ -771,7 +771,7 @@ private fun ZoomableImageItem(
                             if (startScale > 1.05f) {
                                 val targetScale = 1f
                                 val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
-                                AnimationState(startScale).animateTo(targetScale, spring(Spring.StiffnessMediumLow, Spring.DampingRatioNoBouncy, 0.001f)) {
+                                AnimationState(startScale).animateTo(targetScale, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow, 0.001f)) {
                                     scale = value
                                     val r = if (startScale != 0f) value / startScale else 1f
                                     val unconstrainedX = startOffsetX * r + (tapOffset.x - center.x) * (1f - r)
@@ -783,7 +783,7 @@ private fun ZoomableImageItem(
                             } else {
                                 val targetScale = 3f
                                 val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
-                                AnimationState(startScale).animateTo(targetScale, spring(Spring.StiffnessMediumLow, Spring.DampingRatioNoBouncy, 0.001f)) {
+                                AnimationState(startScale).animateTo(targetScale, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow, 0.001f)) {
                                     scale = value
                                     val r = if (startScale != 0f) value / startScale else 1f
                                     val unconstrainedX = startOffsetX * r + (tapOffset.x - center.x) * (1f - r)
@@ -879,7 +879,7 @@ private fun ZoomableImageItem(
                                 val finalPivotY = sY * targetR + (pivot.y - center.y) * (1f - targetR)
                                 val targetX = finalPivotX.coerceIn(-targetMaxX, targetMaxX)
                                 val targetY = finalPivotY.coerceIn(-targetMaxY, targetMaxY)
-                                AnimationState(0f).animateTo(1f, spring(Spring.StiffnessLow, Spring.DampingRatioNoBouncy)) {
+                                AnimationState(0f).animateTo(1f, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) {
                                     val currentS = sS + (targetS - sS) * value
                                     scale = currentS
                                     val r = if (sS != 0f) currentS / sS else 1f
@@ -893,7 +893,7 @@ private fun ZoomableImageItem(
                                     val (maxX, _) = getMaxOffsets(scale)
                                     if (offsetX > maxX || offsetX < -maxX) {
                                         val targetX = offsetX.coerceIn(-maxX, maxX)
-                                        AnimationState(offsetX, velocity.x * rbCoeff).animateTo(targetX, spring(Spring.StiffnessLow, Spring.DampingRatioNoBouncy)) { offsetX = value }
+                                        AnimationState(offsetX, velocity.x * rbCoeff).animateTo(targetX, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetX = value }
                                     } else if (velocity.x != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
                                         var hitX = false; var velX = 0f; var posX = 0f
@@ -904,7 +904,7 @@ private fun ZoomableImageItem(
                                         }
                                         if (hitX) {
                                             val (curMaxX, _) = getMaxOffsets(scale)
-                                            AnimationState(posX, velX * rbCoeff).animateTo(posX.coerceIn(-curMaxX, curMaxX), spring(Spring.StiffnessLow, Spring.DampingRatioNoBouncy)) { offsetX = value }
+                                            AnimationState(posX, velX * rbCoeff).animateTo(posX.coerceIn(-curMaxX, curMaxX), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetX = value }
                                         }
                                     }
                                 }
@@ -912,7 +912,7 @@ private fun ZoomableImageItem(
                                     val (_, maxY) = getMaxOffsets(scale)
                                     if (offsetY > maxY || offsetY < -maxY) {
                                         val targetY = offsetY.coerceIn(-maxY, maxY)
-                                        AnimationState(offsetY, velocity.y * rbCoeff).animateTo(targetY, spring(Spring.StiffnessLow, Spring.DampingRatioNoBouncy)) { offsetY = value }
+                                        AnimationState(offsetY, velocity.y * rbCoeff).animateTo(targetY, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetY = value }
                                     } else if (velocity.y != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
                                         var hitY = false; var velY = 0f; var posY = 0f
@@ -923,7 +923,7 @@ private fun ZoomableImageItem(
                                         }
                                         if (hitY) {
                                             val (_, curMaxY) = getMaxOffsets(scale)
-                                            AnimationState(posY, velY * rbCoeff).animateTo(posY.coerceIn(-curMaxY, curMaxY), spring(Spring.StiffnessLow, Spring.DampingRatioNoBouncy)) { offsetY = value }
+                                            AnimationState(posY, velY * rbCoeff).animateTo(posY.coerceIn(-curMaxY, curMaxY), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetY = value }
                                         }
                                     }
                                 }
