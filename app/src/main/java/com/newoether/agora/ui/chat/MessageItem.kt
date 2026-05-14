@@ -56,6 +56,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
@@ -604,11 +607,23 @@ fun MessageItem(
                 }
             }
         } else {
+            // During generation, eat horizontal nested-scroll so code blocks
+            // cannot be panned. Vertical scroll and taps (thinking header,
+            // stop button) pass through normally. Text selection is already
+            // prevented during streaming — SelectionContainer is only in the
+            // else (!isStreaming) branch.
+            val horizontalScrollEater = remember {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                        Offset(available.x, 0f)
+                }
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
                     .then(contextAlpha)
+                    .then(if (isStreaming) Modifier.nestedScroll(horizontalScrollEater) else Modifier)
             ) {
                 Column {
                     // Status Header
