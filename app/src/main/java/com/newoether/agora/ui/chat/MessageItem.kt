@@ -631,14 +631,28 @@ fun MessageItem(
                         val infiniteTransition = rememberInfiniteTransition(label = "sending")
                         val rotation by infiniteTransition.animateFloat(0f, 360f, infiniteRepeatable(tween(1000, easing = LinearEasing)), "rot")
 
-                        val isThinkingNow = !message.thoughts.isNullOrBlank() || message.status == MessageStatus.THINKING
                         val thinkingStatus = stringResource(R.string.thinking_ellipsis)
+                        val answeringStatus = stringResource(R.string.answering_ellipsis)
+                        // Hold the last non-fallback label so transitions between
+                        // "Thinking… → Answering…" don't flash "Sending…" while
+                        // the first answer token is still in-flight.
+                        var heldLabel by remember { mutableStateOf("") }
                         val statusText = when {
-                            message.status == MessageStatus.SUCCESS -> if (message.tokenCount > 0) stringResource(R.string.cost_tokens, message.tokenCount) else null
-                            isStreaming && isThinkingNow -> thinkingStatus
-                            isStreaming && message.text.isNotEmpty() -> stringResource(R.string.answering_ellipsis)
-                            isStreaming -> stringResource(R.string.sending_ellipsis)
-                            else -> null
+                            message.status == MessageStatus.SUCCESS -> {
+                                heldLabel = ""; if (message.tokenCount > 0) stringResource(R.string.cost_tokens, message.tokenCount) else null
+                            }
+                            isStreaming && message.status == MessageStatus.THINKING -> {
+                                heldLabel = "thinking"; thinkingStatus
+                            }
+                            isStreaming && message.text.isNotEmpty() -> {
+                                heldLabel = "answering"; answeringStatus
+                            }
+                            isStreaming -> when (heldLabel) {
+                                "thinking" -> thinkingStatus
+                                "answering" -> answeringStatus
+                                else -> stringResource(R.string.sending_ellipsis)
+                            }
+                            else -> { heldLabel = ""; null }
                         }
 
                         if (statusText != null) {
