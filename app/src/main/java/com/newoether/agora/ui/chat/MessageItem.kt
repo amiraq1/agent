@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.*
@@ -464,7 +465,8 @@ fun MessageItem(
                             modifier = Modifier.padding(16.dp).bringIntoViewResponder(noOpResponder),
                             horizontalAlignment = Alignment.Start
                         ) {
-                            if (message.images.isNotEmpty()) {
+                            val hasMetaItems = message.attachmentMeta?.items?.isNotEmpty() == true
+                        if (message.images.isNotEmpty() || hasMetaItems) {
                                 val ctx = LocalContext.current
                                 val meta = remember(message.attachmentMeta) {
                                     message.attachmentMeta
@@ -1266,15 +1268,32 @@ private fun RecomposeSafeMarkdown(
         }
     }
 
-    // Always two-layer structure — never switch tree shape, only alpha.
-    // key() prevents Markdown from recomposing when only alpha changes.
+    // Two-layer double-buffer with dynamic z-order via zIndex.
+    //
+    //   crossfading:            Layer 1 (stable) zIndex=0 alpha=1f underneath,
+    //                           Layer 2 (live)   zIndex=1 alpha=transitionAlpha on top (fading in)
+    //   streaming, no crossfade: Layer 2 zIndex=1 alpha=1f, Layer 1 hidden
+    //   after streaming:        Layer 2 zIndex=0 alpha=0f (hidden underneath),
+    //                           Layer 1 zIndex=1 alpha=1f on top (visible, selection works)
+    //
+    // After streaming, Layer 1 is the frontmost visible layer so
+    // SelectionContainer's handles and highlights render above the text.
+    // During crossfade, Layer 2 draws on top so the fade-in is visible.
     Box(modifier = modifier) {
         if (stableText.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().alpha(if (crossfading) 1f else 0f)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(if (crossfading) 0f else 1f)
+                .alpha(if (crossfading || !isStreaming) 1f else 0f)
+            ) {
                 key(stableText) { render(stableText) }
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().alpha(if (crossfading) transitionAlpha else 1f)) {
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(if (crossfading) 1f else 0f)
+            .alpha(if (crossfading) transitionAlpha else if (isStreaming) 1f else 0f)
+        ) {
             key(content) { render(content) }
         }
     }

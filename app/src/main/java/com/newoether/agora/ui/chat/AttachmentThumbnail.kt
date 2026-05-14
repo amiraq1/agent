@@ -43,7 +43,8 @@ fun resolveAttachmentType(
         mimeType == "application/pdf" -> "pdf"
         mimeType?.startsWith("video/") == true -> "video"
         mimeType != null && !mimeType.startsWith("image/") -> "file"
-        else -> "image"
+        mimeType?.startsWith("image/") == true -> "image"
+        else -> "file"
     }
 }
 
