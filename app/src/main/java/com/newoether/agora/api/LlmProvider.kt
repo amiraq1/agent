@@ -24,6 +24,7 @@ data class ProviderConfig(
     val codeExecutionEnabled: Boolean = false,
     val googleSearchEnabled: Boolean = false,
     val thinkingEnabled: Boolean = true,
+    val thinkingLevel: String = "medium",
     val baseUrl: String? = null,
     val tools: List<ToolDefinition>? = null,
     val userPrepend: String? = null,

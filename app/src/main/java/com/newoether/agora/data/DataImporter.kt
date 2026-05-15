@@ -358,6 +358,8 @@ class DataImporter(
                         settingsManager.saveCodeExecutionEnabled(s.codeExecutionEnabled)
                         settingsManager.saveGoogleSearchEnabled(s.googleSearchEnabled)
                         settingsManager.saveThinkingEnabled(s.thinkingEnabled)
+                        settingsManager.saveThinkingLevel(s.thinkingLevel)
+                        settingsManager.saveAutoCacheEnabled(s.autoCacheEnabled)
                         for ((provider, url) in s.providerBaseUrls) {
                             settingsManager.saveProviderBaseUrl(provider, url)
                         }
@@ -484,6 +486,8 @@ class DataImporter(
         val codeExecutionEnabled: Boolean = false,
         val googleSearchEnabled: Boolean = false,
         val thinkingEnabled: Boolean = true,
+        val thinkingLevel: String = "medium",
+        val autoCacheEnabled: Boolean = true,
         val providerBaseUrls: Map<String, String> = emptyMap(),
         val titleGenerationEnabled: Boolean = true,
         val titleGenerationModel: String? = null,

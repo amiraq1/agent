@@ -8,7 +8,7 @@ class OpenRouterProvider : BaseOpenAiProvider() {
 
     override fun customizeRequest(request: OpenAiChatRequest, config: ProviderConfig): OpenAiChatRequest {
         return request.copy(
-            reasoning = if (config.thinkingEnabled) OpenAiReasoning(effort = "high") else null,
+            reasoning = if (config.thinkingEnabled) OpenAiReasoning(effort = config.thinkingLevel) else null,
             plugins = if (config.googleSearchEnabled) listOf(OpenAiPlugin(id = "web")) else null
         )
     }

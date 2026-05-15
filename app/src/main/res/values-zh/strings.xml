@@ -251,6 +251,9 @@
     <string name="advanced_title">高级</string>
     <string name="rag_threshold_label">相似度阈值</string>
     <string name="caching">缓存中…</string>
+    <string name="auto_cache_title">缓存</string>
+    <string name="auto_cache">自动缓存新消息</string>
+    <string name="auto_cache_desc">使用选定的嵌入模型自动索引新消息。关闭后，消息仅在手動触发时才会被缓存。</string>
     <string name="cache_action">缓存</string>
     <string name="recache_action">重新缓存</string>
     <string name="recache_confirm_title">重新缓存所有消息</string>

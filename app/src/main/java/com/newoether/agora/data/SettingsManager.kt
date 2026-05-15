@@ -59,6 +59,7 @@ class SettingsManager(private val context: Context) {
         val CODE_EXECUTION_ENABLED = booleanPreferencesKey("code_execution_enabled")
         val GOOGLE_SEARCH_ENABLED = booleanPreferencesKey("google_search_enabled")
         val THINKING_ENABLED = booleanPreferencesKey("thinking_enabled")
+        val THINKING_LEVEL = stringPreferencesKey("thinking_level")
         val PROVIDER_BASE_URLS = stringPreferencesKey("provider_base_urls")
         val TITLE_GENERATION_ENABLED = booleanPreferencesKey("title_generation_enabled")
         val TITLE_GENERATION_MODEL = stringPreferencesKey("title_generation_model")
@@ -76,6 +77,7 @@ class SettingsManager(private val context: Context) {
         val WEB_SEARCH_API_KEYS_JSON = stringPreferencesKey("web_search_api_keys_json")
         val WEB_SEARCH_BASE_URL = stringPreferencesKey("web_search_base_url")
         val RAG_THRESHOLD = stringPreferencesKey("rag_threshold")
+        val AUTO_CACHE_ENABLED = booleanPreferencesKey("auto_cache_enabled")
         val LOCAL_CHAT_MODELS_JSON = stringPreferencesKey("local_chat_models_json")
         val ACTIVE_LOCAL_CHAT_MODEL_ID = stringPreferencesKey("active_local_chat_model_id")
     }
@@ -121,6 +123,7 @@ class SettingsManager(private val context: Context) {
     val codeExecutionEnabled: Flow<Boolean> = context.dataStore.data.map { it[CODE_EXECUTION_ENABLED] ?: false }
     val googleSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[GOOGLE_SEARCH_ENABLED] ?: false }
     val thinkingEnabled: Flow<Boolean> = context.dataStore.data.map { it[THINKING_ENABLED] ?: true }
+    val thinkingLevel: Flow<String> = context.dataStore.data.map { it[THINKING_LEVEL] ?: "medium" }
 
     val titleGenerationEnabled: Flow<Boolean> = context.dataStore.data.map { it[TITLE_GENERATION_ENABLED] ?: true }
     val titleGenerationModel: Flow<String?> = context.dataStore.data.map { it[TITLE_GENERATION_MODEL] }
@@ -146,6 +149,7 @@ class SettingsManager(private val context: Context) {
     }
     val webSearchBaseUrl: Flow<String> = context.dataStore.data.map { it[WEB_SEARCH_BASE_URL] ?: "" }
     val ragThreshold: Flow<Float> = context.dataStore.data.map { it[RAG_THRESHOLD]?.toFloatOrNull() ?: 0.5f }
+    val autoCacheEnabled: Flow<Boolean> = context.dataStore.data.map { it[AUTO_CACHE_ENABLED] ?: true }
     val localChatModels: Flow<List<LocalChatModelConfig>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[LOCAL_CHAT_MODELS_JSON] ?: "[]"
         try { json.decodeFromString<List<LocalChatModelConfig>>(jsonStr) } catch (e: Exception) { emptyList() }
@@ -225,6 +229,10 @@ class SettingsManager(private val context: Context) {
         context.dataStore.edit { it[THINKING_ENABLED] = enabled }
     }
 
+    suspend fun saveThinkingLevel(level: String) {
+        context.dataStore.edit { it[THINKING_LEVEL] = level }
+    }
+
     suspend fun saveTitleGenerationEnabled(enabled: Boolean) {
         context.dataStore.edit { it[TITLE_GENERATION_ENABLED] = enabled }
     }
@@ -241,6 +249,9 @@ class SettingsManager(private val context: Context) {
     }
     suspend fun saveRagSearchEnabled(enabled: Boolean) {
         context.dataStore.edit { it[RAG_SEARCH_ENABLED] = enabled }
+    }
+    suspend fun saveAutoCacheEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[AUTO_CACHE_ENABLED] = enabled }
     }
     suspend fun saveModelSearchMethod(method: String) {
         context.dataStore.edit { it[MODEL_SEARCH_METHOD] = method }

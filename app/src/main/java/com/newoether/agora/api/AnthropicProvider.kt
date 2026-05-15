@@ -225,7 +225,12 @@ class AnthropicProvider : LlmProvider {
             modelName == "claude-3-sonnet-20240229" ||
             modelName == "claude-3-haiku-20240307"
         val thinking = if (config.thinkingEnabled && modelName.startsWith("claude") && !isLegacyClaude) {
-            AnthropicThinking(budgetTokens = 1024)
+            val budget = when (config.thinkingLevel) {
+                "low" -> 1024
+                "high" -> 8192
+                else -> 4096
+            }
+            AnthropicThinking(budgetTokens = budget)
         } else null
 
         // Convert ToolDefinition to Anthropic format

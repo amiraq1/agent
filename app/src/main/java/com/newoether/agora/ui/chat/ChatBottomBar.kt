@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -92,6 +93,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -124,10 +126,12 @@ fun ChatBottomBar(
     codeExecutionEnabled: Boolean = false,
     googleSearchEnabled: Boolean = false,
     thinkingEnabled: Boolean = true,
+    thinkingLevel: String = "medium",
     webSearchEnabled: Boolean = false,
     onCodeExecutionToggle: (Boolean) -> Unit = {},
     onGoogleSearchToggle: (Boolean) -> Unit = {},
     onThinkingToggle: (Boolean) -> Unit = {},
+    onThinkingLevelChange: (String) -> Unit = {},
     onWebSearchToggle: (Boolean) -> Unit = {},
     onModelSelect: (String) -> Unit,
     onImageClick: (String) -> Unit = {},
@@ -714,6 +718,47 @@ fun ChatBottomBar(
                             },
                             onClick = { onThinkingToggle(!thinkingEnabled) }
                         )
+                        if (thinkingEnabled) {
+                            val levels = listOf("low", "medium", "high")
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp).offset(y = (-10).dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                levels.forEach { level ->
+                                    val selected = level == thinkingLevel
+                                    val bgColor by animateColorAsState(
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        animationSpec = tween(250),
+                                        label = "levelBg"
+                                    )
+                                    val textColor by animateColorAsState(
+                                        if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        animationSpec = tween(250),
+                                        label = "levelText"
+                                    )
+                                    val fontWeight by animateFloatAsState(
+                                        targetValue = if (selected) 1f else 0f,
+                                        animationSpec = tween(250),
+                                        label = "levelWeight"
+                                    )
+                                    Surface(
+                                        onClick = { onThinkingLevelChange(level) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(50),
+                                        color = bgColor,
+                                        contentColor = textColor
+                                    ) {
+                                        Text(
+                                            text = level.replaceFirstChar { it.uppercase() },
+                                            modifier = Modifier.padding(vertical = 6.dp).fillMaxWidth(),
+                                            textAlign = TextAlign.Center,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = if (fontWeight > 0.5f) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {

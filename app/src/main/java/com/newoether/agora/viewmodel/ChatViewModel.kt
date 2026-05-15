@@ -110,7 +110,7 @@ class ChatViewModel(
             context = appContext
         ).also { gm ->
             gm.onMessagePersisted = { messageId, text ->
-                if (modelSearchMethod.value == "rag" || manualSearchMethod.value == "rag") {
+                if (autoCacheEnabled.value && (modelSearchMethod.value == "rag" || manualSearchMethod.value == "rag")) {
                     indexMessageForRag(messageId, text)
                 }
             }
@@ -194,6 +194,7 @@ class ChatViewModel(
         val codeExecutionEnabled = settingsManager.codeExecutionEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
         val googleSearchEnabled = settingsManager.googleSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
         val thinkingEnabled = settingsManager.thinkingEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        val thinkingLevel = settingsManager.thinkingLevel.stateIn(viewModelScope, SharingStarted.Eagerly, "medium")
         val providerBaseUrls = settingsManager.providerBaseUrls.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
     val titleGenerationEnabled = settingsManager.titleGenerationEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val titleGenerationModel = settingsManager.titleGenerationModel.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -201,6 +202,7 @@ class ChatViewModel(
     val accessSavedMemories = settingsManager.accessSavedMemories.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val accessActiveMemory = settingsManager.accessActiveMemory.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val ragSearchEnabled = settingsManager.ragSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val autoCacheEnabled = settingsManager.autoCacheEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val modelSearchMethod = settingsManager.modelSearchMethod.stateIn(viewModelScope, SharingStarted.Eagerly, "keyword")
     val manualSearchMethod = settingsManager.manualSearchMethod.stateIn(viewModelScope, SharingStarted.Eagerly, "keyword")
     val embeddingModels = settingsManager.embeddingModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -588,6 +590,7 @@ class ChatViewModel(
     fun setCodeExecutionEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveCodeExecutionEnabled(enabled) } }
     fun setGoogleSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveGoogleSearchEnabled(enabled) } }
     fun setThinkingEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveThinkingEnabled(enabled) } }
+    fun setThinkingLevel(level: String) { viewModelScope.launch { settingsManager.saveThinkingLevel(level) } }
     fun setProviderBaseUrl(provider: String, url: String) { viewModelScope.launch { settingsManager.saveProviderBaseUrl(provider, url) } }
     fun setTitleGenerationEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveTitleGenerationEnabled(enabled) } }
     fun setTitleGenerationModel(model: String?) { viewModelScope.launch { settingsManager.saveTitleGenerationModel(model) } }
@@ -595,6 +598,7 @@ class ChatViewModel(
     fun setAccessSavedMemories(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessSavedMemories(enabled) } }
     fun setAccessActiveMemory(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessActiveMemory(enabled) } }
     fun setRagSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveRagSearchEnabled(enabled) } }
+    fun setAutoCacheEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAutoCacheEnabled(enabled) } }
     fun setModelSearchMethod(method: String) { viewModelScope.launch { settingsManager.saveModelSearchMethod(method) } }
     fun setManualSearchMethod(method: String) { viewModelScope.launch { settingsManager.saveManualSearchMethod(method) } }
     fun addEmbeddingModel(config: EmbeddingModelConfig) {
@@ -1174,6 +1178,7 @@ class ChatViewModel(
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
+                thinkingLevel = thinkingLevel.value,
                 baseUrl = providerBaseUrls.value[providerName],
                 userPrepend = resolved.userPrepend,
                 userPostpend = resolved.userPostpend
@@ -1268,6 +1273,7 @@ class ChatViewModel(
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
+                thinkingLevel = thinkingLevel.value,
                 baseUrl = providerBaseUrls.value[providerName],
                 userPrepend = resolved.userPrepend,
                 userPostpend = resolved.userPostpend
@@ -1576,6 +1582,7 @@ class ChatViewModel(
                 codeExecutionEnabled = codeExecutionEnabled.value,
                 googleSearchEnabled = googleSearchEnabled.value,
                 thinkingEnabled = thinkingEnabled.value,
+                thinkingLevel = thinkingLevel.value,
                 baseUrl = providerBaseUrls.value[providerName],
                 userPrepend = resolved.userPrepend,
                 userPostpend = resolved.userPostpend

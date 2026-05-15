@@ -8,7 +8,7 @@ class OpenAiProvider : BaseOpenAiProvider() {
 
     override fun customizeRequest(request: OpenAiChatRequest, config: ProviderConfig): OpenAiChatRequest {
         return if (config.thinkingEnabled && (config.modelId.startsWith("o1") || config.modelId.startsWith("o3"))) {
-            request.copy(reasoningEffort = "medium")
+            request.copy(reasoningEffort = config.thinkingLevel)
         } else request
     }
 

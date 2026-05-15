@@ -102,6 +102,7 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     modifier = Modifier.clickable { viewModel.setVisualizeContextRollout(!visualizeContextRollout) }
                 )
             }
+
         }
     }
 }

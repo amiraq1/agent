@@ -285,6 +285,9 @@
     <string name="advanced_title">Advanced</string>
     <string name="rag_threshold_label">Similarity Threshold</string>
     <string name="caching">Caching…</string>
+    <string name="auto_cache_title">Caching</string>
+    <string name="auto_cache">Auto-cache new messages</string>
+    <string name="auto_cache_desc">Automatically index new messages with the selected embedding model. When off, messages are never cached until manually triggered.</string>
     <string name="cache_action">Cache</string>
     <string name="recache_action">Re-cache</string>
     <string name="recache_confirm_title">Re-cache All Messages</string>

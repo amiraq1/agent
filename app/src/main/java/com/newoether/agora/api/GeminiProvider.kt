@@ -292,7 +292,7 @@ class GeminiProvider : LlmProvider {
             null
         } else when {
             cleanModelName.contains("gemini-3", ignoreCase = true) ->
-                ApiThinkingConfig(includeThoughts = true, thinkingLevel = "HIGH")
+                ApiThinkingConfig(includeThoughts = true, thinkingLevel = config.thinkingLevel.uppercase())
             cleanModelName.contains("gemini-2.5", ignoreCase = true) ->
                 ApiThinkingConfig(includeThoughts = true, thinkingBudget = -1)
             cleanModelName.contains("thinking-exp", ignoreCase = true) ->

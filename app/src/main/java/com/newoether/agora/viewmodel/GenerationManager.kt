@@ -54,6 +54,7 @@ data class GenerationConfig(
     val codeExecutionEnabled: Boolean,
     val googleSearchEnabled: Boolean,
     val thinkingEnabled: Boolean,
+    val thinkingLevel: String = "medium",
     val baseUrl: String?,
     val userPrepend: String? = null,
     val userPostpend: String? = null
@@ -723,6 +724,7 @@ class GenerationManager(
                 codeExecutionEnabled = config.codeExecutionEnabled,
                 googleSearchEnabled = config.googleSearchEnabled,
                 thinkingEnabled = config.thinkingEnabled,
+                thinkingLevel = config.thinkingLevel,
                 baseUrl = config.baseUrl,
                 tools = allTools,
                 userPrepend = config.userPrepend,

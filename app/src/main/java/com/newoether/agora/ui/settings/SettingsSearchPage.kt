@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cached
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ private val searchMethods = listOf(
 @Composable
 fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val accessPastConversations by viewModel.accessPastConversations.collectAsState()
+    val autoCacheEnabled by viewModel.autoCacheEnabled.collectAsState()
     val modelSearchMethod by viewModel.modelSearchMethod.collectAsState()
     val manualSearchMethod by viewModel.manualSearchMethod.collectAsState()
     val embeddingModels by viewModel.embeddingModels.collectAsState()
@@ -112,6 +115,19 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Switch(checked = accessPastConversations, onCheckedChange = { viewModel.setAccessPastConversations(it) })
                     },
                     modifier = Modifier.clickable { viewModel.setAccessPastConversations(!accessPastConversations) }
+                )
+            }
+
+            SettingsGroup(title = stringResource(R.string.auto_cache_title)) {
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = { Text(stringResource(R.string.auto_cache)) },
+                    supportingContent = { Text(stringResource(R.string.auto_cache_desc)) },
+                    leadingContent = { Icon(Icons.Default.Cached, null, tint = MaterialTheme.colorScheme.primary) },
+                    trailingContent = {
+                        Switch(checked = autoCacheEnabled, onCheckedChange = { viewModel.setAutoCacheEnabled(it) })
+                    },
+                    modifier = Modifier.clickable { viewModel.setAutoCacheEnabled(!autoCacheEnabled) }
                 )
             }
 
@@ -280,7 +296,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         verticalAlignment = androidx.compose.ui.Alignment.Top
                     ) {
                         Icon(
-                            Icons.Default.AutoAwesome,
+                            painter = painterResource(id = R.drawable.text_compare_24),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 2.dp)
