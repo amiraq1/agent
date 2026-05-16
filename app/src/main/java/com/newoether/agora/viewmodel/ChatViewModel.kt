@@ -1210,9 +1210,10 @@ class ChatViewModel(
         _selectedChildren.value = newMap
 
         _streamingMessage.value = placeholder
-        _isLoading.value = true
 
         generationJob = generationScope.launch {
+            _isLoading.value = true
+            try {
             val userMessage = _allMessages.value.find { it.id == parentId } ?: return@launch
 
             if (isErrorOrStopped && isLatest) {
@@ -1287,6 +1288,9 @@ class ChatViewModel(
                 onGeneratingIdChange = { _generatingInConversationId.value = it },
                 onStreamClear = { _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
             )
+            } finally {
+                if (_isLoading.value) _isLoading.value = false
+            }
         }
     }
 
