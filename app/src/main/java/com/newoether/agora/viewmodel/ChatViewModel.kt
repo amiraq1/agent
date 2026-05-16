@@ -1210,11 +1210,11 @@ class ChatViewModel(
         _selectedChildren.value = newMap
 
         _streamingMessage.value = placeholder
+        _isLoading.value = true
 
         generationJob = generationScope.launch {
-            _isLoading.value = true
             try {
-            val userMessage = _allMessages.value.find { it.id == parentId } ?: return@launch
+                val userMessage = _allMessages.value.find { it.id == parentId } ?: return@launch
 
             if (isErrorOrStopped && isLatest) {
                 // Purge stale tool call children, thinking content, and embeddings
