@@ -158,11 +158,9 @@ class ChatViewModel(
     }
 
     private fun getEffectiveBaseUrl(providerName: String): String? {
-        return if (providerName !in builtInProviders) {
-            getEffectiveBaseUrl(providerName) ?: getProviderInstance(providerName).defaultBaseUrl
-        } else {
-            getEffectiveBaseUrl(providerName)
-        }
+        return providerBaseUrls.value[providerName]
+            ?: if (providerName !in builtInProviders) getProviderInstance(providerName).defaultBaseUrl
+            else null
     }
 
     val customProviders = settingsManager.customProviders.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
