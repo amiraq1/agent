@@ -26,6 +26,11 @@ data class ApiKeyEntry(
 )
 
 @Serializable
+data class CustomProviderConfig(
+    val name: String
+)
+
+@Serializable
 data class SystemPromptEntry(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
@@ -80,6 +85,7 @@ class SettingsManager(private val context: Context) {
         val AUTO_CACHE_ENABLED = booleanPreferencesKey("auto_cache_enabled")
         val LOCAL_CHAT_MODELS_JSON = stringPreferencesKey("local_chat_models_json")
         val ACTIVE_LOCAL_CHAT_MODEL_ID = stringPreferencesKey("active_local_chat_model_id")
+        val CUSTOM_PROVIDERS_JSON = stringPreferencesKey("custom_providers_json")
     }
 
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
@@ -155,6 +161,11 @@ class SettingsManager(private val context: Context) {
         try { json.decodeFromString<List<LocalChatModelConfig>>(jsonStr) } catch (e: Exception) { emptyList() }
     }
     val activeLocalChatModelId: Flow<String> = context.dataStore.data.map { it[ACTIVE_LOCAL_CHAT_MODEL_ID] ?: "" }
+
+    val customProviders: Flow<List<CustomProviderConfig>> = context.dataStore.data.map { pref ->
+        val jsonStr = pref[CUSTOM_PROVIDERS_JSON] ?: "[]"
+        try { json.decodeFromString<List<CustomProviderConfig>>(jsonStr) } catch (e: Exception) { emptyList() }
+    }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         context.dataStore.edit { prefs ->
@@ -298,6 +309,10 @@ class SettingsManager(private val context: Context) {
     }
     suspend fun setActiveLocalChatModelId(id: String) {
         context.dataStore.edit { it[ACTIVE_LOCAL_CHAT_MODEL_ID] = id }
+    }
+
+    suspend fun saveCustomProviders(providers: List<CustomProviderConfig>) {
+        context.dataStore.edit { it[CUSTOM_PROVIDERS_JSON] = json.encodeToString(providers) }
     }
 
     suspend fun saveTitleGenerationModel(model: String?) {

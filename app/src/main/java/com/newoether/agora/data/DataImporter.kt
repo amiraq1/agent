@@ -372,6 +372,7 @@ class DataImporter(
                         settingsManager.saveModelSearchMethod(s.modelSearchMethod)
                         settingsManager.saveManualSearchMethod(s.manualSearchMethod)
                         // Skip embedding models — GGUF files don't exist on this device
+                        settingsManager.saveCustomProviders(s.customProviders)
                         settingsManager.saveAppLanguage(s.appLanguage)
                         settingsManager.saveWebSearchEnabled(s.webSearchEnabled)
                         settingsManager.saveWebSearchProvider(s.webSearchProvider)
@@ -504,6 +505,7 @@ class DataImporter(
         val webSearchProvider: String = "brave",
         val webSearchBaseUrl: String = "",
         val ragThreshold: Float = 0.5f,
+        val customProviders: List<CustomProviderConfig> = emptyList(),
         val localChatModels: List<LocalChatModelConfig> = emptyList(),
         val activeLocalChatModelId: String = "",
         @SerialName("active_system_prompt_id") val activeSystemPromptId: String? = null

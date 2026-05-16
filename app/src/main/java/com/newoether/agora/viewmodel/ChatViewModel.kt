@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.newoether.agora.api.*
 import com.newoether.agora.data.ApiKeyEntry
+import com.newoether.agora.data.CustomProviderConfig
 import com.newoether.agora.data.DataExporter
 import com.newoether.agora.data.DataImporter
 import com.newoether.agora.data.EmbeddingIndexer
@@ -51,6 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.NonCancellable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -96,6 +98,16 @@ class ChatViewModel(
                 settingsManager.saveModelAliases(aliases)
             }
         }
+        // Sync custom providers into the providers map
+        viewModelScope.launch {
+            settingsManager.customProviders.collect { custom ->
+                providers.keys.filter { it !in builtInProviders }.forEach { providers.remove(it) }
+                val baseUrls = settingsManager.providerBaseUrls.first()
+                custom.forEach { config ->
+                    providers[config.name] = CustomOpenAiProvider(config.name, baseUrls[config.name] ?: "")
+                }
+            }
+        }
     }
 
     private val generationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -128,7 +140,7 @@ class ChatViewModel(
 
     private val localProvider = LocalProvider(appContext, settingsManager)
 
-    private val providers = mapOf(
+    private val builtInProviders = mapOf(
         "Google" to GeminiProvider(),
         "OpenAI" to OpenAiProvider(),
         "Anthropic" to AnthropicProvider(),
@@ -139,9 +151,13 @@ class ChatViewModel(
         "Local" to localProvider
     )
 
+    private val providers = builtInProviders.toMutableMap()
+
     fun getProviderInstance(name: String): LlmProvider {
         return providers[name] ?: GeminiProvider()
     }
+
+    val customProviders = settingsManager.customProviders.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 
     private val _scrollToMessage = MutableSharedFlow<String?>(replay = 0)
@@ -592,6 +608,65 @@ class ChatViewModel(
     fun setThinkingEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveThinkingEnabled(enabled) } }
     fun setThinkingLevel(level: String) { viewModelScope.launch { settingsManager.saveThinkingLevel(level) } }
     fun setProviderBaseUrl(provider: String, url: String) { viewModelScope.launch { settingsManager.saveProviderBaseUrl(provider, url) } }
+    fun addCustomProvider(name: String, baseUrl: String) {
+        providers[name] = CustomOpenAiProvider(name, baseUrl)
+        viewModelScope.launch {
+            settingsManager.saveProviderBaseUrl(name, baseUrl)
+            val current = customProviders.value.toMutableList()
+            current.add(CustomProviderConfig(name))
+            settingsManager.saveCustomProviders(current)
+        }
+    }
+    fun renameCustomProvider(oldName: String, newName: String) {
+        val url = providerBaseUrls.value[oldName] ?: return
+        providers.remove(oldName)
+        providers[newName] = CustomOpenAiProvider(newName, url)
+        viewModelScope.launch {
+            val current = customProviders.value.toMutableList()
+            val idx = current.indexOfFirst { it.name == oldName }
+            if (idx >= 0) {
+                current[idx] = CustomProviderConfig(newName)
+                settingsManager.saveCustomProviders(current)
+                settingsManager.saveProviderBaseUrl(oldName, "")
+                settingsManager.saveProviderBaseUrl(newName, url)
+                val models = availableModels.value.toMutableMap()
+                models[newName] = models.remove(oldName) ?: emptyList()
+                settingsManager.saveAvailableModels(newName, models[newName] ?: emptyList())
+                settingsManager.saveAvailableModels(oldName, emptyList())
+                val enabled = enabledModels.value.map { if (it.startsWith("$oldName:")) it.replace("$oldName:", "$newName:") else it }.toSet()
+                settingsManager.saveEnabledModels(enabled)
+                val aliases = modelAliases.value.mapKeys { if (it.key.startsWith("$oldName:")) it.key.replace("$oldName:", "$newName:") else it.key }
+                settingsManager.saveModelAliases(aliases)
+                settingsManager.setActiveApiKeyId(oldName, null)
+                val keys = apiKeys.value.map { if (it.provider == oldName) it.copy(provider = newName) else it }
+                settingsManager.saveApiKeys(keys)
+                val activeKeyIds = activeApiKeyIds.value.toMutableMap()
+                activeKeyIds[oldName]?.let { activeKeyIds[newName] = it; activeKeyIds.remove(oldName) }
+                activeKeyIds.forEach { (provider, id) -> settingsManager.setActiveApiKeyId(provider, id) }
+            }
+        }
+    }
+    fun deleteCustomProvider(name: String) {
+        viewModelScope.launch {
+            val current = customProviders.value.toMutableList()
+            current.removeAll { it.name == name }
+            settingsManager.saveCustomProviders(current)
+            // Clean up associated data
+            val models = availableModels.value.toMutableMap()
+            models.remove(name)
+            settingsManager.saveAvailableModels(name, emptyList())
+            val enabled = enabledModels.value.filter { !it.startsWith("$name:") }.toSet()
+            settingsManager.saveEnabledModels(enabled)
+            val aliases = modelAliases.value.filterKeys { !it.startsWith("$name:") }
+            settingsManager.saveModelAliases(aliases)
+            val baseUrls = providerBaseUrls.value.toMutableMap()
+            baseUrls.remove(name)
+            settingsManager.saveProviderBaseUrl(name, "")
+            val keys = apiKeys.value.filter { it.provider != name }
+            settingsManager.saveApiKeys(keys)
+            settingsManager.setActiveApiKeyId(name, null)
+        }
+    }
     fun setTitleGenerationEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveTitleGenerationEnabled(enabled) } }
     fun setTitleGenerationModel(model: String?) { viewModelScope.launch { settingsManager.saveTitleGenerationModel(model) } }
     fun setAccessPastConversations(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessPastConversations(enabled) } }
@@ -1626,61 +1701,69 @@ class ChatViewModel(
 
     fun fetchAvailableModels() {
         viewModelScope.launch {
+            if (_isSyncingModels.value) return@launch
             _isSyncingModels.value = true
             val successProviders = mutableListOf<String>()
             val failedProviders = mutableListOf<String>()
             var skippedCount = 0
 
-            providers.forEach { (name, providerInstance) ->
-                if (name == "Local") return@forEach
+            val message = try {
+                providers.forEach { (name, providerInstance) ->
+                    if (name == "Local") return@forEach
 
-                val activeKeyId = activeApiKeyIds.value[name]
-                val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
-                val currentBaseUrl = providerBaseUrls.value[name]
-                
-                val isConfigured = if (name == "Ollama") {
-                    !currentBaseUrl.isNullOrBlank()
-                } else {
-                    activeKey.isNotBlank()
-                }
+                    val activeKeyId = activeApiKeyIds.value[name]
+                    val activeKey = apiKeys.value.find { it.id == activeKeyId }?.key ?: ""
+                    val isCustomProvider = name !in builtInProviders
+                    val currentBaseUrl = if (isCustomProvider) providerInstance.defaultBaseUrl else providerBaseUrls.value[name]
 
-                if (!isConfigured) {
-                    skippedCount++
-                    return@forEach
-                }
-                
-                try {
-                    val rawModels = providerInstance.fetchModels(activeKey, currentBaseUrl)
-                    if (rawModels.isNotEmpty()) {
-                        val prefixedModels = rawModels.map { "$name:${it.removePrefix("models/")}" }
-                        settingsManager.saveAvailableModels(name, prefixedModels)
-                        successProviders.add(name)
-                    } else {
+                    val isConfigured = when {
+                        isCustomProvider -> providerInstance.defaultBaseUrl.isNotBlank()
+                        name == "Ollama" -> !providerBaseUrls.value[name].isNullOrBlank()
+                        else -> activeKey.isNotBlank()
+                    }
+
+                    if (!isConfigured) {
+                        skippedCount++
+                        return@forEach
+                    }
+
+                    try {
+                        val rawModels = withTimeout(10_000L) {
+                            providerInstance.fetchModels(activeKey, currentBaseUrl)
+                        }
+                        if (rawModels.isNotEmpty()) {
+                            val prefixedModels = rawModels.map { "$name:${it.removePrefix("models/")}" }
+                            settingsManager.saveAvailableModels(name, prefixedModels)
+                            successProviders.add(name)
+                        } else {
+                            failedProviders.add(name)
+                        }
+                    } catch (e: Exception) {
                         failedProviders.add(name)
                     }
-                } catch (e: Exception) {
-                    failedProviders.add(name)
                 }
-            }
-            
-            val allFetchedModels = settingsManager.availableModels.first().values.flatten().toSet()
-            val newEnabled = enabledModels.value.intersect(allFetchedModels)
-            settingsManager.saveEnabledModels(newEnabled)
-            
-            _isSyncingModels.value = false
 
-            // Construct result message
-            val app = getApplication<Application>()
-            val message = when {
-                successProviders.isNotEmpty() && failedProviders.isEmpty() ->
-                    app.getString(R.string.sync_success_providers, successProviders.size)
-                successProviders.isNotEmpty() && failedProviders.isNotEmpty() ->
-                    app.getString(R.string.sync_partial, successProviders.joinToString(), failedProviders.joinToString())
-                successProviders.isEmpty() && failedProviders.isNotEmpty() ->
-                    app.getString(R.string.sync_failed_providers, failedProviders.joinToString())
-                else -> if (skippedCount > 0) app.getString(R.string.sync_no_providers) else app.getString(R.string.sync_completed)
+                val allFetchedModels = settingsManager.availableModels.first().values.flatten().toSet()
+                val newEnabled = enabledModels.value.intersect(allFetchedModels)
+                settingsManager.saveEnabledModels(newEnabled)
+
+                val app = getApplication<Application>()
+                when {
+                    successProviders.isNotEmpty() && failedProviders.isEmpty() ->
+                        app.getString(R.string.sync_success_providers, successProviders.size)
+                    successProviders.isNotEmpty() && failedProviders.isNotEmpty() ->
+                        app.getString(R.string.sync_partial, successProviders.joinToString(), failedProviders.joinToString())
+                    successProviders.isEmpty() && failedProviders.isNotEmpty() ->
+                        app.getString(R.string.sync_failed_providers, failedProviders.joinToString())
+                    else -> if (skippedCount > 0) app.getString(R.string.sync_no_providers) else app.getString(R.string.sync_completed)
+                }
+            } catch (e: Exception) {
+                getApplication<Application>().getString(R.string.sync_failed_providers, e.message ?: "Unknown error")
+            } finally {
+                _isSyncingModels.value = false
             }
-            _snackbarMessage.emit(SnackbarEvent(message))
+
+            _snackbarMessage.tryEmit(SnackbarEvent(message))
         }
     }
 

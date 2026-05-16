@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
@@ -52,9 +53,11 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showKeyDialog by remember { mutableStateOf<ApiKeyEntry?>(null) }
     var showDeleteKeyConfirm by remember { mutableStateOf<ApiKeyEntry?>(null) }
     var showProviderDialog by remember { mutableStateOf(false) }
+    var showAddCustomProviderDialog by remember { mutableStateOf(false) }
     val localChatModels by viewModel.localChatModels.collectAsState()
 
-    val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router", "Local")
+    val customProviders by viewModel.customProviders.collectAsState()
+    val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router", "Local") + customProviders.map { it.name }
 
     val noOpResponder = remember {
         object : BringIntoViewResponder {
@@ -545,9 +548,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
+                val isCustom = customProviders.any { it.name == viewingProvider }
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text(if (viewingProvider == "Ollama") stringResource(R.string.provider_api_keys_optional) else stringResource(R.string.provider_api_keys)) },
+                    headlineContent = { Text(if (viewingProvider == "Ollama" || isCustom) stringResource(R.string.provider_api_keys_optional) else stringResource(R.string.provider_api_keys)) },
                     supportingContent = {
                         val providerKeys = apiKeys.filter { it.provider == viewingProvider }
                         Text(if (providerKeys.isEmpty()) stringResource(R.string.provider_no_keys, viewingProvider) else stringResource(R.string.provider_keys_count, providerKeys.size))
@@ -587,6 +591,81 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.provider_add_key))
                 }
+
+                if (isCustom) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    var showDeleteProvider by remember { mutableStateOf(false) }
+                    var showRenameProvider by remember { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { showRenameProvider = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.custom_provider_rename))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = { showDeleteProvider = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.custom_provider_delete), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    if (showRenameProvider) {
+                        var renameValue by remember { mutableStateOf(viewingProvider) }
+                        var renameError by remember { mutableStateOf(false) }
+                        AlertDialog(
+                            onDismissRequest = { showRenameProvider = false },
+                            title = { Text(stringResource(R.string.custom_provider_rename_title)) },
+                            text = {
+                                Column(Modifier.fillMaxWidth()) {
+                                    OutlinedTextField(
+                                        value = renameValue, onValueChange = { renameValue = it; renameError = false },
+                                        label = { Text(stringResource(R.string.custom_provider_name_label)) },
+                                        isError = renameError,
+                                        supportingText = if (renameError) {{ Text(stringResource(R.string.custom_provider_name_error)) }} else null,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    val trimmed = renameValue.trim()
+                                    renameError = trimmed.isBlank() || (trimmed != viewingProvider && trimmed in providers)
+                                    if (!renameError) {
+                                        if (trimmed != viewingProvider) {
+                                            viewModel.renameCustomProvider(viewingProvider, trimmed)
+                                            viewingProvider = trimmed
+                                        }
+                                        showRenameProvider = false
+                                    }
+                                }) { Text(stringResource(R.string.custom_provider_rename)) }
+                            },
+                            dismissButton = { TextButton(onClick = { showRenameProvider = false }) { Text(stringResource(R.string.provider_cancel)) } }
+                        )
+                    }
+                    if (showDeleteProvider) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteProvider = false },
+                            title = { Text(stringResource(R.string.custom_provider_delete_title)) },
+                            text = { Text(stringResource(R.string.custom_provider_delete_text, viewingProvider)) },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        viewModel.deleteCustomProvider(viewingProvider)
+                                        viewingProvider = "Google"
+                                        showDeleteProvider = false
+                                    },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) { Text(stringResource(R.string.provider_delete)) }
+                            },
+                            dismissButton = { TextButton(onClick = { showDeleteProvider = false }) { Text(stringResource(R.string.provider_cancel)) } }
+                        )
+                    }
+                }
                 }
             }
         }
@@ -600,9 +679,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             text = {
                 Column {
                     providers.forEach { p ->
-                        val isConfigured = when (p) {
-                            "Ollama" -> !providerBaseUrls[p].isNullOrBlank()
-                            "Local" -> localChatModels.isNotEmpty()
+                        val isCustom = customProviders.any { it.name == p }
+                        val isConfigured = when {
+                            p == "Ollama" || isCustom -> !providerBaseUrls[p].isNullOrBlank()
+                            p == "Local" -> localChatModels.isNotEmpty()
                             else -> apiKeys.any { it.provider == p }
                         }
 
@@ -622,6 +702,17 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         p,
                                         color = if (isConfigured) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                     )
+                                    if (isCustom) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                                            Text(
+                                                stringResource(R.string.custom_provider_badge),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
                                 }
                             },
                             modifier = Modifier.clickable {
@@ -629,6 +720,17 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 showProviderDialog = false
                             }
                         )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    TextButton(
+                        onClick = {
+                            showProviderDialog = false
+                            showAddCustomProviderDialog = true
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.custom_provider_add))
                     }
                 }
             },
@@ -695,6 +797,57 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 ) { Text(stringResource(R.string.provider_delete)) }
             },
             dismissButton = { TextButton(onClick = { showDeleteKeyConfirm = null }) { Text(stringResource(R.string.provider_cancel)) } }
+        )
+    }
+
+    // Add Custom Provider Dialog
+    if (showAddCustomProviderDialog) {
+        var customName by remember { mutableStateOf("") }
+        var customBaseUrl by remember { mutableStateOf("") }
+        var nameError by remember { mutableStateOf(false) }
+        var urlError by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showAddCustomProviderDialog = false },
+            title = { Text(stringResource(R.string.custom_provider_add_title)) },
+            text = {
+                val fm = LocalFocusManager.current
+                Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
+                    OutlinedTextField(
+                        value = customName, onValueChange = { customName = it; nameError = false },
+                        label = { Text(stringResource(R.string.custom_provider_name_label)) },
+                        isError = nameError,
+                        supportingText = if (nameError) {{ Text(stringResource(R.string.custom_provider_name_error)) }} else null,
+                        modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
+                        OutlinedTextField(
+                            value = customBaseUrl, onValueChange = { customBaseUrl = it; urlError = false },
+                            label = { Text(stringResource(R.string.provider_base_url)) },
+                            isError = urlError,
+                            supportingText = if (urlError) {{ Text(stringResource(R.string.custom_provider_url_error)) }} else null,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val trimmedName = customName.trim()
+                    val trimmedUrl = customBaseUrl.trim()
+                    nameError = trimmedName.isBlank() || trimmedName in providers
+                    urlError = trimmedUrl.isBlank()
+                    if (!nameError && !urlError) {
+                        viewModel.addCustomProvider(trimmedName, trimmedUrl)
+                        viewingProvider = trimmedName
+                        showAddCustomProviderDialog = false
+                    }
+                }) { Text(stringResource(R.string.custom_provider_add)) }
+            },
+            dismissButton = { TextButton(onClick = { showAddCustomProviderDialog = false }) { Text(stringResource(R.string.provider_cancel)) } }
         )
     }
 }

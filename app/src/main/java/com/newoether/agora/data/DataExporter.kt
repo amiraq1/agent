@@ -102,6 +102,7 @@ class DataExporter(
         val webSearchProvider: String,
         val webSearchBaseUrl: String,
         val ragThreshold: Float,
+        val customProviders: List<CustomProviderConfig> = emptyList(),
         val localChatModels: List<LocalChatModelConfig>,
         val activeLocalChatModelId: String,
         @SerialName("active_system_prompt_id") val activeSystemPromptId: String?
@@ -290,6 +291,7 @@ class DataExporter(
                     webSearchProvider = settingsManager.webSearchProvider.first(),
                     webSearchBaseUrl = settingsManager.webSearchBaseUrl.first(),
                     ragThreshold = settingsManager.ragThreshold.first(),
+                    customProviders = settingsManager.customProviders.first(),
                     localChatModels = settingsManager.localChatModels.first().map { it.copy(localFilePath = "") },
                     activeLocalChatModelId = "", // cleared — models don't exist on target device
                     activeSystemPromptId = settingsManager.activeSystemPromptId.first()
