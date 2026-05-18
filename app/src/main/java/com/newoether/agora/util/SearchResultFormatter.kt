@@ -139,7 +139,6 @@ object SearchResultFormatter {
             val desc = (obj["description"] as? JsonPrimitive)?.content ?: ""
             if (desc.isNotEmpty()) "$name — $desc" else name
         }
-        val header = context.getString(R.string.shell_list_count, devices.size)
-        return "$header\n$list"
+        return list
     }
 }
