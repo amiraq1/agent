@@ -80,7 +80,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
                     )
                 } else {
-                    SettingsGroup(title = "") {
+                    SettingsGroup(title = stringResource(R.string.shell_devices)) {
                         shellDevices.forEachIndexed { index, device ->
                             val isFirst = index == 0
                             val isLast = index == shellDevices.lastIndex

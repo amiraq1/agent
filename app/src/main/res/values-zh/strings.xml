@@ -201,6 +201,7 @@
     <string name="shell_device_key_hint">可选 Bearer Token</string>
     <string name="shell_device_timeout">超时（秒）</string>
     <string name="shell_timeout_value">%d 秒</string>
+    <string name="shell_devices">设备</string>
     <string name="shell_add_device">添加设备</string>
     <string name="shell_remove_device">移除设备</string>
     <string name="shell_no_devices">未配置设备。添加一个以启用终端访问。</string>
