@@ -40,6 +40,9 @@
     <string name="tool_search_done">搜索完成</string>
     <string name="tool_web_search_done">网页搜索完成</string>
     <string name="tool_conversation_search_done">对话搜索完成</string>
+    <string name="tool_list_shells">列出终端</string>
+    <string name="tool_shell_listing">正在列出可用终端</string>
+    <string name="tool_shell_list_done">终端列表完成</string>
     <string name="tool_execute_shell">终端</string>
     <string name="tool_shell_executing">执行: %1$s</string>
     <string name="tool_shell_done">终端命令完成</string>
@@ -188,15 +191,23 @@
     <string name="shell_desc">远程 Shell 命令执行</string>
     <string name="shell_enable">启用终端工具</string>
     <string name="shell_enable_desc">允许模型通过远程服务器执行 Shell 命令</string>
-    <string name="shell_server_url">服务器 URL</string>
-    <string name="shell_server_url_hint">http://192.168.1.100:14216</string>
-    <string name="shell_api_key">API 密钥</string>
-    <string name="shell_api_key_hint">可选 Bearer Token</string>
-    <string name="shell_timeout">命令超时（秒）</string>
+    <string name="shell_device_name">名称</string>
+    <string name="shell_device_name_hint">我的服务器</string>
+    <string name="shell_device_desc">描述</string>
+    <string name="shell_device_desc_hint">办公室的构建服务器</string>
+    <string name="shell_device_url">服务器 URL</string>
+    <string name="shell_device_url_hint">http://192.168.1.100:14216</string>
+    <string name="shell_device_key">API 密钥</string>
+    <string name="shell_device_key_hint">可选 Bearer Token</string>
+    <string name="shell_device_timeout">超时（秒）</string>
     <string name="shell_timeout_value">%d 秒</string>
+    <string name="shell_add_device">添加设备</string>
+    <string name="shell_remove_device">移除设备</string>
+    <string name="shell_no_devices">未配置设备。添加一个以启用终端访问。</string>
     <string name="shell_result_command">命令: %1$s</string>
     <string name="shell_result_error">错误: %1$s</string>
     <string name="shell_result_exit_code">退出码: %1$d</string>
+    <string name="shell_result_server">服务器: %1$s</string>
 
     <!-- Settings - Title Generation -->
     <string name="title_gen_auto">自动生成标题</string>

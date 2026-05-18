@@ -31,6 +31,16 @@ data class CustomProviderConfig(
 )
 
 @Serializable
+data class ShellDeviceConfig(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val description: String = "",
+    val serverUrl: String = "",
+    val apiKey: String = "",
+    val timeout: Int = 30
+)
+
+@Serializable
 data class SystemPromptEntry(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
@@ -87,9 +97,7 @@ class SettingsManager(private val context: Context) {
         val ACTIVE_LOCAL_CHAT_MODEL_ID = stringPreferencesKey("active_local_chat_model_id")
         val CUSTOM_PROVIDERS_JSON = stringPreferencesKey("custom_providers_json")
         val SHELL_ENABLED = booleanPreferencesKey("shell_enabled")
-        val SHELL_SERVER_URL = stringPreferencesKey("shell_server_url")
-        val SHELL_API_KEY = stringPreferencesKey("shell_api_key")
-        val SHELL_TIMEOUT = stringPreferencesKey("shell_timeout")
+        val SHELL_DEVICES_JSON = stringPreferencesKey("shell_devices_json")
     }
 
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
@@ -172,9 +180,10 @@ class SettingsManager(private val context: Context) {
     }
 
     val shellEnabled: Flow<Boolean> = context.dataStore.data.map { it[SHELL_ENABLED] ?: false }
-    val shellServerUrl: Flow<String> = context.dataStore.data.map { it[SHELL_SERVER_URL] ?: "" }
-    val shellApiKey: Flow<String> = context.dataStore.data.map { it[SHELL_API_KEY] ?: "" }
-    val shellTimeout: Flow<Int> = context.dataStore.data.map { it[SHELL_TIMEOUT]?.toIntOrNull() ?: 30 }
+    val shellDevices: Flow<List<ShellDeviceConfig>> = context.dataStore.data.map { pref ->
+        val jsonStr = pref[SHELL_DEVICES_JSON] ?: "[]"
+        try { json.decodeFromString<List<ShellDeviceConfig>>(jsonStr) } catch (e: Exception) { emptyList() }
+    }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         context.dataStore.edit { prefs ->
@@ -335,15 +344,7 @@ class SettingsManager(private val context: Context) {
         context.dataStore.edit { it[SHELL_ENABLED] = enabled }
     }
 
-    suspend fun saveShellServerUrl(url: String) {
-        context.dataStore.edit { it[SHELL_SERVER_URL] = url }
-    }
-
-    suspend fun saveShellApiKey(key: String) {
-        context.dataStore.edit { it[SHELL_API_KEY] = key }
-    }
-
-    suspend fun saveShellTimeout(timeout: Int) {
-        context.dataStore.edit { it[SHELL_TIMEOUT] = timeout.toString() }
+    suspend fun saveShellDevices(devices: List<ShellDeviceConfig>) {
+        context.dataStore.edit { it[SHELL_DEVICES_JSON] = json.encodeToString(devices) }
     }
 }

@@ -41,6 +41,9 @@
     <string name="tool_search_done">Search done</string>
     <string name="tool_web_search_done">Web search done</string>
     <string name="tool_conversation_search_done">Conversation search done</string>
+    <string name="tool_list_shells">List Shells</string>
+    <string name="tool_shell_listing">Listing available shells</string>
+    <string name="tool_shell_list_done">Shell list done</string>
     <string name="tool_execute_shell">Shell</string>
     <string name="tool_shell_executing">Executing: %1$s</string>
     <string name="tool_shell_done">Shell command done</string>
@@ -221,16 +224,24 @@
     <string name="shell_title">Shell</string>
     <string name="shell_desc">Remote shell command execution</string>
     <string name="shell_enable">Enable Shell Tool</string>
-    <string name="shell_enable_desc">Allow the model to execute shell commands via a remote server</string>
-    <string name="shell_server_url">Server URL</string>
-    <string name="shell_server_url_hint">http://192.168.1.100:14216</string>
-    <string name="shell_api_key">API Key</string>
-    <string name="shell_api_key_hint">Optional bearer token</string>
-    <string name="shell_timeout">Command Timeout (seconds)</string>
+    <string name="shell_enable_desc">Allow the model to execute shell commands via remote servers</string>
+    <string name="shell_device_name">Name</string>
+    <string name="shell_device_name_hint">My Server</string>
+    <string name="shell_device_desc">Description</string>
+    <string name="shell_device_desc_hint">Build server in the office</string>
+    <string name="shell_device_url">Server URL</string>
+    <string name="shell_device_url_hint">http://192.168.1.100:14216</string>
+    <string name="shell_device_key">API Key</string>
+    <string name="shell_device_key_hint">Optional bearer token</string>
+    <string name="shell_device_timeout">Timeout (seconds)</string>
     <string name="shell_timeout_value">%d s</string>
+    <string name="shell_add_device">Add Device</string>
+    <string name="shell_remove_device">Remove Device</string>
+    <string name="shell_no_devices">No devices configured. Add one to enable shell access.</string>
     <string name="shell_result_command">Command: %1$s</string>
     <string name="shell_result_error">Error: %1$s</string>
     <string name="shell_result_exit_code">Exit code: %1$d</string>
+    <string name="shell_result_server">Server: %1$s</string>
 
     <!-- Settings - Title Generation -->
     <string name="title_gen_auto">Auto-Generate Title</string>

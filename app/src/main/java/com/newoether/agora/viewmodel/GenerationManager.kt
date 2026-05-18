@@ -73,9 +73,7 @@ data class GenerationContext(
     val webSearchProvider: String = "brave",
     val webSearchBaseUrl: String = "",
     val shellEnabled: Boolean = false,
-    val shellServerUrl: String = "",
-    val shellApiKey: String = "",
-    val shellTimeout: Int = 30
+    val shellDevices: List<com.newoether.agora.data.ShellDeviceConfig> = emptyList()
 )
 
 class GenerationManager(
@@ -290,18 +288,31 @@ class GenerationManager(
     }
 
     fun buildShellTool(ctx: GenerationContext): List<ToolDefinition> {
-        if (!ctx.shellEnabled || ctx.shellServerUrl.isBlank()) return emptyList()
+        if (!ctx.shellEnabled || ctx.shellDevices.isEmpty()) return emptyList()
+        val deviceNames = ctx.shellDevices.joinToString(", ") { d -> "\"${d.name}\"" }
+        val serverProperty = if (ctx.shellDevices.size == 1) {
+            ToolProperty("string", "The shell server name (optional, defaults to the only configured server: \"${ctx.shellDevices[0].name}\").")
+        } else {
+            ToolProperty("string", "The shell server name. Use list_shells to see available servers: $deviceNames.")
+        }
+        val requiredParams = if (ctx.shellDevices.size == 1) listOf("command") else listOf("command", "server")
         return listOf(
+            ToolDefinition(function = ToolFunction(
+                name = "list_shells",
+                description = "List all configured shell servers with their names and descriptions.",
+                parameters = ToolParameters(properties = emptyMap(), required = emptyList())
+            )),
             ToolDefinition(function = ToolFunction(
                 name = "execute_shell_command",
                 description = "Execute a shell command on a remote server and return the combined stdout and stderr output. Use this to run system commands, scripts, or interact with the command line. The command is sent to a configured remote shell server, not executed locally on the device.",
                 parameters = ToolParameters(
                     properties = mapOf(
                         "command" to ToolProperty("string", "The shell command to execute."),
-                        "timeout_ms" to ToolProperty("integer", "Timeout in milliseconds (optional, defaults to configured timeout)."),
+                        "server" to serverProperty,
+                        "timeout_ms" to ToolProperty("integer", "Timeout in milliseconds (optional, defaults to the device's configured timeout)."),
                         "workdir" to ToolProperty("string", "Working directory for the command (optional).")
                     ),
-                    required = listOf("command")
+                    required = requiredParams
                 )
             ))
         )
@@ -558,6 +569,19 @@ class GenerationManager(
         }
     }
 
+    private suspend fun listShells(ctx: GenerationContext): String {
+        val devices = ctx.shellDevices.map { d ->
+            buildJsonObject {
+                put("name", d.name)
+                put("description", d.description)
+            }
+        }
+        return buildJsonObject {
+            put("type", "list_shells")
+            putJsonArray("devices") { devices.forEach { add(it) } }
+        }.toString()
+    }
+
     private suspend fun executeShellCommand(arguments: String, ctx: GenerationContext): String {
         val argsStr = arguments.ifBlank { "{}" }
         val args = try {
@@ -577,13 +601,38 @@ class GenerationManager(
                 put("error", "no_command")
             }.toString()
         }
-        val timeoutMs = (arg("timeout_ms").toIntOrNull() ?: ctx.shellTimeout * 1000).coerceIn(1000, 120000)
+        val serverName = arg("server")
+        val device = if (serverName.isNotBlank()) {
+            ctx.shellDevices.find { it.name.equals(serverName, ignoreCase = true) }
+        } else if (ctx.shellDevices.size == 1) {
+            ctx.shellDevices.first()
+        } else {
+            null
+        }
+        if (device == null) {
+            return if (ctx.shellDevices.size == 1) {
+                buildJsonObject {
+                    put("type", "execute_shell_command")
+                    put("error", "server_not_found")
+                    put("message", "Unknown server: $serverName. Use \"${ctx.shellDevices[0].name}\" or omit the server parameter.")
+                }.toString()
+            } else {
+                val names = ctx.shellDevices.joinToString(", ") { "\"${it.name}\"" }
+                buildJsonObject {
+                    put("type", "execute_shell_command")
+                    put("error", "server_not_found")
+                    put("message", if (serverName.isBlank()) "Multiple servers available. Use list_shells to see them, then specify one: $names." else "Unknown server: $serverName. Available: $names.")
+                }.toString()
+            }
+        }
+        val timeoutMs = (arg("timeout_ms").toIntOrNull() ?: device.timeout * 1000).coerceIn(1000, 120000)
         val workdir = arg("workdir")
-        val serverUrl = ctx.shellServerUrl.trimEnd('/')
+        val serverUrl = device.serverUrl.trimEnd('/')
         if (serverUrl.isBlank()) {
             return buildJsonObject {
                 put("type", "execute_shell_command")
                 put("error", "no_server_url")
+                put("message", "Server \"${device.name}\" has no URL configured.")
             }.toString()
         }
         return try {
@@ -593,7 +642,7 @@ class GenerationManager(
                 if (workdir.isNotBlank()) put("workdir", workdir)
             }.toString()
             val headers = mutableMapOf("Content-Type" to "application/json")
-            if (ctx.shellApiKey.isNotBlank()) headers["Authorization"] = "Bearer ${ctx.shellApiKey}"
+            if (device.apiKey.isNotBlank()) headers["Authorization"] = "Bearer ${device.apiKey}"
             val handle = com.newoether.agora.api.HttpClient.streamPost("$serverUrl/execute", body, headers)
             try {
                 val output = StringBuilder()
@@ -626,6 +675,7 @@ class GenerationManager(
                 if (errorMessage != null) {
                     buildJsonObject {
                         put("type", "execute_shell_command")
+                        put("server", device.name)
                         put("command", command)
                         put("error", "execution_error")
                         put("message", errorMessage)
@@ -634,6 +684,7 @@ class GenerationManager(
                 } else {
                     buildJsonObject {
                         put("type", "execute_shell_command")
+                        put("server", device.name)
                         put("command", command)
                         put("exit_code", exitCode ?: -1)
                         put("output", output.toString().trimEnd())
@@ -643,6 +694,7 @@ class GenerationManager(
         } catch (e: Exception) {
             buildJsonObject {
                 put("type", "execute_shell_command")
+                put("server", device.name)
                 put("command", command)
                 put("error", "request_failed")
                 put("message", e.message ?: "Unknown error")
@@ -690,6 +742,7 @@ class GenerationManager(
                 "web_search" -> executeWebSearch(arguments, ctx)
                 "web_fetch" -> executeWebFetch(arguments, ctx)
                 "search_conversations" -> executeSearchConversations(arguments, ctx)
+                "list_shells" -> listShells(ctx)
                 "execute_shell_command" -> executeShellCommand(arguments, ctx)
                 else -> "Unknown tool: $name"
             }

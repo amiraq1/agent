@@ -379,8 +379,7 @@ class DataImporter(
                         settingsManager.saveWebSearchBaseUrl(s.webSearchBaseUrl)
                         settingsManager.saveRagThreshold(s.ragThreshold)
                         settingsManager.saveShellEnabled(s.shellEnabled)
-                        settingsManager.saveShellServerUrl(s.shellServerUrl)
-                        settingsManager.saveShellTimeout(s.shellTimeout)
+                        settingsManager.saveShellDevices(s.shellDevices)
                         // Skip local chat models — GGUF files don't exist on this device
                         s.activeSystemPromptId?.let { settingsManager.setActiveSystemPromptId(it) }
                         settingsImported = true
@@ -402,7 +401,16 @@ class DataImporter(
                             data.webSearchApiKeys.forEach { (provider, key) ->
                                 settingsManager.saveWebSearchApiKey(provider, key)
                             }
-                            settingsManager.saveShellApiKey(data.shellApiKey)
+                            data.shellApiKeys.forEach { (name, key) ->
+                                val devices = settingsManager.shellDevices.first().toMutableList()
+                                val idx = devices.indexOfFirst { it.name == name }
+                                if (idx >= 0) {
+                                    devices[idx] = devices[idx].copy(apiKey = key)
+                                } else {
+                                    devices.add(ShellDeviceConfig(name = name, apiKey = key))
+                                }
+                                settingsManager.saveShellDevices(devices)
+                            }
                         } else {
                             // MERGE: add non-duplicate keys
                             val existing = settingsManager.apiKeys.first().toMutableList()
@@ -419,9 +427,19 @@ class DataImporter(
                                     settingsManager.saveWebSearchApiKey(provider, key)
                                 }
                             }
-                            if (data.shellApiKey.isNotBlank() && settingsManager.shellApiKey.first().isBlank()) {
-                                settingsManager.saveShellApiKey(data.shellApiKey)
+                            val currentDevices = settingsManager.shellDevices.first().toMutableList()
+                            var changed = false
+                            data.shellApiKeys.forEach { (name, key) ->
+                                val idx = currentDevices.indexOfFirst { it.name == name }
+                                if (idx >= 0 && currentDevices[idx].apiKey.isBlank()) {
+                                    currentDevices[idx] = currentDevices[idx].copy(apiKey = key)
+                                    changed = true
+                                } else if (idx < 0) {
+                                    currentDevices.add(ShellDeviceConfig(name = name, apiKey = key))
+                                    changed = true
+                                }
                             }
+                            if (changed) settingsManager.saveShellDevices(currentDevices)
                         }
                         // Apply active key IDs
                         for ((provider, id) in data.activeApiKeyIds) {
@@ -513,9 +531,7 @@ class DataImporter(
         val webSearchBaseUrl: String = "",
         val ragThreshold: Float = 0.5f,
         val shellEnabled: Boolean = false,
-        val shellServerUrl: String = "",
-        val shellApiKey: String = "",
-        val shellTimeout: Int = 30,
+        val shellDevices: List<ShellDeviceConfig> = emptyList(),
         val customProviders: List<CustomProviderConfig> = emptyList(),
         val localChatModels: List<LocalChatModelConfig> = emptyList(),
         val activeLocalChatModelId: String = "",
@@ -527,6 +543,6 @@ class DataImporter(
         val apiKeys: List<ApiKeyEntry> = emptyList(),
         val activeApiKeyIds: Map<String, String> = emptyMap(),
         val webSearchApiKeys: Map<String, String> = emptyMap(),
-        val shellApiKey: String = ""
+        val shellApiKeys: Map<String, String> = emptyMap()
     )
 }

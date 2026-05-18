@@ -136,6 +136,7 @@ private fun toolDisplayName(toolName: String?): String {
         "web_search" -> stringResource(R.string.tool_web_search)
         "web_fetch" -> stringResource(R.string.tool_web_fetch)
         "search_conversations" -> stringResource(R.string.tool_search_conversations)
+        "list_shells" -> stringResource(R.string.tool_list_shells)
         "execute_shell_command" -> stringResource(R.string.tool_execute_shell)
         else -> (toolName ?: stringResource(R.string.tool_context)).split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
     }
@@ -196,6 +197,11 @@ private fun toolSummary(seg: MessageSegment): String {
             else if (content.isNotEmpty()) SearchResultFormatter.getFirstLine(content, LocalContext.current)
             else if (query != null) stringResource(R.string.tool_searching_conversations, query) else stringResource(R.string.tool_searching_conversations_default)
         }
+        "list_shells" -> {
+            if (isError) stringResource(R.string.tool_shell_listing)
+            else if (content.isNotEmpty()) SearchResultFormatter.getFirstLine(content, LocalContext.current)
+            else stringResource(R.string.tool_shell_list_done)
+        }
         "execute_shell_command" -> {
             val command = argsJson?.get("command")?.let { (it as? JsonPrimitive)?.content }
             if (isError) stringResource(R.string.tool_shell_failed)
@@ -231,6 +237,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
         "web_search" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_web_search_done) }
         "web_fetch" -> stringResource(R.string.tool_web_fetch_done, argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }?.take(60)?.ifEmpty { "page" } ?: "page")
         "search_conversations" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_conversation_search_done) }
+        "list_shells" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_shell_list_done) }
         "execute_shell_command" -> SearchResultFormatter.getFirstLine(result, LocalContext.current).ifBlank { stringResource(R.string.tool_shell_done) }
         else -> stringResource(R.string.tool_done)
     }

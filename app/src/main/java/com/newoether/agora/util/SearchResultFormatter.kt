@@ -12,7 +12,7 @@ object SearchResultFormatter {
 
     fun isRawSearchResult(text: String): Boolean = try {
         val type = Json.parseToJsonElement(text).jsonObject["type"]?.let { (it as? JsonPrimitive)?.content }
-        type == "web_search" || type == "search_conversations" || type == "execute_shell_command"
+        type == "web_search" || type == "search_conversations" || type == "execute_shell_command" || type == "list_shells"
     } catch (_: Exception) { false }
 
     fun format(text: String, context: Context): String {
@@ -24,6 +24,7 @@ object SearchResultFormatter {
             when (json["type"]?.let { (it as? JsonPrimitive)?.content }) {
                 "web_search" -> formatWebSearch(json, context)
                 "search_conversations" -> formatConversationSearch(json, context)
+                "list_shells" -> formatShellList(json, context)
                 "execute_shell_command" -> formatShellCommand(json, context)
                 else -> text
             }
@@ -102,16 +103,29 @@ object SearchResultFormatter {
     }
 
     private fun formatShellCommand(json: JsonObject, context: Context): String {
+        val server = json["server"]?.let { (it as? JsonPrimitive)?.content } ?: ""
         val command = json["command"]?.let { (it as? JsonPrimitive)?.content } ?: ""
         val output = json["output"]?.let { (it as? JsonPrimitive)?.content } ?: ""
         val exitCode = json["exit_code"]?.let { (it as? JsonPrimitive)?.content }
         val error = json["error"]?.let { (it as? JsonPrimitive)?.content }
+        val serverLine = if (server.isNotEmpty()) context.getString(R.string.shell_result_server, server) + "\n" else ""
         return if (error != null) {
             val msg = json["message"]?.let { (it as? JsonPrimitive)?.content } ?: ""
-            "${context.getString(R.string.shell_result_command, command)}\n${context.getString(R.string.shell_result_error, msg)}${if (output.isNotEmpty()) "\n\n$output" else ""}"
+            "$serverLine${context.getString(R.string.shell_result_command, command)}\n${context.getString(R.string.shell_result_error, msg)}${if (output.isNotEmpty()) "\n\n$output" else ""}"
         } else {
             val code = exitCode?.toIntOrNull() ?: -1
-            "${context.getString(R.string.shell_result_command, command)}\n${context.getString(R.string.shell_result_exit_code, code)}\n\n$output"
+            "$serverLine${context.getString(R.string.shell_result_command, command)}\n${context.getString(R.string.shell_result_exit_code, code)}\n\n$output"
+        }
+    }
+
+    private fun formatShellList(json: JsonObject, context: Context): String {
+        val devices = json["devices"]?.jsonArray ?: return context.getString(R.string.shell_no_devices)
+        if (devices.isEmpty()) return context.getString(R.string.shell_no_devices)
+        return devices.joinToString("\n") { element ->
+            val obj = element.jsonObject
+            val name = (obj["name"] as? JsonPrimitive)?.content ?: ""
+            val desc = (obj["description"] as? JsonPrimitive)?.content ?: ""
+            if (desc.isNotEmpty()) "$name — $desc" else name
         }
     }
 }
