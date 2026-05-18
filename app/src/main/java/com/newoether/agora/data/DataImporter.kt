@@ -281,14 +281,15 @@ class DataImporter(
                 try {
                     val memEntries = entries.filter { it.key.startsWith("memories/") }
                     if (memDecision == ImportStrategy.REPLACE) {
-                        for (name in memoryManager.listFiles()) {
-                            memoryManager.deleteFile(name)
+                        for (file in memoryManager.listFiles()) {
+                            memoryManager.deleteFile(file.name)
                         }
                         val activeMem = memoryManager.getActiveMemory()
                         if (activeMem.isNotEmpty()) {
                             memoryManager.updateActiveMemory("", "replace")
                         }
                     }
+                    val existingNames = memoryManager.listFiles().map { it.name }.toSet()
                     for ((path, content) in memEntries) {
                         val text = content.decodeToString()
                         if (path == "memories/active_memory.md" && text.isNotBlank()) {
@@ -296,9 +297,13 @@ class DataImporter(
                                 memoryManager.updateActiveMemory(text, "replace")
                             }
                             memoriesImported++
+                        } else if (path == "memories/memory_db/memory_meta.json") {
+                            if (memDecision == ImportStrategy.REPLACE || memoryManager.getMetaJson() == "{}") {
+                                memoryManager.saveMetaJson(text)
+                            }
                         } else if (path.startsWith("memories/memory_db/")) {
                             val name = path.removePrefix("memories/memory_db/")
-                            if (memDecision == ImportStrategy.REPLACE || !memoryManager.listFiles().contains(name)) {
+                            if (memDecision == ImportStrategy.REPLACE || name !in existingNames) {
                                 try {
                                     memoryManager.createFile(name, text)
                                 } catch (_: Exception) {

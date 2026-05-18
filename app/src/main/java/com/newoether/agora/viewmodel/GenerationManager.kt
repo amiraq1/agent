@@ -180,7 +180,7 @@ class GenerationManager(
             tools.addAll(listOf(
                 ToolDefinition(function = ToolFunction(
                     name = "list_memory_files",
-                    description = "List all files in the memory database.",
+                    description = "List all files in the memory database with their names and descriptions.",
                     parameters = ToolParameters(properties = emptyMap())
                 )),
                 ToolDefinition(function = ToolFunction(
@@ -196,23 +196,25 @@ class GenerationManager(
                 )),
                 ToolDefinition(function = ToolFunction(
                     name = "create_memory_file",
-                    description = "Create a new file in the memory database with the given content.",
+                    description = "Create a new file in the memory database with the given content and optional description.",
                     parameters = ToolParameters(
                         properties = mapOf(
                             "name" to ToolProperty("string", "The file name to create (e.g., 'notes.md')."),
-                            "content" to ToolProperty("string", "The markdown content for the file.")
+                            "content" to ToolProperty("string", "The markdown content for the file."),
+                            "description" to ToolProperty("string", "A short description of what this file contains (optional).")
                         ),
                         required = listOf("name", "content")
                     )
                 )),
                 ToolDefinition(function = ToolFunction(
                     name = "edit_memory_file",
-                    description = "Edit or rename a file in the memory database. At least one of 'content' or 'new_name' must be provided.",
+                    description = "Edit, rename, or update the description of a file in the memory database. At least one of 'content', 'new_name', or 'description' must be provided.",
                     parameters = ToolParameters(
                         properties = mapOf(
                             "name" to ToolProperty("string", "The current file name to edit."),
                             "content" to ToolProperty("string", "The new markdown content. Omit to keep existing content."),
-                            "new_name" to ToolProperty("string", "New file name to rename to. Omit to keep existing name.")
+                            "new_name" to ToolProperty("string", "New file name to rename to. Omit to keep existing name."),
+                            "description" to ToolProperty("string", "A short description of the file contents. Omit to keep existing description. Pass empty string to remove.")
                         ),
                         required = listOf("name")
                     )
@@ -711,7 +713,10 @@ class GenerationManager(
                 "list_memory_files" -> {
                     val files = memoryManager.listFiles()
                     if (files.isEmpty()) "No memory files found."
-                    else "Memory files:\n${files.joinToString("\n") { "- $it" }}"
+                    else "Memory files:\n${files.joinToString("\n") { file ->
+                        if (file.description.isNotBlank()) "- ${file.name} — ${file.description}"
+                        else "- ${file.name}"
+                    }}"
                 }
                 "read_memory_file" -> {
                     val singleName = arg("name")
@@ -727,12 +732,14 @@ class GenerationManager(
                         "Error: No file name provided. Use 'name' for a single file or 'names' for multiple files."
                     }
                 }
-                "create_memory_file" -> memoryManager.createFile(arg("name"), arg("content"))
+                "create_memory_file" -> memoryManager.createFile(arg("name"), arg("content"), arg("description"))
                 "edit_memory_file" -> {
                     val editContent = arg("content").ifBlank { null }
                     val newName = arg("new_name").ifBlank { null }
-                    if (editContent == null && newName == null) "Error: At least 'content' or 'new_name' must be provided."
-                    else memoryManager.editFile(arg("name"), editContent, newName)
+                    val descArg = arg("description")
+                    val desc = if (args.containsKey("description")) descArg else null
+                    if (editContent == null && newName == null && desc == null) "Error: At least 'content', 'new_name', or 'description' must be provided."
+                    else memoryManager.editFile(arg("name"), editContent, newName, desc)
                 }
                 "delete_memory_file" -> memoryManager.deleteFile(arg("name"))
                 "update_active_memory" -> {

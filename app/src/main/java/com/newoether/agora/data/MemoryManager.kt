@@ -1,6 +1,8 @@
 package com.newoether.agora.data
 
 import android.content.Context
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 
 class MemoryManager(context: Context) {
@@ -9,6 +11,16 @@ class MemoryManager(context: Context) {
 
     private val activeMemoryFile: File =
         File(context.filesDir, "active_memory.md")
+
+    private val metaFile: File =
+        File(memoryDir, "memory_meta.json")
+
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+
+    data class MemoryFileInfo(
+        val name: String,
+        val description: String = ""
+    )
 
     @Synchronized
     fun getActiveMemory(): String =
@@ -33,11 +45,48 @@ class MemoryManager(context: Context) {
         }
 
     @Synchronized
-    fun listFiles(): List<String> =
-        memoryDir.listFiles()
+    private fun loadMeta(): MutableMap<String, String> =
+        if (metaFile.exists()) {
+            try { json.decodeFromString<MutableMap<String, String>>(metaFile.readText()) }
+            catch (_: Exception) { mutableMapOf() }
+        } else mutableMapOf()
+
+    @Synchronized
+    private fun saveMeta(meta: Map<String, String>) {
+        metaFile.writeText(json.encodeToString(meta))
+    }
+
+    @Synchronized
+    fun getDescription(name: String): String {
+        val resolved = resolveFile(name)
+        if (!resolved.exists()) return ""
+        return loadMeta()[resolved.name] ?: ""
+    }
+
+    @Synchronized
+    fun setDescription(name: String, description: String) {
+        val resolved = resolveFile(name)
+        if (!resolved.exists()) throw IllegalArgumentException("File not found: $name")
+        val meta = loadMeta()
+        if (description.isBlank()) meta.remove(resolved.name) else meta[resolved.name] = description
+        saveMeta(meta)
+    }
+
+    @Synchronized
+    fun listFiles(): List<MemoryFileInfo> {
+        val meta = loadMeta()
+        return memoryDir.listFiles()
             ?.filter { it.extension == "md" }
-            ?.map { it.name }
-            ?.sorted() ?: emptyList()
+            ?.map { MemoryFileInfo(it.name, meta[it.name] ?: "") }
+            ?.sortedBy { it.name } ?: emptyList()
+    }
+
+    fun getMetaJson(): String =
+        if (metaFile.exists()) metaFile.readText() else "{}"
+
+    fun saveMetaJson(jsonStr: String) {
+        metaFile.writeText(jsonStr)
+    }
 
     @Synchronized
     fun readFile(name: String): String {
@@ -47,26 +96,42 @@ class MemoryManager(context: Context) {
     }
 
     @Synchronized
-    fun createFile(name: String, content: String): String {
+    fun createFile(name: String, content: String, description: String = ""): String {
         val file = resolveFile(name)
         if (file.exists()) throw IllegalArgumentException("File already exists: ${file.name}")
         file.writeText(content)
+        if (description.isNotBlank()) {
+            val meta = loadMeta()
+            meta[file.name] = description
+            saveMeta(meta)
+        }
         return "Created ${file.name}"
     }
 
     @Synchronized
-    fun editFile(name: String, content: String? = null, newName: String? = null): String {
+    fun editFile(name: String, content: String? = null, newName: String? = null, description: String? = null): String {
         val file = resolveFile(name)
         if (!file.exists()) throw IllegalArgumentException("File not found: $name")
+        val meta = loadMeta()
+        var renamedFile: File? = null
         if (content != null) file.writeText(content)
         if (newName != null && newName != name) {
-            val newFile = resolveFile(newName)
-            if (newFile.exists()) throw IllegalArgumentException("Target file already exists: ${newFile.name}")
-            file.renameTo(newFile)
-            if (content != null) return "Updated and renamed to ${newFile.name}"
-            return "Renamed to ${newFile.name}"
+            renamedFile = resolveFile(newName)
+            if (renamedFile.exists()) throw IllegalArgumentException("Target file already exists: ${renamedFile.name}")
+            file.renameTo(renamedFile)
+            val desc = meta.remove(file.name)
+            if (desc != null) meta[renamedFile.name] = desc
         }
-        if (content != null) return "Updated ${file.name}"
+        if (description != null) {
+            if (description.isBlank()) meta.remove((renamedFile ?: file).name)
+            else meta[(renamedFile ?: file).name] = description
+        }
+        saveMeta(meta)
+        val targetName = newName?.let { resolveFile(it).name } ?: file.name
+        if (content != null && newName != null) return "Updated and renamed to $targetName"
+        if (content != null) return "Updated $targetName"
+        if (newName != null) return "Renamed to $targetName"
+        if (description != null) return "Updated description of $targetName"
         return "No changes made."
     }
 
@@ -75,6 +140,9 @@ class MemoryManager(context: Context) {
         val file = resolveFile(name)
         if (!file.exists()) throw IllegalArgumentException("File not found: $name")
         file.delete()
+        val meta = loadMeta()
+        meta.remove(file.name)
+        saveMeta(meta)
         return "Deleted ${file.name}"
     }
 

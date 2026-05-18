@@ -246,10 +246,16 @@ class DataExporter(
                     zip.write(activeMemory.toByteArray())
                     zip.closeEntry()
                 }
-                for (name in memoryManager.listFiles()) {
-                    val content = memoryManager.readFile(name)
-                    zip.putNextEntry(ZipEntry("memories/memory_db/$name"))
+                for (file in memoryManager.listFiles()) {
+                    val content = memoryManager.readFile(file.name)
+                    zip.putNextEntry(ZipEntry("memories/memory_db/${file.name}"))
                     zip.write(content.toByteArray())
+                    zip.closeEntry()
+                }
+                val metaJson = memoryManager.getMetaJson()
+                if (metaJson != "{}") {
+                    zip.putNextEntry(ZipEntry("memories/memory_db/memory_meta.json"))
+                    zip.write(metaJson.toByteArray())
                     zip.closeEntry()
                 }
                 step()

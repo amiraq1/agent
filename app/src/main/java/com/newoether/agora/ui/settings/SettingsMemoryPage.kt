@@ -36,7 +36,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val accessSavedMemories by viewModel.accessSavedMemories.collectAsState()
     val accessActiveMemory by viewModel.accessActiveMemory.collectAsState()
     var activeMemoryContent by remember { mutableStateOf("") }
-    var memoryFiles by remember { mutableStateOf<List<String>>(emptyList()) }
+    var memoryFiles by remember { mutableStateOf<List<com.newoether.agora.data.MemoryManager.MemoryFileInfo>>(emptyList()) }
     var showFileEditor by remember { mutableStateOf<String?>(null) }
     var fileEditorContent by remember { mutableStateOf("") }
     var showNewFileDialog by remember { mutableStateOf(false) }
@@ -132,13 +132,14 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         supportingContent = { Text(stringResource(R.string.memory_create_hint)) }
                     )
                 } else {
-                    memoryFiles.forEach { fileName ->
+                    memoryFiles.forEach { file ->
                         var showFileMenu by remember { mutableStateOf(false) }
-                        val displayName = fileName.removeSuffix(".md")
+                        val displayName = file.name.removeSuffix(".md")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = { Text(displayName, fontWeight = FontWeight.Medium) },
+                            supportingContent = if (file.description.isNotBlank()) {{ Text(file.description) }} else null,
                             leadingContent = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) },
                             trailingContent = {
                                 Box {
@@ -156,8 +157,8 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             onClick = {
                                                 showFileMenu = false
                                                 try {
-                                                    showFileEditor = fileName
-                                                    fileEditorContent = viewModel.memoryManager.readFile(fileName)
+                                                    showFileEditor = file.name
+                                                    fileEditorContent = viewModel.memoryManager.readFile(file.name)
                                                 } catch (_: Exception) {}
                                             }
                                         )
@@ -166,7 +167,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                             onClick = {
                                                 showFileMenu = false
-                                                showDeleteFileConfirm = fileName
+                                                showDeleteFileConfirm = file.name
                                             }
                                         )
                                     }
