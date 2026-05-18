@@ -107,7 +107,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 headlineContent = {
                                     Text(
-                                        device.name.ifBlank { stringResource(R.string.shell_device_name) },
+                                        device.name.ifBlank { stringResource(R.string.search_untitled) },
                                         fontWeight = FontWeight.Medium
                                     )
                                 },
