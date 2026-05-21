@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -57,6 +58,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -70,10 +73,14 @@ import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -84,6 +91,7 @@ import kotlinx.serialization.json.jsonObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -1351,75 +1359,304 @@ fun MessageItem(
         }
     }
 
-    // Segment detail bottom sheet
+    // Segment detail bottom sheet (custom implementation)
     if (showSegmentDetail && selectedSegment != null) {
         val seg = selectedSegment!!
-        ModalBottomSheet(
-            onDismissRequest = { showSegmentDetail = false }
-        ) {
-            val scrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 32.dp)
-            ) {
-                Text(
-                    text = if (seg.type == "tool") toolDisplayName(seg.toolName) else stringResource(R.string.tool_thinking),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+        val density = LocalDensity.current
+        val configuration = LocalConfiguration.current
+        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+        val coroutineScope = rememberCoroutineScope()
+        val scrollState = rememberScrollState()
 
-                if (seg.type == "tool") {
-                    val args = seg.toolArgs
-                    if (!args.isNullOrBlank() && args != "{}") {
-                        Text(
-                            stringResource(R.string.arguments_label),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        SelectionContainer {
-                            Text(
-                                text = formatJsonOrPlain(args),
-                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
+        val PARTIAL = 0.45f
+        val FULL = 0.92f
 
-                    Text(
-                        stringResource(R.string.result_label),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val result = seg.toolResult
-                    if (result != null && result.isNotEmpty()) {
-                        SelectionContainer {
-                            Text(
-                                text = formatJsonOrPlain(result),
-                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+        var rawFraction by remember { mutableFloatStateOf(0f) }
+        val visualFraction = remember { Animatable(0f) }
+        var isSnapping by remember { mutableStateOf(false) }
+        var snapAnimJob by remember { mutableStateOf<Job?>(null) }
+
+        val snapSpring = spring<Float>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = 500f,
+            visibilityThreshold = 0.001f
+        )
+        val dismissSpring = spring<Float>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = 550f,
+            visibilityThreshold = 0.001f
+        )
+
+        // Initial appearance
+        LaunchedEffect(Unit) {
+            isSnapping = true
+            snapAnimJob = coroutineScope.launch {
+                visualFraction.animateTo(PARTIAL, snapSpring)
+            }
+            snapAnimJob?.join()
+            rawFraction = PARTIAL
+            isSnapping = false
+        }
+
+        fun dismiss() {
+            if (visualFraction.value < 0.02f) {
+                showSegmentDetail = false
+                return
+            }
+            snapAnimJob = coroutineScope.launch {
+                isSnapping = true
+                visualFraction.animateTo(0f, dismissSpring)
+                showSegmentDetail = false
+            }
+        }
+
+        // Debounced snap after drag ends
+        LaunchedEffect(rawFraction) {
+            if (isSnapping) return@LaunchedEffect
+            val fraction = rawFraction
+            delay(180)
+            if (fraction != rawFraction) return@LaunchedEffect
+            val target = when {
+                rawFraction > (PARTIAL + FULL) / 2f -> FULL
+                rawFraction > 0.15f -> PARTIAL
+                else -> 0f
+            }
+            if (abs(target - rawFraction) > 0.005f) {
+                isSnapping = true
+                snapAnimJob = coroutineScope.launch {
+                    if (target == 0f) {
+                        if (rawFraction < 0.02f) {
+                            showSegmentDetail = false
+                        } else {
+                            visualFraction.animateTo(0f, dismissSpring)
+                            showSegmentDetail = false
                         }
                     } else {
-                        Text(
-                            text = stringResource(R.string.tool_calling_ellipsis),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        visualFraction.animateTo(target, snapSpring)
+                        rawFraction = visualFraction.value
+                        isSnapping = false
                     }
-                } else {
-                    SelectionContainer {
-                        Text(
-                            text = seg.content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                }
+            } else if (target == 0f) {
+                showSegmentDetail = false
+            }
+        }
+
+        val sheetScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (isSnapping) {
+                        snapAnimJob?.cancel()
+                        rawFraction = visualFraction.value
+                        isSnapping = false
+                    }
+                    if (rawFraction < FULL) {
+                        val delta = -available.y / screenHeightPx
+                        rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                        coroutineScope.launch { visualFraction.snapTo(rawFraction) }
+                        return available.copy(x = 0f)
+                    }
+                    return Offset.Zero
+                }
+
+                override fun onPostScroll(
+                    consumed: Offset, available: Offset, source: NestedScrollSource
+                ): Offset {
+                    if (isSnapping) {
+                        snapAnimJob?.cancel()
+                        rawFraction = visualFraction.value
+                        isSnapping = false
+                    }
+                    if (rawFraction >= FULL) {
+                        if (available.y < 0f) {
+                            return available.copy(x = 0f)
+                        }
+                        if (available.y > 0f) {
+                            if (scrollState.value > 0) {
+                                return available.copy(x = 0f)
+                            }
+                            if (scrollState.value == 0) {
+                                val delta = -available.y / screenHeightPx
+                                rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                                coroutineScope.launch { visualFraction.snapTo(rawFraction) }
+                                return available.copy(x = 0f)
+                            }
+                        }
+                    }
+                    return Offset.Zero
+                }
+            }
+        }
+
+        Popup(
+            onDismissRequest = { dismiss() },
+            properties = PopupProperties(
+                focusable = true,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false
+            )
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Scrim (only interactive when visible)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f * visualFraction.value.coerceIn(0f, 1f)))
+                        .then(
+                            if (visualFraction.value > 0.02f) {
+                                Modifier.clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { dismiss() }
+                            } else Modifier
                         )
+                )
+
+                // Sheet
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height((configuration.screenHeightDp.dp * visualFraction.value).coerceAtLeast(0.dp)),
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surfaceContainer
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Draggable header: drag handle + title + divider
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(Unit) {
+                                    var lastTime = 0L
+                                    var flingVelocity = 0f
+                                    detectVerticalDragGestures(
+                                        onDragStart = {
+                                            lastTime = System.nanoTime()
+                                            flingVelocity = 0f
+                                            if (isSnapping) {
+                                                snapAnimJob?.cancel()
+                                                rawFraction = visualFraction.value
+                                                isSnapping = false
+                                            }
+                                        },
+                                        onVerticalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val now = System.nanoTime()
+                                            val dtSec = ((now - lastTime).coerceAtLeast(1_000_000L) / 1_000_000_000f)
+                                            if (dtSec < 0.2f) {
+                                                flingVelocity = -dragAmount / screenHeightPx / dtSec
+                                            }
+                                            lastTime = now
+                                            val delta = -dragAmount / screenHeightPx
+                                            rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                                            coroutineScope.launch { visualFraction.snapTo(rawFraction) }
+                                        },
+                                        onDragEnd = {
+                                            if (abs(flingVelocity) > 0.3f) {
+                                                val projected = (rawFraction + flingVelocity * 0.15f).coerceIn(0f, 1f)
+                                                isSnapping = true
+                                                coroutineScope.launch {
+                                                    visualFraction.animateTo(
+                                                        targetValue = projected,
+                                                        animationSpec = snapSpring,
+                                                        initialVelocity = flingVelocity
+                                                    )
+                                                    rawFraction = visualFraction.value
+                                                    isSnapping = false
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                        ) {
+                            // Drag handle
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(28.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(36.dp).height(5.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                                )
+                            }
+
+                            // Fixed title
+                            Text(
+                                text = if (seg.type == "tool") toolDisplayName(seg.toolName)
+                                    else stringResource(R.string.tool_thinking),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 24.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+                        }
+
+                        // Scrollable detail content
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(sheetScrollConnection)
+                                .verticalScroll(scrollState)
+                                .padding(horizontal = 24.dp)
+                                .padding(top = 12.dp, bottom = 32.dp)
+                        ) {
+                            if (seg.type == "tool") {
+                                val args = seg.toolArgs
+                                if (!args.isNullOrBlank() && args != "{}") {
+                                    Text(
+                                        stringResource(R.string.arguments_label),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    SelectionContainer {
+                                        Text(
+                                            text = formatJsonOrPlain(args),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                Text(
+                                    stringResource(R.string.result_label),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val result = seg.toolResult
+                                if (result != null && result.isNotEmpty()) {
+                                    SelectionContainer {
+                                        Text(
+                                            text = formatJsonOrPlain(result),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = stringResource(R.string.tool_calling_ellipsis),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                SelectionContainer {
+                                    Text(
+                                        text = seg.content,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
