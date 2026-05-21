@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.input.*
@@ -1529,12 +1530,12 @@ fun MessageItem(
         var snapAnimJob by remember { mutableStateOf<Job?>(null) }
 
         val snapSpring = spring<Float>(
-            dampingRatio = Spring.DampingRatioNoBouncy,
+            dampingRatio = 1.2f,
             stiffness = 500f,
             visibilityThreshold = 0.001f
         )
         val dismissSpring = spring<Float>(
-            dampingRatio = Spring.DampingRatioNoBouncy,
+            dampingRatio = 1.2f,
             stiffness = 550f,
             visibilityThreshold = 0.001f
         )
@@ -1604,7 +1605,7 @@ fun MessageItem(
                     }
                     if (rawFraction < FULL) {
                         val delta = -available.y / screenHeightPx
-                        rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                        rawFraction = (rawFraction + delta).coerceIn(0f, FULL)
                         coroutineScope.launch { visualFraction.snapTo(rawFraction) }
                         return available.copy(x = 0f)
                     }
@@ -1621,6 +1622,11 @@ fun MessageItem(
                     }
                     if (rawFraction >= FULL) {
                         if (available.y < 0f) {
+                            if (source == NestedScrollSource.Fling) {
+                                coroutineScope.launch {
+                                    scrollState.scroll(MutatePriority.UserInput) { }
+                                }
+                            }
                             return available.copy(x = 0f)
                         }
                         if (available.y > 0f) {
@@ -1629,7 +1635,7 @@ fun MessageItem(
                             }
                             if (scrollState.value == 0) {
                                 val delta = -available.y / screenHeightPx
-                                rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                                rawFraction = (rawFraction + delta).coerceIn(0f, FULL)
                                 coroutineScope.launch { visualFraction.snapTo(rawFraction) }
                                 return available.copy(x = 0f)
                             }
@@ -1702,12 +1708,15 @@ fun MessageItem(
                                             }
                                             lastTime = now
                                             val delta = -dragAmount / screenHeightPx
-                                            rawFraction = (rawFraction + delta).coerceIn(0f, 1f)
+                                            rawFraction = (rawFraction + delta).coerceIn(0f, FULL)
+                                            // Kill velocity pushing into boundaries
+                                            if (rawFraction >= FULL && flingVelocity > 0f) flingVelocity = 0f
+                                            if (rawFraction <= 0f && flingVelocity < 0f) flingVelocity = 0f
                                             coroutineScope.launch { visualFraction.snapTo(rawFraction) }
                                         },
                                         onDragEnd = {
                                             if (abs(flingVelocity) > 0.3f) {
-                                                val projected = (rawFraction + flingVelocity * 0.15f).coerceIn(0f, 1f)
+                                                val projected = (rawFraction + flingVelocity * 0.15f).coerceIn(0f, FULL)
                                                 val target = when {
                                                     projected > (PARTIAL + FULL) / 2f -> FULL
                                                     projected > 0.15f -> PARTIAL
@@ -1715,7 +1724,7 @@ fun MessageItem(
                                                 }
                                                 if (abs(target - rawFraction) > 0.005f) {
                                                     isSnapping = true
-                                                    coroutineScope.launch {
+                                                    snapAnimJob = coroutineScope.launch {
                                                         if (target == 0f) {
                                                             visualFraction.animateTo(0f, dismissSpring, initialVelocity = flingVelocity)
                                                             showSegmentDetail = false
