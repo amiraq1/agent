@@ -39,8 +39,10 @@
     <string name="tool_searching_conversations">Searching \'%1$s\' in conversations</string>
     <string name="tool_search_failed">Search failed</string>
     <string name="tool_search_done">Search done</string>
-    <string name="tool_web_search_done">Web search done</string>
+    <string name="tool_web_search_done">Found %1$d results for \"%2$s\"</string>
+    <string name="tool_web_search_done_default">Searched the web</string>
     <string name="tool_conversation_search_done">Conversation search done</string>
+    <string name="tool_conversation_search_done_for">Found %1$d conversations for \"%2$s\"</string>
     <string name="tool_list_shells">List Shells</string>
     <string name="tool_shell_listing">Listing available shells</string>
     <string name="tool_shell_list_done">Shell list done</string>

@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.input.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -76,6 +77,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -123,6 +125,17 @@ private fun mergeAdjacentSegments(segs: List<MessageSegment>): List<MessageSegme
         }
     }
     return merged
+}
+
+private val prettyPrinter = Json { prettyPrint = true }
+
+private fun formatJsonOrPlain(text: String): String {
+    return try {
+        val element = Json.parseToJsonElement(text)
+        prettyPrinter.encodeToString(JsonElement.serializer(), element)
+    } catch (_: Exception) {
+        text
+    }
 }
 
 @Composable
@@ -191,7 +204,14 @@ private fun toolSummary(seg: MessageSegment): String {
         "web_search" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
             if (isError) stringResource(R.string.tool_search_failed)
-            else if (query != null) stringResource(R.string.tool_searching_web, query) else stringResource(R.string.tool_searching_web_default)
+            else {
+                val resultCount = try {
+                    Json.parseToJsonElement(content).jsonObject["results"]?.jsonArray?.size ?: 0
+                } catch (_: Exception) { 0 }
+                if (resultCount > 0 && query != null) stringResource(R.string.tool_web_search_done, resultCount, query)
+                else if (query != null) stringResource(R.string.tool_searching_web, query)
+                else stringResource(R.string.tool_web_search_done_default)
+            }
         }
         "web_fetch" -> {
             val url = argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }
@@ -202,7 +222,14 @@ private fun toolSummary(seg: MessageSegment): String {
         "search_conversations" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
             if (isError) stringResource(R.string.tool_search_failed)
-            else if (query != null) stringResource(R.string.tool_searching_conversations, query) else stringResource(R.string.tool_searching_conversations_default)
+            else {
+                val convCount = try {
+                    Json.parseToJsonElement(content).jsonObject["results"]?.jsonArray?.size ?: 0
+                } catch (_: Exception) { 0 }
+                if (convCount > 0 && query != null) stringResource(R.string.tool_conversation_search_done_for, convCount, query)
+                else if (query != null) stringResource(R.string.tool_searching_conversations, query)
+                else stringResource(R.string.tool_searching_conversations_default)
+            }
         }
         "list_shells" -> {
             if (isError) stringResource(R.string.tool_shell_listing)
@@ -257,7 +284,12 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
         "update_active_memory" -> stringResource(R.string.tool_update_active_default)
         "web_search" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (query != null) stringResource(R.string.tool_searching_web, query) else stringResource(R.string.tool_searching_web_default)
+            val resultCount = try {
+                Json.parseToJsonElement(result).jsonObject["results"]?.jsonArray?.size ?: 0
+            } catch (_: Exception) { 0 }
+            if (resultCount > 0 && query != null) stringResource(R.string.tool_web_search_done, resultCount, query)
+            else if (query != null) stringResource(R.string.tool_searching_web, query)
+            else stringResource(R.string.tool_web_search_done_default)
         }
         "web_fetch" -> {
             val url = argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }
@@ -266,7 +298,12 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
         }
         "search_conversations" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (query != null) stringResource(R.string.tool_searching_conversations, query) else stringResource(R.string.tool_searching_conversations_default)
+            val convCount = try {
+                Json.parseToJsonElement(result).jsonObject["results"]?.jsonArray?.size ?: 0
+            } catch (_: Exception) { 0 }
+            if (convCount > 0 && query != null) stringResource(R.string.tool_conversation_search_done_for, convCount, query)
+            else if (query != null) stringResource(R.string.tool_searching_conversations, query)
+            else stringResource(R.string.tool_searching_conversations_default)
         }
         "list_shells" -> {
             val deviceCount = try {
@@ -284,6 +321,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageItem(
     message: ChatMessage, 
@@ -311,6 +349,8 @@ fun MessageItem(
     LaunchedEffect(Unit) { isFirstComposition = false }
 
     var isThoughtExpanded by rememberSaveable { mutableStateOf(false) }
+    var showSegmentDetail by remember { mutableStateOf(false) }
+    var selectedSegment by remember { mutableStateOf<MessageSegment?>(null) }
     var currentThoughtBlockHeight by remember { mutableIntStateOf(0) }
     var stableCollapsedThoughtHeight by remember { mutableIntStateOf(0) }
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -814,11 +854,16 @@ fun MessageItem(
                                     .padding(top = 8.dp, bottom = mergedBottomPadding + 6.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .clickable { isThoughtExpanded = !isThoughtExpanded }
                                     .bringIntoViewResponder(noOpResponder)
-                                    .padding(10.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { isThoughtExpanded = !isThoughtExpanded }
+                                        .padding(10.dp)
+                                ) {
                                     if (isToolCalling || isToolInProgress) {
                                         Icon(Icons.Default.Build, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                                     } else {
@@ -855,47 +900,63 @@ fun MessageItem(
                                                 }
                                             }
                                     ) {
-                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         segs.forEachIndexed { idx, seg ->
                                             if (seg.type == "thought" && seg.content.isNotBlank()) {
-                                                Text(
-                                                    stringResource(R.string.tool_thinking), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                SelectionContainer {
-                                                    RecomposeSafeMarkdown(
-                                                        content = seg.content,
-                                                        isStreaming = isStreaming
-                                                    ) { text ->
-                                                        Markdown(
-                                                            content = text.escapeThinkTags(),
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            colors = customMarkdownColors,
-                                                            typography = thoughtTypography,
-                                                            padding = thoughtMarkdownPadding,
-                                                            components = customMarkdownComponents,
-                                                            imageTransformer = latexImageTransformer
-                                                        )
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { selectedSegment = seg; showSegmentDetail = true }
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                                                ) {
+                                                    Text(
+                                                        stringResource(R.string.tool_thinking), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    SelectionContainer {
+                                                        RecomposeSafeMarkdown(
+                                                            content = seg.content,
+                                                            isStreaming = isStreaming
+                                                        ) { text ->
+                                                            Markdown(
+                                                                content = text.escapeThinkTags(),
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                colors = customMarkdownColors,
+                                                                typography = thoughtTypography,
+                                                                padding = thoughtMarkdownPadding,
+                                                                components = customMarkdownComponents,
+                                                                imageTransformer = latexImageTransformer
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             } else if (seg.type == "tool") {
                                                 val isToolError = (seg.toolResult ?: "").startsWith("Error")
-                                                Text(
-                                                    toolDisplayName(seg.toolName),
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                                    color = if (isToolError) MaterialTheme.colorScheme.error.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                Text(
-                                                    text = toolSummary(seg),
-                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
-                                                    color = if (isToolError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { selectedSegment = seg; showSegmentDetail = true }
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                                                ) {
+                                                    Text(
+                                                        toolDisplayName(seg.toolName),
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                        color = if (isToolError) MaterialTheme.colorScheme.error.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    Text(
+                                                        text = toolSummary(seg),
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                                                        color = if (isToolError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
                                             }
                                             if (idx < segs.lastIndex) {
                                                 HorizontalDivider(
-                                                    modifier = Modifier.padding(vertical = 8.dp),
+                                                    modifier = Modifier.padding(vertical = 2.dp),
                                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
                                                 )
                                             }
@@ -1284,6 +1345,81 @@ fun MessageItem(
                         }
                         
                         Spacer(modifier = Modifier.height(32.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    // Segment detail bottom sheet
+    if (showSegmentDetail && selectedSegment != null) {
+        val seg = selectedSegment!!
+        ModalBottomSheet(
+            onDismissRequest = { showSegmentDetail = false }
+        ) {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = if (seg.type == "tool") toolDisplayName(seg.toolName) else stringResource(R.string.tool_thinking),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (seg.type == "tool") {
+                    val args = seg.toolArgs
+                    if (!args.isNullOrBlank() && args != "{}") {
+                        Text(
+                            stringResource(R.string.arguments_label),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        SelectionContainer {
+                            Text(
+                                text = formatJsonOrPlain(args),
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    Text(
+                        stringResource(R.string.result_label),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val result = seg.toolResult
+                    if (result != null && result.isNotEmpty()) {
+                        SelectionContainer {
+                            Text(
+                                text = formatJsonOrPlain(result),
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.tool_calling_ellipsis),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    SelectionContainer {
+                        Text(
+                            text = seg.content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
