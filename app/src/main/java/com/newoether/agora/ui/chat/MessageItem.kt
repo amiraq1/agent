@@ -511,7 +511,7 @@ fun MessageItem(
 
     var isThoughtExpanded by rememberSaveable { mutableStateOf(false) }
     var showSegmentDetail by remember { mutableStateOf(false) }
-    var selectedSegment by remember { mutableStateOf<MessageSegment?>(null) }
+    var selectedSegmentIndex by remember { mutableIntStateOf(-1) }
     var currentThoughtBlockHeight by remember { mutableIntStateOf(0) }
     var stableCollapsedThoughtHeight by remember { mutableIntStateOf(0) }
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -1068,7 +1068,7 @@ fun MessageItem(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .clip(RoundedCornerShape(8.dp))
-                                                        .clickable { selectedSegment = seg; showSegmentDetail = true }
+                                                        .clickable { selectedSegmentIndex = idx; showSegmentDetail = true }
                                                         .padding(horizontal = 10.dp, vertical = 8.dp)
                                                 ) {
                                                     Text(
@@ -1099,7 +1099,7 @@ fun MessageItem(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .clip(RoundedCornerShape(8.dp))
-                                                        .clickable { selectedSegment = seg; showSegmentDetail = true }
+                                                        .clickable { selectedSegmentIndex = idx; showSegmentDetail = true }
                                                         .padding(horizontal = 10.dp, vertical = 8.dp)
                                                 ) {
                                                     Text(
@@ -1296,8 +1296,12 @@ fun MessageItem(
     }
 
     // Segment detail bottom sheet (custom implementation)
-    if (showSegmentDetail && selectedSegment != null) {
-        val seg = selectedSegment!!
+    if (showSegmentDetail && selectedSegmentIndex >= 0) {
+        val liveSegs = remember(message) { mergeAdjacentSegments(message.segments.orEmpty()) }
+        val seg = liveSegs.getOrNull(selectedSegmentIndex)
+        if (seg == null) {
+            showSegmentDetail = false
+        } else {
         val density = LocalDensity.current
         val configuration = LocalConfiguration.current
         val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
@@ -1601,6 +1605,7 @@ fun MessageItem(
                     }
                 }
             }
+        }
         }
     }
 }
