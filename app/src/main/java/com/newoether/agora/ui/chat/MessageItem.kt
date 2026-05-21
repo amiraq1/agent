@@ -1697,7 +1697,8 @@ fun MessageItem(
                                             val now = System.nanoTime()
                                             val dtSec = ((now - lastTime).coerceAtLeast(1_000_000L) / 1_000_000_000f)
                                             if (dtSec < 0.2f) {
-                                                flingVelocity = -dragAmount / screenHeightPx / dtSec
+                                                val instant = -dragAmount / screenHeightPx / dtSec
+                                                flingVelocity = flingVelocity * 0.6f + instant * 0.4f
                                             }
                                             lastTime = now
                                             val delta = -dragAmount / screenHeightPx
@@ -1707,15 +1708,23 @@ fun MessageItem(
                                         onDragEnd = {
                                             if (abs(flingVelocity) > 0.3f) {
                                                 val projected = (rawFraction + flingVelocity * 0.15f).coerceIn(0f, 1f)
-                                                isSnapping = true
-                                                coroutineScope.launch {
-                                                    visualFraction.animateTo(
-                                                        targetValue = projected,
-                                                        animationSpec = snapSpring,
-                                                        initialVelocity = flingVelocity
-                                                    )
-                                                    rawFraction = visualFraction.value
-                                                    isSnapping = false
+                                                val target = when {
+                                                    projected > (PARTIAL + FULL) / 2f -> FULL
+                                                    projected > 0.15f -> PARTIAL
+                                                    else -> 0f
+                                                }
+                                                if (abs(target - rawFraction) > 0.005f) {
+                                                    isSnapping = true
+                                                    coroutineScope.launch {
+                                                        if (target == 0f) {
+                                                            visualFraction.animateTo(0f, dismissSpring, initialVelocity = flingVelocity)
+                                                            showSegmentDetail = false
+                                                        } else {
+                                                            visualFraction.animateTo(target, snapSpring, initialVelocity = flingVelocity)
+                                                            rawFraction = visualFraction.value
+                                                            isSnapping = false
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
