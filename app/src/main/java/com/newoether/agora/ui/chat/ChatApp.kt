@@ -133,7 +133,11 @@ fun ChatApp(
     val drawerWidthPx = with(density) { drawerWidth.toPx() }
     val drawerProgress by remember {
         derivedStateOf {
-            if (drawerWidthPx > 0f) (drawerState.currentOffset / drawerWidthPx).coerceIn(0f, 1f) else 0f
+            if (drawerWidthPx > 0f) {
+                val offset = drawerState.currentOffset
+                if (offset.isNaN()) 0f
+                else (offset / drawerWidthPx).coerceIn(0f, 1f)
+            } else 0f
         }
     }
     // Bottom offset to clear the Settings button in the drawer.
