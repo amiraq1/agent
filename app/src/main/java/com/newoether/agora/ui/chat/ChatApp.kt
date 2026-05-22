@@ -480,7 +480,7 @@ fun ChatApp(
                     }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     FilledTonalButton(
                         onClick = {
