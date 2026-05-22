@@ -938,10 +938,10 @@ fun MessageItem(
                             val text = displayText ?: return@AnimatedVisibility
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
                                 if (isStreaming || message.status == MessageStatus.SENDING || message.status == MessageStatus.THINKING || message.status == MessageStatus.TOOL_CALLING) {
-                                    LinearProgressIndicator(
-                                        modifier = Modifier.width(80.dp),
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(12.dp),
                                         color = if (text == thinkingStatus) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        strokeWidth = 1.5.dp,
                                     )
                                 } else {
                                     val icon = when (message.status) {
