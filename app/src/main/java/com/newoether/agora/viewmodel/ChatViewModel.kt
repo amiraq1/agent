@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.newoether.agora.api.*
 import com.newoether.agora.data.ClaudeChatImporter
+import com.newoether.agora.data.GptChatImporter
 import com.newoether.agora.data.ApiKeyEntry
 import com.newoether.agora.data.CustomProviderConfig
 import com.newoether.agora.data.DataExporter
@@ -418,7 +419,17 @@ class ChatViewModel(
     private val _claudeImportResult = MutableStateFlow<ClaudeChatImporter.ImportResult?>(null)
     val claudeImportResult: StateFlow<ClaudeChatImporter.ImportResult?> = _claudeImportResult.asStateFlow()
 
- 
+    // GPT import state
+    private val _gptImportPreview = MutableStateFlow<GptChatImporter.ImportPreview?>(null)
+    val gptImportPreview: StateFlow<GptChatImporter.ImportPreview?> = _gptImportPreview.asStateFlow()
+
+    private val _gptImportProgress = MutableStateFlow<Float?>(null)
+    val gptImportProgress: StateFlow<Float?> = _gptImportProgress.asStateFlow()
+
+    private val _gptImportResult = MutableStateFlow<GptChatImporter.ImportResult?>(null)
+    val gptImportResult: StateFlow<GptChatImporter.ImportResult?> = _gptImportResult.asStateFlow()
+
+
     private val _conversationCount = MutableStateFlow(0)
     val conversationCount: StateFlow<Int> = _conversationCount.asStateFlow()
 
@@ -462,6 +473,7 @@ class ChatViewModel(
                                 text = SearchResultFormatter.format(it.text, appContext),
                                 images = it.images,
                                 thoughts = it.thoughts,
+                                thoughtTitle = it.thoughtTitle,
                                 tokenCount = it.tokenCount,
                                 status = it.status,
                                 participant = it.participant,
@@ -1999,6 +2011,107 @@ class ChatViewModel(
             } catch (e: Exception) {
                 _claudeImportProgress.value = null
                 emitSnackbar(getApplication<android.app.Application>().getString(R.string.claude_import_error_detail, e.localizedMessage ?: ""))
+            }
+        }
+    }
+
+    fun previewGptChat(bytes: ByteArray) {
+        try {
+            val importer = GptChatImporter()
+            val parseResult = importer.extractAndParse(bytes)
+            if (parseResult.isSuccess) {
+                val conversations = parseResult.getOrThrow()
+                val preview = importer.preview(conversations)
+                _gptImportPreview.value = preview
+            } else {
+                emitSnackbar(parseResult.exceptionOrNull()?.localizedMessage ?: "Parse error")
+                _gptImportPreview.value = null
+            }
+        } catch (e: Exception) {
+            emitSnackbar(e.localizedMessage ?: "Unknown error")
+            _gptImportPreview.value = null
+        }
+    }
+
+    fun setGptImportError(error: String) {
+        emitSnackbar(error)
+        _gptImportPreview.value = null
+    }
+
+    fun clearGptImportState() {
+        _gptImportPreview.value = null
+        _gptImportProgress.value = null
+        _gptImportResult.value = null
+    }
+
+    fun importGptChat(uri: Uri, strategy: com.newoether.agora.ui.settings.ImportStrategy, selectedIds: Set<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _gptImportProgress.value = 0.2f
+                val bytes = getApplication<android.app.Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes == null) {
+                    emitSnackbar(getApplication<android.app.Application>().getString(R.string.gpt_import_error_detail, "Could not read file"))
+                    return@launch
+                }
+
+                val importer = GptChatImporter()
+                val parseResult = importer.extractAndParse(bytes)
+                if (parseResult.isFailure) {
+                    emitSnackbar(getApplication<android.app.Application>().getString(R.string.gpt_import_error_detail, parseResult.exceptionOrNull()?.localizedMessage ?: "Parse error"))
+                    return@launch
+                }
+
+                _gptImportProgress.value = 0.4f
+                val conversations = parseResult.getOrThrow()
+                val preview = importer.preview(conversations)
+                val importData = importer.toImportFormat(conversations, selectedIds)
+
+                if (preview.totalMessageCount == 0) {
+                    emitSnackbar(getApplication<android.app.Application>().getString(R.string.gpt_import_no_data))
+                    return@launch
+                }
+
+                _gptImportProgress.value = 0.6f
+
+                val chatEntities = importData.conversations.map { ce ->
+                    ChatEntity(ce.id, ce.title, ce.lastUpdated, ce.selectedBranchesJson, ce.systemPromptId, ce.modelId)
+                }
+                val messageEntities = importData.messages.map { me ->
+                    MessageEntity(
+                        id = me.id, conversationId = me.conversationId, parentId = me.parentId,
+                        text = me.text, images = me.images, thoughts = me.thoughts,
+                        thoughtTitle = me.thoughtTitle, tokenCount = me.tokenCount,
+                        status = safeValueOf<MessageStatus>(me.status) ?: MessageStatus.SUCCESS,
+                        participant = safeValueOf<Participant>(me.participant) ?: Participant.MODEL,
+                        timestamp = me.timestamp, thoughtTimeMs = me.thoughtTimeMs,
+                        modelName = me.modelName, toolCallJson = me.toolCallJson,
+                        attachmentMeta = me.attachmentMeta
+                    )
+                }
+
+                val thoughtsCount = importData.messages.count { it.thoughts != null && it.thoughts.isNotBlank() }
+                if (strategy == com.newoether.agora.ui.settings.ImportStrategy.REPLACE) {
+                    chatDao.deleteAllConversations()
+                    chatEntities.forEach { chatDao.upsertConversation(it) }
+                    messageEntities.forEach { chatDao.upsertMessage(it) }
+                    _gptImportProgress.value = 0.8f
+                    _gptImportResult.value = GptChatImporter.ImportResult(chatEntities.size, messageEntities.size, thoughtsCount)
+                } else {
+                    val existingConvIds = chatDao.getAllConversationsList().map { it.id }.toSet()
+                    val existingMsgIds = chatDao.findExistingMessageIds(messageEntities.map { it.id }).toSet()
+                    val newCh = chatEntities.filterNot { it.id in existingConvIds }
+                    val newMsgs = messageEntities.filterNot { it.id in existingMsgIds }
+                    val newThoughtsCount = newMsgs.count { it.thoughts != null && it.thoughts.isNotBlank() }
+                    newCh.forEach { chatDao.upsertConversation(it) }
+                    newMsgs.forEach { chatDao.upsertMessage(it) }
+                    _gptImportProgress.value = 0.8f
+                    _gptImportResult.value = GptChatImporter.ImportResult(newCh.size, newMsgs.size, newThoughtsCount)
+                }
+                _gptImportProgress.value = null
+                refreshDataCounts()
+            } catch (e: Exception) {
+                _gptImportProgress.value = null
+                emitSnackbar(getApplication<android.app.Application>().getString(R.string.gpt_import_error_detail, e.localizedMessage ?: ""))
             }
         }
     }

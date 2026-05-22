@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.newoether.agora.R
 import com.newoether.agora.data.ClaudeChatImporter
+import com.newoether.agora.data.GptChatImporter
 import com.newoether.agora.data.DataExporter
 import com.newoether.agora.data.DataImporter
 import com.newoether.agora.viewmodel.ChatViewModel
@@ -49,6 +50,10 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val claudeImportPreview by viewModel.claudeImportPreview.collectAsState()
     val claudeImportProgress by viewModel.claudeImportProgress.collectAsState()
     val claudeImportResult by viewModel.claudeImportResult.collectAsState()
+
+    val gptImportPreview by viewModel.gptImportPreview.collectAsState()
+    val gptImportProgress by viewModel.gptImportProgress.collectAsState()
+    val gptImportResult by viewModel.gptImportResult.collectAsState()
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportPreviewDialog by remember { mutableStateOf(false) }
     var importUri by remember { mutableStateOf<Uri?>(null) }
@@ -58,6 +63,11 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var claudeFileUri by remember { mutableStateOf<Uri?>(null) }
     var claudeFileName by remember { mutableStateOf<String?>(null) }
     var showClaudeSuccessDialog by remember { mutableStateOf(false) }
+
+    var showGptImportDialog by remember { mutableStateOf(false) }
+    var gptFileUri by remember { mutableStateOf<Uri?>(null) }
+    var gptFileName by remember { mutableStateOf<String?>(null) }
+    var showGptSuccessDialog by remember { mutableStateOf(false) }
 
     val isExporting = exportProgress != null
     val isImporting = importProgress != null
@@ -118,6 +128,32 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         }
     }
 
+    // GPT chat file picker launcher
+    val gptChatLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            gptFileUri = uri
+            val name = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIdx = cursor.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst()) cursor.getString(nameIdx) else null
+            }
+            gptFileName = name
+            scope.launch {
+                try {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    if (bytes != null) {
+                        viewModel.previewGptChat(bytes)
+                    } else {
+                        viewModel.setGptImportError("Failed to read file")
+                    }
+                } catch (e: Exception) {
+                    viewModel.setGptImportError(e.localizedMessage ?: "Unknown error")
+                }
+            }
+        }
+    }
+
     // Show import preview dialog when preview is loaded
     LaunchedEffect(importPreview) {
         if (importPreview != null) {
@@ -126,7 +162,8 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     }
 
     val isClaudeImporting = claudeImportProgress != null
-    val isProgressVisible = isExporting || isImporting || isClaudeImporting
+    val isGptImporting = gptImportProgress != null
+    val isProgressVisible = isExporting || isImporting || isClaudeImporting || isGptImporting
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -186,6 +223,16 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable { claudeChatLauncher.launch(arrayOf("application/json", "*/*")) }
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.gpt_import_title)) },
+                        supportingContent = { Text(stringResource(R.string.gpt_import_subtitle)) },
+                        leadingContent = {
+                            Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { gptChatLauncher.launch(arrayOf("application/zip", "*/*")) }
+                    )
                 }
 
                 // Show Claude import dialog when preview is loaded
@@ -201,13 +248,28 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         showClaudeSuccessDialog = true
                     }
                 }
+
+                // Show GPT import dialog when preview is loaded
+                LaunchedEffect(gptImportPreview) {
+                    if (gptImportPreview != null) {
+                        showGptImportDialog = true
+                    }
+                }
+
+                // Show GPT import success dialog when result is available
+                LaunchedEffect(gptImportResult) {
+                    if (gptImportResult != null) {
+                        showGptSuccessDialog = true
+                    }
+                }
             }
         }
 
         // Progress dialog
         if (isProgressVisible) {
-            val progress = claudeImportProgress ?: exportProgress ?: importProgress ?: 0f
+            val progress = claudeImportProgress ?: gptImportProgress ?: exportProgress ?: importProgress ?: 0f
             val label = if (isClaudeImporting) stringResource(R.string.claude_import_progress)
+                        else if (isGptImporting) stringResource(R.string.gpt_import_progress)
                         else if (isExporting) stringResource(R.string.exporting_label)
                         else stringResource(R.string.importing_label)
 
@@ -408,6 +470,139 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 TextButton(onClick = {
                     showClaudeSuccessDialog = false
                     viewModel.clearClaudeImportState()
+                }) {
+                    Text(stringResource(R.string.provider_close))
+                }
+            }
+        )
+    }
+
+    // GPT import preview dialog
+    if (showGptImportDialog && gptImportPreview != null) {
+        val preview = gptImportPreview!!
+        var dialogSelectedIds by remember { mutableStateOf(preview.conversations.map { it.uuid }.toSet()) }
+        val allIds = preview.conversations.map { it.uuid }.toSet()
+        val allSelected = dialogSelectedIds.size == allIds.size
+        val selectedConvCount = preview.conversations.count { it.uuid in dialogSelectedIds }
+        val selectedMsgCount = preview.conversations.filter { it.uuid in dialogSelectedIds }.sumOf { it.messageCount }
+
+        AlertDialog(
+            onDismissRequest = {
+                showGptImportDialog = false
+                viewModel.clearGptImportState()
+            },
+            title = { Text(stringResource(R.string.gpt_import_title)) },
+            text = {
+                Column {
+                    Text(
+                        "$selectedConvCount ${stringResource(R.string.gpt_import_conversations)}, $selectedMsgCount ${stringResource(R.string.gpt_import_messages)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = {
+                            dialogSelectedIds = if (allSelected) emptySet() else allIds
+                        }) {
+                            Text(
+                                if (allSelected) stringResource(R.string.deselect_all) else stringResource(R.string.select_all),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                        items(preview.conversations.size) { index ->
+                            val conv = preview.conversations[index]
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        dialogSelectedIds = if (conv.uuid in dialogSelectedIds)
+                                            dialogSelectedIds - conv.uuid else dialogSelectedIds + conv.uuid
+                                    }
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = conv.uuid in dialogSelectedIds,
+                                    onCheckedChange = {
+                                        dialogSelectedIds = if (it)
+                                            dialogSelectedIds + conv.uuid else dialogSelectedIds - conv.uuid
+                                    }
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        conv.title.ifEmpty { "Untitled" },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        "${conv.messageCount} messages",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val finalIds = dialogSelectedIds
+                        showGptImportDialog = false
+                        viewModel.clearGptImportState()
+                        gptFileUri?.let {
+                            scope.launch {
+                                viewModel.importGptChat(it, ImportStrategy.MERGE, finalIds)
+                            }
+                        }
+                    },
+                    enabled = dialogSelectedIds.isNotEmpty()
+                ) {
+                    Text(stringResource(R.string.gpt_import_import))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showGptImportDialog = false
+                    viewModel.clearGptImportState()
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // GPT import success dialog
+    if (showGptSuccessDialog && gptImportResult != null) {
+        val result = gptImportResult!!
+        AlertDialog(
+            onDismissRequest = {
+                showGptSuccessDialog = false
+                viewModel.clearGptImportState()
+            },
+            title = { Text(stringResource(R.string.gpt_import_success)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.gpt_import_success_detail, result.conversationsImported, result.messagesImported))
+                    if (result.errors.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Errors: ${result.errors.joinToString(", ")}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showGptSuccessDialog = false
+                    viewModel.clearGptImportState()
                 }) {
                     Text(stringResource(R.string.provider_close))
                 }
