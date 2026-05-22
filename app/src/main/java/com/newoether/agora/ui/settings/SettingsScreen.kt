@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -61,18 +62,30 @@ private data class SettingsCategory(
     val icon: ImageVector
 )
 
-private val categories = listOf(
-    SettingsCategory("provider", R.string.settings_provider, R.string.settings_provider_desc, Icons.Default.Cloud),
-    SettingsCategory("prompts", R.string.settings_prompts, R.string.settings_prompts_desc, Icons.Default.Psychology),
-    SettingsCategory("models", R.string.settings_models, R.string.settings_models_desc, Icons.Default.Chat),
-    SettingsCategory("context", R.string.settings_context, R.string.settings_context_desc, Icons.Default.Memory),
-    SettingsCategory("websearch", R.string.settings_web_search, R.string.settings_web_search_desc, Icons.Default.Language),
-    SettingsCategory("search", R.string.search_title, R.string.search_desc, Icons.Default.Search),
-    SettingsCategory("shell", R.string.shell_title, R.string.shell_desc, Icons.Default.Terminal),
-    SettingsCategory("titlegen", R.string.settings_title_gen, R.string.settings_title_gen_desc, Icons.Default.Edit),
-    SettingsCategory("memory", R.string.settings_memory, R.string.settings_memory_desc, Icons.Default.Description),
-    SettingsCategory("datacontrol", R.string.settings_data_control, R.string.settings_data_control_desc, Icons.Default.Storage),
-    SettingsCategory("language", R.string.language_title, R.string.language_desc, Icons.Default.Translate)
+private data class SettingsGroupData(
+    val items: List<SettingsCategory>
+)
+
+private val settingsGroups = listOf(
+    SettingsGroupData(listOf(
+        SettingsCategory("provider", R.string.settings_provider, R.string.settings_provider_desc, Icons.Default.Cloud),
+        SettingsCategory("models", R.string.settings_models, R.string.settings_models_desc, Icons.Default.Chat),
+    )),
+    SettingsGroupData(listOf(
+        SettingsCategory("prompts", R.string.settings_prompts, R.string.settings_prompts_desc, Icons.Default.Psychology),
+        SettingsCategory("context", R.string.settings_context, R.string.settings_context_desc, Icons.Default.Memory),
+        SettingsCategory("titlegen", R.string.settings_title_gen, R.string.settings_title_gen_desc, Icons.Default.Edit),
+    )),
+    SettingsGroupData(listOf(
+        SettingsCategory("websearch", R.string.settings_web_search, R.string.settings_web_search_desc, Icons.Default.Language),
+        SettingsCategory("search", R.string.search_title, R.string.search_desc, Icons.Default.Search),
+        SettingsCategory("shell", R.string.shell_title, R.string.shell_desc, Icons.Default.Terminal),
+    )),
+    SettingsGroupData(listOf(
+        SettingsCategory("memory", R.string.settings_memory, R.string.settings_memory_desc, Icons.Default.Description),
+        SettingsCategory("datacontrol", R.string.settings_data_control, R.string.settings_data_control_desc, Icons.Default.Storage),
+        SettingsCategory("language", R.string.language_title, R.string.language_desc, Icons.Default.Translate),
+    )),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,26 +153,69 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         LazyColumn(
                             modifier = Modifier
                                 .padding(padding)
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
-                            items(categories) { cat ->
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = { Text(stringResource(cat.titleRes)) },
-                                    supportingContent = { Text(stringResource(cat.descriptionRes), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    leadingContent = {
-                                        Icon(cat.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    },
-                                    trailingContent = {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { selectedCategory = cat.key }
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            items(settingsGroups.size) { groupIndex ->
+                                val group = settingsGroups[groupIndex]
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    group.items.forEachIndexed { index, cat ->
+                                        if (index > 0) {
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                        }
+                                        val isFirst = index == 0
+                                        val isLast = index == group.items.lastIndex
+                                        val shape = when {
+                                            group.items.size == 1 -> RoundedCornerShape(24.dp)
+                                            isFirst -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 3.dp, bottomEnd = 3.dp)
+                                            isLast -> RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+                                            else -> RoundedCornerShape(3.dp)
+                                        }
+                                        Surface(
+                                            shape = shape,
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(shape)
+                                                .clickable { selectedCategory = cat.key }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    cat.icon,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(16.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = stringResource(cat.titleRes),
+                                                        style = MaterialTheme.typography.bodyLarge
+                                                    )
+                                                    Text(
+                                                        text = stringResource(cat.descriptionRes),
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Icon(
+                                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                if (groupIndex < settingsGroups.size - 1) {
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                }
                             }
                         }
                     }
