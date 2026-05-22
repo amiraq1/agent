@@ -700,7 +700,7 @@ fun ChatApp(
                     },
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
-                shadowElevation = 16.dp,
+                shadowElevation = 0.dp,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 Box(
