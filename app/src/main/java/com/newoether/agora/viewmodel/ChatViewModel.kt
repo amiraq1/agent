@@ -1345,7 +1345,7 @@ class ChatViewModel(
                 onStreamClear = { val msg = _streamingMessage.value; if (msg?.status != MessageStatus.STOPPED) { if (msg != null) { _allMessages.update { it.map { m -> if (m.id == msg.id) msg else m } } }; _streamingMessage.value = null }; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
             )
             } finally {
-                if (_isLoading.value) _isLoading.value = false
+                if (_isLoading.value && generationJob === currentCoroutineContext()[Job]) _isLoading.value = false
             }
         }
     }
