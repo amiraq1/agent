@@ -1405,6 +1405,7 @@ class GenerationManager(
                 totalText = "Error: ${e.localizedMessage ?: "An unexpected error occurred."}"
             }
         } finally {
+            val cancelledExternally = generationJob?.isCancelled == true
             withContext(NonCancellable) {
                 try {
                     if (generationId == myGenerationId) {
@@ -1429,7 +1430,7 @@ class GenerationManager(
                 } catch (e: Exception) {
                     DebugLog.e("AgoraVM", "Failed to persist message to DB", e)
                 }
-                if (generationId == myGenerationId) {
+                if (generationId == myGenerationId && !cancelledExternally) {
                     onStreamClear()
                     onLoadingChange(false)
                     onGeneratingIdChange(null)
