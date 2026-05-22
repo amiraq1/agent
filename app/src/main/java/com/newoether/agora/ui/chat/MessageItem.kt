@@ -1685,14 +1685,21 @@ private fun RecomposeSafeMarkdown(
         else -> 0f
     }
 
+    // Only render Layer 2 during streaming/transitions. In idle state,
+    // removing Layer 2 from the tree avoids a hidden duplicate text
+    // element that can intercept SelectionContainer handles.
+    val showL2 = isStreaming || crossfading || exitingStreaming
+
     Box(modifier = modifier) {
         if (stableText.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().zIndex(l1z).alpha(l1a)) {
                 render(stableText)
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().zIndex(l2z).alpha(l2a)) {
-            render(content)
+        if (showL2) {
+            Box(modifier = Modifier.fillMaxWidth().zIndex(l2z).alpha(l2a)) {
+                render(content)
+            }
         }
     }
 }
