@@ -132,7 +132,8 @@ fun MainNavigation(viewModel: ChatViewModel) {
     var savedPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
     if (pdfPages.isNotEmpty()) { savedPdfPages = pdfPages } else { savedPdfPages = emptyList() }
     val snackbarHostState = remember { SnackbarHostState() }
-    var snackbarBottomPadding by remember { mutableStateOf(0.dp) }
+    var chatSnackbarOffset by remember { mutableStateOf(0.dp) }
+    val snackbarBottomPadding = if (showSettings) 0.dp else chatSnackbarOffset
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
@@ -172,7 +173,7 @@ fun MainNavigation(viewModel: ChatViewModel) {
                     viewModel.showPdfPreview(pages, idx)
                     fullScreenImageUrl = pages[idx]
                 },
-                onBottomBarHeightChanged = { snackbarBottomPadding = it }
+                onSnackbarOffsetChanged = { chatSnackbarOffset = it }
             )
 
             // Scrim that fades in behind the settings page

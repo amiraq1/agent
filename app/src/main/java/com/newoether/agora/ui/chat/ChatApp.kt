@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,7 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -76,7 +79,7 @@ fun ChatApp(
     onImageClick: (String) -> Unit,
     onFileContentClick: ((String, String) -> Unit)? = null,
     onPdfPagesClick: ((List<String>, Int) -> Unit)? = null,
-    onBottomBarHeightChanged: (androidx.compose.ui.unit.Dp) -> Unit = {}
+    onSnackbarOffsetChanged: (androidx.compose.ui.unit.Dp) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -127,7 +130,25 @@ fun ChatApp(
     val drawerWidth = configuration.screenWidthDp.dp * 0.8f
     var bottomBarHeightPx by rememberSaveable { mutableFloatStateOf(0f) }
     val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
-    LaunchedEffect(bottomBarHeight) { onBottomBarHeightChanged(bottomBarHeight) }
+    val drawerWidthPx = with(density) { drawerWidth.toPx() }
+    val drawerProgress by remember {
+        derivedStateOf {
+            if (drawerWidthPx > 0f) (drawerState.currentOffset / drawerWidthPx).coerceIn(0f, 1f) else 0f
+        }
+    }
+    // Bottom offset to clear the Settings button in the drawer.
+    var settingsButtonBottomDp by remember { mutableFloatStateOf(80f) }
+    val snackbarOffset by animateDpAsState(
+        targetValue = if (drawerProgress <= 0.5f) {
+            bottomBarHeight
+        } else {
+            val t = ((drawerProgress - 0.5f) * 2f).coerceIn(0f, 1f)
+            (bottomBarHeight.value + (settingsButtonBottomDp - bottomBarHeight.value) * t).dp
+        },
+        animationSpec = tween(200),
+        label = "snackbarOffset"
+    )
+    LaunchedEffect(snackbarOffset) { onSnackbarOffsetChanged(snackbarOffset) }
     val listState = viewModel.listState
     val textFieldState = rememberSaveable(saver = androidx.compose.foundation.text.input.TextFieldState.Saver) { androidx.compose.foundation.text.input.TextFieldState() }
     val inputFocusRequester = remember { FocusRequester() }
@@ -495,7 +516,13 @@ fun ChatApp(
                             onOpenSettings()
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { coords ->
+                                val screenHeightPx = configuration.screenHeightDp * density.density
+                                val buttonBottomPx = coords.positionInWindow().y + coords.size.height
+                                settingsButtonBottomDp = (screenHeightPx - buttonBottomPx) / density.density
+                            },
                         shape = CircleShape
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = null)
