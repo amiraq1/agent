@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,11 +57,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -1088,8 +1087,8 @@ fun MessageItem(
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                         fontWeight = FontWeight.SemiBold
                                                     )
-                                                    val thoughtMarkdown = remember {
-                                                        movableContentOf {
+                                                    Box {
+                                                        SelectionContainer {
                                                             RecomposeSafeMarkdown(
                                                                 content = seg.content,
                                                                 isStreaming = isStreaming
@@ -1105,9 +1104,19 @@ fun MessageItem(
                                                                 )
                                                             }
                                                         }
+                                                        if (isStreaming) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .matchParentSize()
+                                                                    .combinedClickable(
+                                                                        interactionSource = remember { MutableInteractionSource() },
+                                                                        indication = null,
+                                                                        onClick = { },
+                                                                        onLongClick = { }
+                                                                    )
+                                                            )
+                                                        }
                                                     }
-                                                    if (!isStreaming) SelectionContainer { thoughtMarkdown() }
-                                                    if (isStreaming) { thoughtMarkdown() }
                                                 }
                                             } else if (seg.type == "tool") {
                                                 val isToolError = (seg.toolResult ?: "").startsWith("Error")
@@ -1175,8 +1184,8 @@ fun MessageItem(
                             } else if (debouncedText.isNotEmpty()) {
                                 val spans = remember(debouncedText) { parseLatexSpans(debouncedText) }
                                 if (spans.all { !it.isLatex }) {
-                                    val mainMarkdown = remember {
-                                        movableContentOf {
+                                    Box {
+                                        SelectionContainer {
                                             RecomposeSafeMarkdown(
                                                 content = debouncedText,
                                                 isStreaming = isStreaming
@@ -1192,9 +1201,19 @@ fun MessageItem(
                                                 )
                                             }
                                         }
+                                        if (isStreaming) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .matchParentSize()
+                                                    .combinedClickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = { },
+                                                        onLongClick = { }
+                                                    )
+                                            )
+                                        }
                                     }
-                                    if (!isStreaming) SelectionContainer { mainMarkdown() }
-                                    if (isStreaming) { mainMarkdown() }
                                 } else {
                                     val paragraphs = remember(debouncedText) { splitParagraphs(debouncedText) }
                                     Column {
@@ -1657,7 +1676,6 @@ private fun RecomposeSafeMarkdown(
     var fadeKey by remember { mutableIntStateOf(0) }
     var wasStreaming by remember { mutableStateOf(false) }
     var waitingForFade by remember { mutableStateOf(false) }
-
     // State machine
     if (isStreaming) {
         waitingForFade = false
@@ -1674,23 +1692,18 @@ private fun RecomposeSafeMarkdown(
         }
         if (waitingForFade) {
             if (!fading) {
-                // Current fade (if any) completed — write final to hidden, start final fade
                 if (front == 0) buf1 = content else buf0 = content
                 waitingForFade = false
                 fadeKey++
                 fading = true
                 fadeAlpha = 0f
             }
-            // If fading still in progress, wait (don't interrupt)
         }
         if (!waitingForFade && !fading) {
-            // Normal idle — update front buffer, clear hidden
             if (front == 0) {
                 if (buf0 != content) buf0 = content
-                buf1 = ""
             } else {
                 if (buf1 != content) buf1 = content
-                buf0 = ""
             }
         }
     }
@@ -1698,8 +1711,6 @@ private fun RecomposeSafeMarkdown(
 
     // Fade animation — keyed by fadeKey so every fade gets a fresh LaunchedEffect
     LaunchedEffect(fadeKey) {
-        // Guard: only animate when a fade was actually requested
-        // (fadeKey=0 on init would otherwise run a spurious fade)
         if (!fading) return@LaunchedEffect
         withFrameNanos { }
         val startNs = withFrameNanos { it }

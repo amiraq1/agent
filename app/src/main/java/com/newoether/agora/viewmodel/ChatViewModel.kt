@@ -1342,7 +1342,7 @@ class ChatViewModel(
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
                 onGeneratingIdChange = { _generatingInConversationId.value = it },
-                onStreamClear = { _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
+                onStreamClear = { val msg = _streamingMessage.value; if (msg != null) { _allMessages.update { it.map { m -> if (m.id == msg.id) msg else m } } }; _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
             )
             } finally {
                 if (_isLoading.value) _isLoading.value = false
@@ -1442,7 +1442,7 @@ class ChatViewModel(
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
                 onGeneratingIdChange = { _generatingInConversationId.value = it },
-                onStreamClear = { _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
+                onStreamClear = { val msg = _streamingMessage.value; if (msg != null) { _allMessages.update { it.map { m -> if (m.id == msg.id) msg else m } } }; _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
             )
         }
     }
@@ -1753,7 +1753,7 @@ class ChatViewModel(
                 onStreamUpdate = { _streamingMessage.value = it },
                 onLoadingChange = { _isLoading.value = it },
                 onGeneratingIdChange = { _generatingInConversationId.value = it },
-                onStreamClear = { _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
+                onStreamClear = { val msg = _streamingMessage.value; if (msg != null) { _allMessages.update { it.map { m -> if (m.id == msg.id) msg else m } } }; _streamingMessage.value = null; val id = activeEmbeddingModelId.value; if (id.isNotEmpty()) cacheMessagesForModel(id, silent = true) }
             )
 
             val lastMsg = _allMessages.value.find { it.id == modelMessageId }
