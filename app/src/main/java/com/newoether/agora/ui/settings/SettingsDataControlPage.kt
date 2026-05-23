@@ -80,7 +80,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
     // SAF launchers
     val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
+        ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         if (uri != null && pendingExportCategories.isNotEmpty()) {
             viewModel.exportData(uri, pendingExportCategories, pendingExportIncludeApiKeys)
@@ -215,16 +215,6 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 // Third party group
                 SettingsGroup(title = stringResource(R.string.third_party_import)) {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.claude_import_title)) },
-                        supportingContent = { Text(stringResource(R.string.claude_import_subtitle)) },
-                        leadingContent = {
-                            Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { claudeChatLauncher.launch(arrayOf("application/json", "*/*")) }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    ListItem(
                         headlineContent = { Text(stringResource(R.string.gpt_import_title)) },
                         supportingContent = { Text(stringResource(R.string.gpt_import_subtitle)) },
                         leadingContent = {
@@ -232,6 +222,16 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable { gptChatLauncher.launch(arrayOf("application/zip", "*/*")) }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.claude_import_title)) },
+                        supportingContent = { Text(stringResource(R.string.claude_import_subtitle)) },
+                        leadingContent = {
+                            Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { claudeChatLauncher.launch(arrayOf("application/json", "*/*")) }
                     )
                 }
 
