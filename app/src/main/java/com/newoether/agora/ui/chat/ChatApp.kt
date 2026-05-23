@@ -37,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -721,26 +722,53 @@ fun ChatApp(
                 }
             }
 
+            val gradientTopPaddingPx = with(density) { 20.dp.toPx() }
+            val gradientWidthPx = with(density) { 40.dp.toPx() }
+            val bgColor = MaterialTheme.colorScheme.background
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
-                    .onSizeChanged {
-                        bottomBarHeightPx = it.height.toFloat()
-                    }
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(8.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 0.dp,
-                shape = RoundedCornerShape(28.dp)
+                    .drawBehind {
+                        val totalH = size.height
+                        if (totalH > 0f) {
+                            val transparentEnd = (gradientTopPaddingPx / totalH).coerceIn(0f, 1f)
+                            val fadeEnd = ((gradientTopPaddingPx + gradientWidthPx) / totalH).coerceIn(0f, 1f)
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        transparentEnd to Color.Transparent,
+                                        fadeEnd to bgColor,
+                                    ),
+                                    startY = 0f,
+                                    endY = totalH
+                                )
+                            )
+                        }
+                    },
+                color = Color.Transparent
             ) {
-                Box(
-                    contentAlignment = Alignment.BottomCenter
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
+                        .onSizeChanged {
+                            bottomBarHeightPx = it.height.toFloat()
+                        }
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                    shadowElevation = 0.dp,
+                    shape = RoundedCornerShape(28.dp)
                 ) {
-                    ChatBottomBar(
+                    Box(
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        ChatBottomBar(
                         onSendMessage = { text, attachments ->
                             viewModel.sendMessage(text, attachments = attachments)
                             scope.launch {
@@ -778,6 +806,7 @@ fun ChatApp(
                     )
                 }
             }
+        }
         }
     }
 
