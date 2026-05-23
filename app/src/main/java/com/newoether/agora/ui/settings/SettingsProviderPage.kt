@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
@@ -130,15 +129,27 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             }
 
             // Build items list based on selected provider
+            val isCustom = customProviders.any { it.name == viewingProvider }
             val providerItems: List<@Composable () -> Unit> = buildList {
                 add {
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    var showProviderMenu by remember { mutableStateOf(false) }
+                    SettingsItem(
                         headlineContent = { Text(stringResource(R.string.provider_api_provider)) },
                         supportingContent = { Text(viewingProvider) },
                         leadingContent = {
                             Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         },
+                        trailingContent = if (isCustom) {{
+                            Box {
+                                IconButton(onClick = { showProviderMenu = true }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
+                                }
+                                DropdownMenu(expanded = showProviderMenu, onDismissRequest = { showProviderMenu = false }, shape = RoundedCornerShape(12.dp)) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showProviderMenu = false; showRenameProvider = true })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showProviderMenu = false; showDeleteProvider = true })
+                                }
+                            }
+                        }} else null,
                         modifier = Modifier.clickable { showProviderDialog = true }
                     )
                 }
@@ -146,8 +157,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 if (viewingProvider == "Local") {
                     // Local chat model management
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.local_chat_models)) },
                             supportingContent = { Text(stringResource(R.string.local_chat_models_count, localChatModels.size)) },
                             leadingContent = {
@@ -163,8 +173,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     localChatModels.forEach { model ->
                         add {
                             var showMenu by remember { mutableStateOf(false) }
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(model.alias, fontWeight = FontWeight.Medium) },
                                 supportingContent = {
                                     Text("${model.modelId}\nctx=${model.nCtx}  temp=${model.temperature}  topP=${model.topP}")
@@ -172,13 +181,14 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 leadingContent = {
                                     RadioButton(
                                         selected = model.id == activeLocalId,
-                                        onClick = { viewModel.setActiveLocalChatModel(model.id) }
+                                        onClick = { viewModel.setActiveLocalChatModel(model.id) },
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 },
                                 trailingContent = {
                                     Box {
-                                        IconButton(onClick = { showMenu = true }) {
-                                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                                        IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                         }
                                         DropdownMenu(
                                             expanded = showMenu,
@@ -204,19 +214,26 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
 
                     add {
-                        TextButton(
-                            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                            enabled = !importingModel,
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .clickable(enabled = !importingModel) { filePickerLauncher.launch(arrayOf("*/*")) }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             if (importingModel) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.importing_model))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.importing_model), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                                }
                             } else {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.import_model_chat))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.import_model_chat), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                                }
                             }
                         }
                     }
@@ -274,10 +291,8 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     }
 
-                    val isCustom = customProviders.any { it.name == viewingProvider }
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(if (viewingProvider == "Ollama" || isCustom) stringResource(R.string.provider_api_keys_optional) else stringResource(R.string.provider_api_keys)) },
                             supportingContent = {
                                 val providerKeys = apiKeys.filter { it.provider == viewingProvider }
@@ -290,17 +305,16 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     apiKeys.filter { it.provider == viewingProvider }.forEach { entry ->
                         add {
                             var showMenu by remember { mutableStateOf(false) }
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(entry.name, fontWeight = FontWeight.Medium) },
                                 supportingContent = { Text(entry.key.take(4) + "••••••••" + entry.key.takeLast(4)) },
                                 leadingContent = {
-                                    RadioButton(selected = entry.id == activeApiKeyIds[viewingProvider], onClick = { viewModel.setActiveApiKey(viewingProvider, entry.id) })
+                                    RadioButton(selected = entry.id == activeApiKeyIds[viewingProvider], onClick = { viewModel.setActiveApiKey(viewingProvider, entry.id) }, modifier = Modifier.size(24.dp))
                                 },
                                 trailingContent = {
                                     Box {
-                                        IconButton(onClick = { showMenu = true }) {
-                                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                                        IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                         }
                                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
                                             DropdownMenuItem(text = { Text(stringResource(R.string.provider_edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
@@ -314,43 +328,22 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
 
                     add {
-                        TextButton(
-                            onClick = { showKeyDialog = ApiKeyEntry(name = "", key = "", provider = viewingProvider) },
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .clickable { showKeyDialog = ApiKeyEntry(name = "", key = "", provider = viewingProvider) }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.provider_add_key))
-                        }
-                    }
-
-                    if (isCustom) {
-                        add {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    TextButton(onClick = { showRenameProvider = true }) {
-                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(stringResource(R.string.custom_provider_rename))
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    TextButton(onClick = { showDeleteProvider = true }) {
-                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(stringResource(R.string.custom_provider_delete), color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.provider_add_key), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
+
                 }
             }
             SettingsGroup(title = stringResource(R.string.settings_provider), items = providerItems)
@@ -719,8 +712,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             else -> apiKeys.any { it.provider == p }
                         }
 
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (isConfigured) {
@@ -731,10 +723,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             fontWeight = FontWeight.Black
                                         )
                                     }
-                                    Text(
-                                        p,
-                                        color = if (isConfigured) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
+                                    Text(p)
                                     if (isCustom) {
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primaryContainer) {
@@ -748,10 +737,12 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     }
                                 }
                             },
-                            modifier = Modifier.clickable {
-                                viewingProvider = p
-                                showProviderDialog = false
-                            }
+                            modifier = Modifier
+                                .clickable {
+                                    viewingProvider = p
+                                    showProviderDialog = false
+                                }
+                                .padding(vertical = 3.dp)
                         )
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -8,6 +8,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -133,8 +135,7 @@ private fun PromptList(
         ) {
             val promptItems: List<@Composable () -> Unit> = buildList {
                 add {
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    SettingsItem(
                         headlineContent = { Text(stringResource(R.string.prompts_default)) },
                         supportingContent = { Text(stringResource(R.string.prompts_default_desc)) },
                         leadingContent = {
@@ -146,22 +147,21 @@ private fun PromptList(
                 systemPrompts.forEach { entry ->
                     add {
                         var showMenu by remember { mutableStateOf(false) }
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(entry.title, fontWeight = FontWeight.Medium) },
                             supportingContent = {
                                 val preview = entry.resolvedSystemItems.firstOrNull()?.value ?: entry.content
                                 Text(preview, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             },
                             leadingContent = {
-                                RadioButton(selected = entry.id == activeSystemPromptId, onClick = { onSelectPrompt(entry.id) })
+                                RadioButton(selected = entry.id == activeSystemPromptId, onClick = { onSelectPrompt(entry.id) }, modifier = Modifier.size(24.dp))
                             },
                             trailingContent = {
                                 Box {
-                                    IconButton(onClick = { showMenu = true }) {
-                                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
+                                    IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
+                                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                     }
-                                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+                                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
                                         DropdownMenuItem(text = { Text(stringResource(R.string.provider_edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; onEdit(entry) })
                                         DropdownMenuItem(text = { Text(stringResource(R.string.provider_delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDeleteRequest(entry) })
                                     }
@@ -173,13 +173,19 @@ private fun PromptList(
                 }
 
                 add {
-                    TextButton(
-                        onClick = onAdd,
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
+                            .clickable { onAdd() }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.prompts_add))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.prompts_add), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }

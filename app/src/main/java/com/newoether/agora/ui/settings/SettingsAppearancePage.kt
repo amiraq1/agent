@@ -107,17 +107,13 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 items = ColorSchemePreset.entries.map { preset ->
                     {
                         val presetPrimary = colorSchemeForPreset(preset).light.primary
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = {
                                 Text(
                                     text = presetDisplayName(preset),
                                     fontWeight = if (preset == currentPreset) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
-                            supportingContent = if (dynamicColor && isDynamicAvailable) {
-                                { Text(stringResource(R.string.dynamic_color_overrides_scheme)) }
-                            } else null,
                             leadingContent = {
                                 Box(
                                     modifier = Modifier
@@ -129,7 +125,8 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             trailingContent = {
                                 RadioButton(
                                     selected = preset == currentPreset,
-                                    onClick = { viewModel.setColorScheme(preset.name) }
+                                    onClick = { viewModel.setColorScheme(preset.name) },
+                                    enabled = !dynamicColor || !isDynamicAvailable
                                 )
                             },
                             modifier = Modifier
@@ -146,8 +143,7 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     title = stringResource(R.string.dynamic_color),
                     items = buildList {
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.dynamic_color)) },
                                 supportingContent = { Text(stringResource(R.string.dynamic_color_desc)) },
                                 trailingContent = {
@@ -155,7 +151,8 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         checked = dynamicColor,
                                         onCheckedChange = { viewModel.setDynamicColor(it) }
                                     )
-                                }
+                                },
+                                modifier = Modifier.clickable { viewModel.setDynamicColor(!dynamicColor) }
                             )
                         }
                     }
@@ -167,8 +164,7 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun ThemeModeOption(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onClick: () -> Unit) {
-    ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    SettingsItem(
         headlineContent = { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
         leadingContent = {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)

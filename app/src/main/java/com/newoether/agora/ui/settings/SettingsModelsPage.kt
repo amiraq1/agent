@@ -85,8 +85,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         val providerName = selectedModel.substringBefore(":")
                         val activeDisplayName = activeAlias ?: cleanId.removePrefix("models/")
 
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = {
                                 Text(
                                     if (enabledModels.isEmpty()) stringResource(R.string.models_no_models) else activeDisplayName,
@@ -94,7 +93,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 )
                             },
                             supportingContent = if (enabledModels.isNotEmpty()) {
-                                { Text(providerName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) }
+                                { Text(providerName, style = MaterialTheme.typography.bodySmall) }
                             } else null,
                             leadingContent = { Icon(Icons.Default.Chat, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                             modifier = Modifier.clickable(enabled = enabledModels.isNotEmpty()) { showActiveModelDialog = true }
@@ -107,8 +106,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.models_available),
                 items = buildList {
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.models_sync)) },
                             supportingContent = { Text(stringResource(R.string.models_sync_desc)) },
                             leadingContent = { Icon(Icons.Default.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -121,8 +119,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 add {
                                     val isExpanded = expandedProviders[providerName] ?: false
                                     Column {
-                                        ListItem(
-                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                        SettingsItem(
                                             headlineContent = { Text(providerName, fontWeight = FontWeight.Bold) },
                                             supportingContent = { Text(stringResource(R.string.models_count, models.size)) },
                                             trailingContent = {
@@ -143,8 +140,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                                     val cleanId = model.substringAfter(":")
                                                     val displayName = alias ?: cleanId.removePrefix("models/")
 
-                                                    ListItem(
-                                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                    SettingsItem(
                                                         headlineContent = { Text(displayName) },
                                                         supportingContent = if (alias != null) { { Text(cleanId.removePrefix("models/")) } } else null,
                                                         trailingContent = {
@@ -186,13 +182,12 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         val cleanId = model.substringAfter(":")
                         val displayName = alias ?: cleanId.removePrefix("models/")
 
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = {
                                 Text(displayName, fontWeight = if (model == selectedModel) FontWeight.Bold else FontWeight.Normal)
                             },
                             supportingContent = {
-                                Text(model.substringBefore(":"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                                Text(model.substringBefore(":"), style = MaterialTheme.typography.bodySmall)
                             },
                             leadingContent = {
                                 RadioButton(

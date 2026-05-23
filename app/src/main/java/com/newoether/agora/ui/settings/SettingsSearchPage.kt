@@ -111,8 +111,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.memory_access_title),
                 items = listOf(
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.memory_access_past)) },
                             supportingContent = { Text(stringResource(R.string.memory_access_past_desc)) },
                             leadingContent = { Icon(Icons.Default.Chat, null, tint = MaterialTheme.colorScheme.primary) },
@@ -129,8 +128,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.auto_cache_title),
                 items = listOf(
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.auto_cache)) },
                             supportingContent = { Text(stringResource(R.string.auto_cache_desc)) },
                             leadingContent = { Icon(Icons.Default.Cached, null, tint = MaterialTheme.colorScheme.primary) },
@@ -147,8 +145,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.search_methods_title),
                 items = buildList {
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.model_search_method)) },
                             supportingContent = { Text(stringResource(R.string.model_search_method_desc)) },
                             leadingContent = { Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary) }
@@ -156,8 +153,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     searchMethods.forEach { method ->
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(method.labelRes)) },
                                 leadingContent = {
                                     RadioButton(
@@ -170,8 +166,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     }
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.manual_search_method)) },
                             supportingContent = { Text(stringResource(R.string.manual_search_method_desc)) },
                             leadingContent = { Icon(Icons.Default.ManageSearch, null, tint = MaterialTheme.colorScheme.primary) }
@@ -179,8 +174,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     searchMethods.forEach { method ->
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(method.labelRes)) },
                                 leadingContent = {
                                     RadioButton(
@@ -200,8 +194,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 items = buildList {
                     if (embeddingModels.isEmpty()) {
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.no_embedding_models)) },
                                 leadingContent = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) }
                             )
@@ -214,8 +207,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 val isCaching = progress != null
                                 val counts = cacheCounts[model.id]
                                 val allCached = counts != null && counts.second > 0 && counts.first >= counts.second
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                SettingsItem(
                                     headlineContent = { Text(model.name) },
                                     supportingContent = {
                                         val typeLabel = if (model.type == com.newoether.agora.data.EmbeddingModelType.REMOTE)
@@ -294,7 +286,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     add {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             TextButton(onClick = {
@@ -483,8 +475,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         if (localFilePath.isNotBlank()) {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.local_model_ready)) },
                                 leadingContent = {
                                     Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)

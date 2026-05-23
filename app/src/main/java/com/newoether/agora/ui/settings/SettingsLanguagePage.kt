@@ -78,8 +78,7 @@ fun SettingsLanguagePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.language_title),
                 items = languages.map { lang ->
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(lang.label, fontWeight = if (appLanguage == lang.code) FontWeight.Bold else FontWeight.Normal) },
                             leadingContent = {
                                 RadioButton(

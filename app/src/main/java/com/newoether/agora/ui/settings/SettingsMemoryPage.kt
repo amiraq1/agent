@@ -82,8 +82,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.memory_access_title),
                 items = listOf(
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.memory_access_saved)) },
                             supportingContent = { Text(stringResource(R.string.memory_access_saved_desc)) },
                             leadingContent = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary) },
@@ -94,8 +93,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                     },
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.memory_access_active)) },
                             supportingContent = { Text(stringResource(R.string.memory_access_active_desc)) },
                             leadingContent = { Icon(Icons.Default.Memory, null, tint = MaterialTheme.colorScheme.primary) },
@@ -112,8 +110,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.memory_active_title),
                 items = listOf(
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.memory_active_context)) },
                             supportingContent = {
                                 Text(
@@ -135,8 +132,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.memory_saved_title),
                 items = buildList {
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.memory_add)) },
                             supportingContent = { Text(stringResource(R.string.memory_add_desc)) },
                             leadingContent = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) },
@@ -145,8 +141,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     if (memoryFiles.isEmpty()) {
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.memory_no_files), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
                                 supportingContent = { Text(stringResource(R.string.memory_create_hint)) }
                             )
@@ -156,8 +151,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             add {
                                 var showFileMenu by remember { mutableStateOf(false) }
                                 val displayName = file.name.removeSuffix(".md")
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                SettingsItem(
                                     headlineContent = { Text(displayName, fontWeight = FontWeight.Medium) },
                                     supportingContent = if (file.description.isNotBlank()) {{ Text(file.description) }} else null,
                                     leadingContent = { Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) },

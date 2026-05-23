@@ -69,8 +69,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             SettingsGroup(title = stringResource(R.string.shell_title), items = listOf({
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                SettingsItem(
                     headlineContent = { Text(stringResource(R.string.shell_enable)) },
                     supportingContent = { Text(stringResource(R.string.shell_enable_desc)) },
                     leadingContent = { Icon(Icons.Default.Terminal, null, tint = MaterialTheme.colorScheme.primary) },
@@ -122,32 +121,32 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     }
                                 }
 
-                                ListItem(
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    headlineContent = {
-                                        Text(
-                                            device.name.ifBlank { stringResource(R.string.search_untitled) },
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    },
-                                    supportingContent = {
-                                        if (device.description.isNotBlank()) Text(device.description)
-                                    },
-                                    leadingContent = {
-                                        Icon(Icons.Default.Devices, null, tint = MaterialTheme.colorScheme.primary)
-                                    },
-                                    trailingContent = {
-                                        IconButton(onClick = { expanded = !expanded }) {
-                                            Icon(
-                                                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                                stringResource(R.string.edit)
+                                Column {
+                                    SettingsItem(
+                                        headlineContent = {
+                                            Text(
+                                                device.name.ifBlank { stringResource(R.string.search_untitled) },
+                                                fontWeight = FontWeight.Medium
                                             )
-                                        }
-                                    },
-                                    modifier = Modifier.clickable { expanded = !expanded }
-                                )
+                                        },
+                                        supportingContent = {
+                                            if (device.description.isNotBlank()) Text(device.description)
+                                        },
+                                        leadingContent = {
+                                            Icon(Icons.Default.Devices, null, tint = MaterialTheme.colorScheme.primary)
+                                        },
+                                        trailingContent = {
+                                            IconButton(onClick = { expanded = !expanded }) {
+                                                Icon(
+                                                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                    stringResource(R.string.edit)
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier.clickable { expanded = !expanded }
+                                    )
 
-                                AnimatedVisibility(
+                                    AnimatedVisibility(
                                     visible = expanded,
                                     enter = expandVertically(),
                                     exit = shrinkVertically()
@@ -157,8 +156,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             .fillMaxWidth()
                                             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                                     ) {
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                        Spacer(Modifier.height(12.dp))
+                                        Spacer(Modifier.height(8.dp))
 
                                         OutlinedTextField(
                                             value = nameInput,
@@ -271,6 +269,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         }
                                     }
                                 }
+                            }
                             }
                         }
                     }

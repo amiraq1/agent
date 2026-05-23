@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -59,11 +60,58 @@ fun SettingsGroup(
                 Surface(
                     shape = shape,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.fillMaxWidth().clip(shape)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     item()
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsItem(
+    modifier: Modifier = Modifier,
+    headlineContent: @Composable () -> Unit,
+    supportingContent: (@Composable () -> Unit)? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+) {
+    val verticalPadding = if (supportingContent == null) 12.dp else 16.dp
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = verticalPadding),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (leadingContent != null) {
+            CompositionLocalProvider(
+                LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                leadingContent()
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.bodyLarge,
+                LocalContentColor provides MaterialTheme.colorScheme.onSurface
+            ) {
+                headlineContent()
+            }
+            if (supportingContent != null) {
+                Spacer(modifier = Modifier.height(3.dp))
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodyMedium,
+                    LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    supportingContent()
+                }
+            }
+        }
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(16.dp))
+            trailingContent()
         }
     }
 }
@@ -106,6 +154,7 @@ private val settingsGroups = listOf(
 @Composable
 fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
     val isSyncingModels by viewModel.isSyncingModels.collectAsState()
     val fetchingModelsMessage = stringResource(R.string.snackbar_fetching_models)
 
@@ -167,6 +216,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     ) { padding ->
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier
                                 .padding(padding)
                                 .navigationBarsPadding()

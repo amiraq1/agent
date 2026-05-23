@@ -100,7 +100,7 @@ fun SettingsClaudeImportPage(
                 title = stringResource(R.string.claude_import_title),
                 items = buildList {
                     add {
-                        ListItem(
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.claude_import_select_file)) },
                             supportingContent = {
                                 if (fileName != null) {
@@ -112,7 +112,6 @@ fun SettingsClaudeImportPage(
                             leadingContent = {
                                 Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { filePickerLauncher.launch(arrayOf("application/json", "application/zip", "*/*")) }
                         )
                     }

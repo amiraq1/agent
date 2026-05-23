@@ -58,8 +58,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.settings_title_gen),
                 items = buildList {
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.title_gen_auto)) },
                             supportingContent = { Text(stringResource(R.string.title_gen_auto_desc)) },
                             leadingContent = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
@@ -71,8 +70,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     if (titleGenEnabled) {
                         add {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.title_gen_model)) },
                                 supportingContent = {
                                     val displayName = if (titleGenModel == null) stringResource(R.string.title_gen_current_model) else {
@@ -99,8 +97,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.title_gen_current_model), fontWeight = if (titleGenModel == null) FontWeight.Bold else FontWeight.Normal) },
                             leadingContent = {
                                 RadioButton(selected = titleGenModel == null, onClick = {
@@ -117,8 +114,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     items(enabledModelsList) { model ->
                         val alias = modelAliases[model]
                         val displayName = alias ?: model.substringAfter(":").removePrefix("models/")
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(displayName, fontWeight = if (titleGenModel == model) FontWeight.Bold else FontWeight.Normal) },
                             supportingContent = { Text(model.substringBefore(":"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                             leadingContent = {

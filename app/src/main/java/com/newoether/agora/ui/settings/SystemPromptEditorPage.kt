@@ -309,13 +309,12 @@ fun SystemPromptEditorPage(
             Spacer(modifier = Modifier.height(8.dp))
             val availableVars = if (selectedTab == 0) PredefinedVariables.ALL.filter { it !in PredefinedVariables.PER_MESSAGE_VARS } else PredefinedVariables.ALL
             for (key in availableVars) {
-                ListItem(
+                SettingsItem(
                     headlineContent = { Text(variableDisplayName(key)) },
                     supportingContent = { Text("{${key}}") },
                     leadingContent = {
                         Icon(variableIcon(key), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.fillMaxWidth().clickable {
                         val item = PromptTemplateItem(type = PromptItemType.PREDEFINED, value = key)
                         if (targetIndex >= 0 && targetIndex <= currentItems.size) {

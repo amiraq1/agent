@@ -93,8 +93,7 @@ fun SettingsContextPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     },
                     {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.context_visualize)) },
                             supportingContent = { Text(stringResource(R.string.context_visualize_desc)) },
                             leadingContent = {

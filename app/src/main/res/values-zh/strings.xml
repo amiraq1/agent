@@ -90,7 +90,7 @@
     <string name="search_desc">对话历史的访问控制和搜索方式</string>
 
     <!-- Settings - Provider Page -->
-    <string name="provider_api_provider">API 提供商</string>
+    <string name="provider_api_provider">AI 提供商</string>
     <string name="provider_base_url">基础 URL</string>
     <string name="provider_api_keys">API 密钥</string>
     <string name="provider_api_keys_optional">API 密钥（可选）</string>
@@ -115,10 +115,9 @@
     <string name="custom_provider_name_label">提供商名称</string>
     <string name="custom_provider_name_error">名称已存在或无效</string>
     <string name="custom_provider_url_error">需要提供 Base URL</string>
-    <string name="custom_provider_delete">删除提供商</string>
     <string name="custom_provider_delete_title">删除自定义提供商</string>
     <string name="custom_provider_delete_text">删除提供商 \"%1$s\" 及其所有数据？此操作无法撤销。</string>
-    <string name="custom_provider_rename">重命名</string>
+    <string name="custom_provider_rename">重命名提供商</string>
     <string name="custom_provider_rename_title">重命名自定义提供商</string>
 
     <!-- Settings - Prompts Page -->

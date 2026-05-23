@@ -124,7 +124,7 @@
     <string name="search_desc">Access to conversation history and search method</string>
 
     <!-- Settings - Provider Page -->
-    <string name="provider_api_provider">API Provider</string>
+    <string name="provider_api_provider">AI Provider</string>
     <string name="provider_base_url">Base URL</string>
     <string name="provider_api_keys">API Keys</string>
     <string name="provider_api_keys_optional">API Keys (Optional)</string>
@@ -149,10 +149,9 @@
     <string name="custom_provider_name_label">Provider Name</string>
     <string name="custom_provider_name_error">Name already exists or is invalid</string>
     <string name="custom_provider_url_error">Base URL is required</string>
-    <string name="custom_provider_delete">Delete Provider</string>
     <string name="custom_provider_delete_title">Delete Custom Provider</string>
     <string name="custom_provider_delete_text">Delete provider \"%1$s\" and all its data? This action cannot be undone.</string>
-    <string name="custom_provider_rename">Rename</string>
+    <string name="custom_provider_rename">Rename Provider</string>
     <string name="custom_provider_rename_title">Rename Custom Provider</string>
 
     <!-- Settings - Prompts Page -->

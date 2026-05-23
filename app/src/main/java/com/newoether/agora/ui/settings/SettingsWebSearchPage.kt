@@ -73,8 +73,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         ) {
             SettingsGroup(title = stringResource(R.string.web_search_title), items = buildList {
                 add {
-                    ListItem(
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    SettingsItem(
                         headlineContent = { Text(stringResource(R.string.web_search_enable)) },
                         supportingContent = { Text(stringResource(R.string.web_search_enable_desc)) },
                         leadingContent = { Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary) },
@@ -87,8 +86,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
                 if (webSearchEnabled) {
                     add {
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.web_search_provider_label)) },
                             supportingContent = {
                                 Text(
@@ -199,8 +197,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         "searxng" to R.string.web_search_searxng
                     )
                     providers.forEach { (key, labelRes) ->
-                        ListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        SettingsItem(
                             headlineContent = { Text(stringResource(labelRes), fontWeight = if (webSearchProvider == key) FontWeight.Bold else FontWeight.Normal) },
                             supportingContent = {
                                 Text(

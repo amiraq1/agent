@@ -194,24 +194,22 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 // Import/Export group
                 SettingsGroup(title = stringResource(R.string.settings_data_control), items = listOf(
                     {
-                        ListItem(
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.data_import_title)) },
                             supportingContent = { Text(stringResource(R.string.data_import_subtitle)) },
                             leadingContent = {
                                 Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/zip", "*/*")) }
                         )
                     },
                     {
-                        ListItem(
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.data_export_title)) },
                             supportingContent = { Text(stringResource(R.string.data_export_subtitle)) },
                             leadingContent = {
                                 Icon(Icons.Default.Upload, null, tint = MaterialTheme.colorScheme.primary)
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { showExportDialog = true }
                         )
                     }
@@ -220,24 +218,22 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 // Third party group
                 SettingsGroup(title = stringResource(R.string.third_party_import), items = listOf(
                     {
-                        ListItem(
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.gpt_import_title)) },
                             supportingContent = { Text(stringResource(R.string.gpt_import_subtitle)) },
                             leadingContent = {
                                 Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { gptChatLauncher.launch(arrayOf("application/zip", "*/*")) }
                         )
                     },
                     {
-                        ListItem(
+                        SettingsItem(
                             headlineContent = { Text(stringResource(R.string.claude_import_title)) },
                             supportingContent = { Text(stringResource(R.string.claude_import_subtitle)) },
                             leadingContent = {
                                 Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { claudeChatLauncher.launch(arrayOf("application/json", "*/*")) }
                         )
                     }
