@@ -64,6 +64,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             modifier = Modifier
                 .padding(padding)
                 .navigationBarsPadding()
+                .imePadding()
                 .verticalScroll(scrollState)
                 .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { fm.clearFocus() }
                 .padding(horizontal = 16.dp, vertical = 16.dp)
