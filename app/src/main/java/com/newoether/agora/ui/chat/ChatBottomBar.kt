@@ -68,13 +68,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.newoether.agora.R
+import com.newoether.agora.util.noOpBringIntoView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.CoroutineScope
@@ -152,12 +149,7 @@ fun ChatBottomBar(
     BackHandler(enabled = isExpanded) { onCollapse() }
     val isModelValid = selectedModel.isNotBlank() && enabledModels.contains(selectedModel)
 
-    val noOpResponder = remember {
-        object : BringIntoViewResponder {
-            override fun calculateRectForParent(localRect: Rect): Rect = localRect
-            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
-        }
-    }
+    // No-op bring-into-view to prevent auto-scrolling on text field focus
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -457,7 +449,7 @@ fun ChatBottomBar(
                         }
                         if ((isFile || isPdf) && attachment.fileName != null) {
                             Text(
-                                text = attachment.fileName!!,
+                                text = attachment.fileName,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -470,7 +462,7 @@ fun ChatBottomBar(
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.weight(1f) else Modifier).bringIntoViewResponder(noOpResponder)) {
+        Box(modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.weight(1f) else Modifier).noOpBringIntoView()) {
             TextField(state = textFieldState, scrollState = scrollState, modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.fillMaxHeight() else Modifier).focusRequester(focusRequester).verticalScrollbar(scrollState, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)), placeholder = { Text(stringResource(R.string.ask_agora), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) }, enabled = true, lineLimits = TextFieldLineLimits.MultiLine(1, if (isExpanded) Int.MAX_VALUE else 6), colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, cursorColor = MaterialTheme.colorScheme.primary), textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface))
             if (!isExpanded) {
                 val elevatedSurface = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
@@ -496,7 +488,7 @@ fun ChatBottomBar(
                                 showAddMenu = true
                             }
                         },
-                        modifier = Modifier.size(32.dp).menuAnchor()
+                        modifier = Modifier.size(32.dp).menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
                     ) {
                         Icon(Icons.Default.Add, stringResource(R.string.add_attachment), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -510,7 +502,6 @@ fun ChatBottomBar(
                             }
                         },
                         matchTextFieldWidth = false,
-                        focusable = false,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         DropdownMenuItem(
@@ -582,8 +573,8 @@ fun ChatBottomBar(
                             } else if (now - lastModelDismissTime > 200) {
                                 activeMenu = "model"
                             }
-                        }, 
-                        modifier = Modifier.widthIn(max = 160.dp).menuAnchor(),
+                        },
+                        modifier = Modifier.widthIn(max = 160.dp).menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
                         contentPadding = PaddingValues(start = 12.dp, end = 8.dp)
                     ) { 
                         Text(
@@ -604,7 +595,6 @@ fun ChatBottomBar(
                             }
                         },
                         matchTextFieldWidth = false,
-                        focusable = false,
                         shape = MaterialTheme.shapes.medium
                     ) {
                         if (enabledModels.isEmpty()) {
@@ -648,8 +638,8 @@ fun ChatBottomBar(
                                 activeMenu = "tools"
                             }
                         }, 
-                        modifier = Modifier.size(32.dp).menuAnchor()
-                    ) { 
+                        modifier = Modifier.size(32.dp).menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                    ) {
                         Icon(Icons.Default.MoreVert, stringResource(R.string.tools), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     
@@ -662,7 +652,6 @@ fun ChatBottomBar(
                             }
                         },
                         matchTextFieldWidth = false,
-                        focusable = false,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         val isGemini = provider.equals("google", ignoreCase = true)

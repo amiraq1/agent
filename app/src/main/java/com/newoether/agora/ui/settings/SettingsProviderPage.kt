@@ -6,8 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,7 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -37,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
+import com.newoether.agora.util.noOpBringIntoView
 import com.newoether.agora.data.ApiKeyEntry
 import com.newoether.agora.viewmodel.ChatViewModel
 import kotlinx.coroutines.Dispatchers
@@ -58,12 +56,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val customProviders by viewModel.customProviders.collectAsState()
     val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router", "Local") + customProviders.map { it.name }
 
-    val noOpResponder = remember {
-        object : BringIntoViewResponder {
-            override fun calculateRectForParent(localRect: Rect): Rect = localRect
-            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
-        }
-    }
+    // No-op bring-into-view to prevent auto-scrolling on text field focus
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -278,7 +271,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                    Box(modifier = Modifier.noOpBringIntoView().padding(top = 8.dp)) {
                                         OutlinedTextField(
                                             state = baseUrlState,
                                             placeholder = { Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) },
@@ -780,10 +773,10 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         label = { Text(stringResource(R.string.provider_key_name_hint)) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .bringIntoViewResponder(noOpResponder)
+                            .noOpBringIntoView()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
+                    Box(modifier = Modifier.noOpBringIntoView()) {
                         OutlinedTextField(
                             value = key,
                             onValueChange = { key = it },
@@ -843,11 +836,11 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         label = { Text(stringResource(R.string.custom_provider_name_label)) },
                         isError = nameError,
                         supportingText = if (nameError) {{ Text(stringResource(R.string.custom_provider_name_error)) }} else null,
-                        modifier = Modifier.fillMaxWidth().bringIntoViewResponder(noOpResponder),
+                        modifier = Modifier.fillMaxWidth().noOpBringIntoView(),
                         singleLine = true
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
+                    Box(modifier = Modifier.noOpBringIntoView()) {
                         OutlinedTextField(
                             value = customBaseUrl, onValueChange = { customBaseUrl = it; urlError = false },
                             label = { Text(stringResource(R.string.provider_base_url)) },

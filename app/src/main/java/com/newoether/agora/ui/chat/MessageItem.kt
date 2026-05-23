@@ -72,9 +72,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -112,7 +109,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.newoether.agora.R
-
+import com.newoether.agora.util.noOpBringIntoView
 import com.newoether.agora.model.ChatMessage
 import com.newoether.agora.model.MessageSegment
 import com.newoether.agora.model.MessageStatus
@@ -382,7 +379,7 @@ private fun toolSummary(seg: MessageSegment): String {
         "web_fetch" -> {
             val url = argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }
             if (isError) stringResource(R.string.tool_web_fetch_failed)
-            else if (url != null) stringResource(R.string.tool_web_fetch_done, url.take(60).ifEmpty { "page" } ?: "page")
+            else if (url != null) stringResource(R.string.tool_web_fetch_done, url.take(60).ifEmpty { "page" })
             else stringResource(R.string.tool_web_fetch_default)
         }
         "search_conversations" -> {
@@ -459,7 +456,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
         }
         "web_fetch" -> {
             val url = argsJson?.get("url")?.let { (it as? JsonPrimitive)?.content }
-            if (url != null) stringResource(R.string.tool_web_fetch_done, url.take(60).ifEmpty { "page" } ?: "page")
+            if (url != null) stringResource(R.string.tool_web_fetch_done, url.take(60).ifEmpty { "page" })
             else stringResource(R.string.tool_web_fetch_default)
         }
         "search_conversations" -> {
@@ -521,6 +518,7 @@ fun MessageItem(
     var stableCollapsedThoughtHeight by remember { mutableIntStateOf(0) }
     var showInfoDialog by remember { mutableStateOf(false) }
     
+    @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
 
     if (showInfoDialog) {
@@ -551,13 +549,7 @@ fun MessageItem(
     }
 
     var currentTotalHeight by remember { mutableIntStateOf(0) }
-    // Create a responder that ignores bring-into-view requests to prevent auto-scrolling on focus/selection
-    val noOpResponder = remember {
-        object : BringIntoViewResponder {
-            override fun calculateRectForParent(localRect: Rect): Rect = localRect
-            override suspend fun bringChildIntoView(localRect: () -> Rect?) { /* Do nothing */ }
-        }
-    }
+    // No-op modifier that suppresses bring-into-view auto-scrolling on focus
 
     fun calculateReportedHeight(totalPx: Int, thoughtPx: Int): Int {
         // When we are NOT expanded, the thought block is animating down from its large height 
@@ -721,7 +713,7 @@ fun MessageItem(
                         val editState = rememberTextFieldState(message.text)
                         val editScrollState = rememberScrollState()
                         Column(modifier = Modifier.padding(8.dp)) {
-                            Box(modifier = Modifier.bringIntoViewResponder(noOpResponder)) {
+                            Box(modifier = Modifier.noOpBringIntoView()) {
                                 TextField(
                                     state = editState,
                                     scrollState = editScrollState,
@@ -742,7 +734,7 @@ fun MessageItem(
                         }
                     } else {
                         Column(
-                            modifier = Modifier.padding(16.dp).bringIntoViewResponder(noOpResponder),
+                            modifier = Modifier.padding(16.dp).noOpBringIntoView(),
                             horizontalAlignment = Alignment.Start
                         ) {
                             val hasMetaItems = message.attachmentMeta?.items?.isNotEmpty() == true
@@ -816,7 +808,7 @@ fun MessageItem(
                                             )
                                         )
                                         if (type == "pdf" && metaItem?.warning != null) {
-                                            Text(metaItem.warning!!, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(metaItem.warning, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
                                 }
@@ -1046,7 +1038,7 @@ fun MessageItem(
                                     .padding(top = 8.dp, bottom = mergedBottomPadding + 6.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .bringIntoViewResponder(noOpResponder)
+                                    .noOpBringIntoView()
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1184,7 +1176,7 @@ fun MessageItem(
                                         streamingMaxHeightPx = maxOf(streamingMaxHeightPx, size.height)
                                     }
                                 }
-                                .bringIntoViewResponder(noOpResponder)
+                                .noOpBringIntoView()
                         ) {
                             if (isError) {
                                 Surface(color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f), contentColor = MaterialTheme.colorScheme.onErrorContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -1469,7 +1461,7 @@ fun MessageItem(
                     if (phase == PHASE_FULL
                         && available.y > 0f
                         && scrollState.value == 0
-                        && source == NestedScrollSource.Drag
+                        && source == NestedScrollSource.UserInput
                     ) {
                         phase = PHASE_HALF
                         val delta = -available.y / screenHeightPx

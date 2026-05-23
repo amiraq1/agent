@@ -12,9 +12,6 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.foundation.relocation.BringIntoViewResponder
-import androidx.compose.foundation.relocation.bringIntoViewResponder
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
+import com.newoether.agora.util.noOpBringIntoView
 import com.newoether.agora.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,12 +35,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var apiKeyText by remember(webSearchProvider) { mutableStateOf(webSearchApiKeys[webSearchProvider] ?: "") }
     LaunchedEffect(webSearchProvider) { apiKeyText = webSearchApiKeys[webSearchProvider] ?: "" }
 
-    val noOpResponder = remember {
-        object : BringIntoViewResponder {
-            override fun calculateRectForParent(localRect: Rect): Rect = localRect
-            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
-        }
-    }
+    // No-op bring-into-view to prevent auto-scrolling on text field focus
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -126,7 +119,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             ),
                                             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                        Box(modifier = Modifier.noOpBringIntoView().padding(top = 8.dp)) {
                                             OutlinedTextField(
                                                 value = apiKeyText,
                                                 onValueChange = { apiKeyText = it; viewModel.setWebSearchApiKey(webSearchProvider, it) },
@@ -167,7 +160,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         LaunchedEffect(urlState.text) {
                                             viewModel.setWebSearchBaseUrl(urlState.text.toString())
                                         }
-                                        Box(modifier = Modifier.bringIntoViewResponder(noOpResponder).padding(top = 8.dp)) {
+                                        Box(modifier = Modifier.noOpBringIntoView().padding(top = 8.dp)) {
                                             OutlinedTextField(
                                                 state = urlState,
                                                 placeholder = { Text(stringResource(R.string.web_search_searxng_url_hint)) },

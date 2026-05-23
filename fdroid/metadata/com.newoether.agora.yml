@@ -1,0 +1,28 @@
+Categories:
+  - Internet
+License: MIT
+SourceCode: https://github.com/newo-ether/Agora
+IssueTracker: https://github.com/newo-ether/Agora/issues
+
+Name: Agora
+Summary: LLM chat client with tool calling and LAN shell execution
+Description: |
+  Agora connects to any OpenAI-compatible API (OpenAI, Ollama, local
+  models). Supports streaming chat, tool calling with structured output,
+  markdown/LaTeX/code rendering, image generation, text-to-speech, and
+  encrypted shell execution over LAN via the companion Conch server.
+
+RepoType: git
+Repo: https://github.com/newo-ether/Agora
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0.2
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0
+CurrentVersionCode: 1
