@@ -311,7 +311,7 @@ fun SystemPromptEditorPage(
         ModalBottomSheet(
             onDismissRequest = { showVariablePicker = false; insertAtIndex = -1 },
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Text(
                 text = stringResource(R.string.template_variable_picker_title),
@@ -433,8 +433,9 @@ private fun TemplateItemRow(
                 )
             }
             PromptItemType.PREDEFINED -> {
-                ElevatedCard(
+                Surface(
                     shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
