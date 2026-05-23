@@ -133,12 +133,12 @@ fun ChatApp(
     val drawerWidthPx = with(density) { drawerWidth.toPx() }
     var drawerProgress by remember { mutableFloatStateOf(0f) }
     // Bottom offset to clear the Settings button in the drawer.
-    var settingsButtonBottomDp by remember { mutableFloatStateOf(80f) }
+    var settingsButtonTopDp by remember { mutableFloatStateOf(80f) }
     val targetSnackbarOffset = if (drawerProgress <= 0.5f) {
         bottomBarHeight
     } else {
         val t = ((drawerProgress - 0.5f) * 2f).coerceIn(0f, 1f)
-        (bottomBarHeight.value + (settingsButtonBottomDp - bottomBarHeight.value) * t).dp
+        (bottomBarHeight.value + (settingsButtonTopDp - bottomBarHeight.value) * t).dp
     }
     LaunchedEffect(targetSnackbarOffset) { onSnackbarOffsetChanged(targetSnackbarOffset) }
     val listState = viewModel.listState
@@ -518,8 +518,8 @@ fun ChatApp(
                             .fillMaxWidth()
                             .onGloballyPositioned { coords ->
                                 val screenHeightPx = configuration.screenHeightDp * density.density
-                                val buttonBottomPx = coords.positionInWindow().y + coords.size.height
-                                settingsButtonBottomDp = (screenHeightPx - buttonBottomPx) / density.density
+                                val buttonTopPx = coords.positionInWindow().y
+                                settingsButtonTopDp = (screenHeightPx - buttonTopPx) / density.density
                             },
                         shape = CircleShape
                     ) {

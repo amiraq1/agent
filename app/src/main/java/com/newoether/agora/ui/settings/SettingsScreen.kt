@@ -155,8 +155,9 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                             modifier = Modifier
                                 .padding(padding)
                                 .navigationBarsPadding()
-                                .padding(top = 16.dp, bottom = 16.dp)
+                                .padding(horizontal = 16.dp)
                         ) {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
                             items(settingsGroups.size) { groupIndex ->
                                 val group = settingsGroups[groupIndex]
                                 Column(
@@ -219,6 +220,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     Spacer(modifier = Modifier.height(20.dp))
                                 }
                             }
+                            item { Spacer(modifier = Modifier.height(32.dp)) }
                         }
                     }
                 }
