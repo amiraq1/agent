@@ -78,8 +78,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.Job
@@ -645,7 +645,7 @@ fun MessageItem(
     }
     val customMarkdownColors = markdownColor(
         codeBackground = codeBg,
-        inlineCodeBackground = codeBg,
+        inlineCodeBackground = Color.Transparent,
     )
     val customMarkdownPadding = markdownPadding(block = 7.dp)
     val thoughtMarkdownPadding = markdownPadding(block = 4.dp)
@@ -1115,8 +1115,7 @@ fun MessageItem(
                                                                     colors = customMarkdownColors,
                                                                     typography = thoughtTypography,
                                                                     padding = thoughtMarkdownPadding,
-                                                                    components = customMarkdownComponents,
-                                                                    imageTransformer = latexImageTransformer
+                                                                    components = customMarkdownComponents
                                                                 )
                                                             }
                                                         }
@@ -1485,10 +1484,10 @@ fun MessageItem(
             }
         }
 
-        Popup(
+        Dialog(
             onDismissRequest = { dismiss() },
-            properties = PopupProperties(
-                focusable = false,
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = false
             )
