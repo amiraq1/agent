@@ -1,34 +1,29 @@
 package com.newoether.agora.api
 
 import com.newoether.agora.util.DebugLog
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.float
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+@Serializable
+private data class EmbeddingRequest(
+    val input: String,
+    val model: String
+)
+
+@Serializable
+private data class BatchEmbeddingRequest(
+    val input: List<String>,
+    val model: String
+)
+
 object EmbeddingClient {
 
     private val json = Json { ignoreUnknownKeys = true }
-
-    private fun escapeJson(s: String): String {
-        val sb = StringBuilder(s.length + 2)
-        sb.append('"')
-        for (c in s) {
-            when (c) {
-                '"' -> sb.append("\\\"")
-                '\\' -> sb.append("\\\\")
-                '\b' -> sb.append("\\b")
-                '' -> sb.append("\\f")
-                '\n' -> sb.append("\\n")
-                '\r' -> sb.append("\\r")
-                '\t' -> sb.append("\\t")
-                else -> sb.append(c)
-            }
-        }
-        sb.append('"')
-        return sb.toString()
-    }
 
     fun computeEmbedding(
         text: String,
@@ -38,7 +33,7 @@ object EmbeddingClient {
     ): FloatArray? {
         return try {
             val url = "$baseUrl/embeddings"
-            val body = """{"input":${escapeJson(text)},"model":"$model"}"""
+            val body = json.encodeToString(EmbeddingRequest(input = text, model = model))
             val headers = mapOf(
                 "Authorization" to "Bearer $apiKey",
                 "Content-Type" to "application/json"
@@ -63,8 +58,7 @@ object EmbeddingClient {
         if (texts.isEmpty()) return emptyList()
         return try {
             val url = "$baseUrl/embeddings"
-            val inputs = texts.joinToString(",") { escapeJson(it) }
-            val body = """{"input":[$inputs],"model":"$model"}"""
+            val body = json.encodeToString(BatchEmbeddingRequest(input = texts, model = model))
             val headers = mapOf(
                 "Authorization" to "Bearer $apiKey",
                 "Content-Type" to "application/json"

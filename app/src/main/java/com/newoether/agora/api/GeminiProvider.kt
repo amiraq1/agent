@@ -317,12 +317,15 @@ class GeminiProvider : LlmProvider {
         try {
             // Determine if baseUrl already includes versioning
             val finalUrlString = if (baseUrl.contains("/v1") || baseUrl.contains("/v1beta")) {
-                "$baseUrl/models/$cleanModelName:streamGenerateContent?alt=sse&key=${config.apiKey}"
+                "$baseUrl/models/$cleanModelName:streamGenerateContent?alt=sse"
             } else {
-                "$baseUrl/v1beta/models/$cleanModelName:streamGenerateContent?alt=sse&key=${config.apiKey}"
+                "$baseUrl/v1beta/models/$cleanModelName:streamGenerateContent?alt=sse"
             }
 
-            val headers = mapOf("Content-Type" to "application/json")
+            val headers = mapOf(
+                "Content-Type" to "application/json",
+                "x-goog-api-key" to config.apiKey
+            )
             val requestJson = json.encodeToString(ApiGenerateContentRequest.serializer(), requestBody)
             DebugLog.d("AgoraAPI", "[Gemini] REQ → $finalUrlString | model=$cleanModelName | msgs=${apiContents.size} | thinking=${config.thinkingEnabled} | tools=${tools.size}")
             DebugLog.d("AgoraAPI", "[Gemini] BODY: ${requestJson.take(4000)}")
@@ -455,12 +458,15 @@ class GeminiProvider : LlmProvider {
         try {
             val effectiveBaseUrl = baseUrl?.trimEnd('/') ?: defaultBaseUrl
             val finalUrlString = if (effectiveBaseUrl.contains("/v1") || effectiveBaseUrl.contains("/v1beta")) {
-                "$effectiveBaseUrl/models?key=$apiKey"
+                "$effectiveBaseUrl/models"
             } else {
-                "$effectiveBaseUrl/v1beta/models?key=$apiKey"
+                "$effectiveBaseUrl/v1beta/models"
             }
 
-            val responseText = HttpClient.fetchModels(finalUrlString) ?: run {
+            val responseText = HttpClient.fetchModels(
+                finalUrlString,
+                mapOf("x-goog-api-key" to apiKey)
+            ) ?: run {
                 DebugLog.e("AgoraAPI", "Failed to fetch Gemini models: empty response")
                 return@withContext emptyList()
             }
