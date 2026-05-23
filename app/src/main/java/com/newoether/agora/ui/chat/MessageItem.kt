@@ -940,20 +940,22 @@ fun MessageItem(
                         ) {
                             val text = displayText ?: return@AnimatedVisibility
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-                                if (isStreaming || message.status == MessageStatus.SENDING || message.status == MessageStatus.THINKING || message.status == MessageStatus.TOOL_CALLING) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        color = if (text == thinkingStatus) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 2.dp,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    )
-                                } else {
-                                    val icon = when (message.status) {
-                                        MessageStatus.SUCCESS -> Icons.Default.CheckCircle
-                                        MessageStatus.STOPPED -> Icons.Default.Stop
-                                        else -> Icons.Default.Info
+                                Box(modifier = Modifier.size(18.dp), contentAlignment = Alignment.Center) {
+                                    if (isStreaming || message.status == MessageStatus.SENDING || message.status == MessageStatus.THINKING || message.status == MessageStatus.TOOL_CALLING) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = if (text == thinkingStatus) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 2.dp,
+                                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        )
+                                    } else {
+                                        val icon = when (message.status) {
+                                            MessageStatus.SUCCESS -> Icons.Default.CheckCircle
+                                            MessageStatus.STOPPED -> Icons.Default.Stop
+                                            else -> Icons.Default.Info
+                                        }
+                                        Icon(icon, null, modifier = Modifier.size(16.dp), tint = if (message.status == MessageStatus.SUCCESS) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error)
                                     }
-                                    Icon(icon, null, modifier = Modifier.size(12.dp), tint = if (message.status == MessageStatus.SUCCESS) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error)
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
