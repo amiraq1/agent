@@ -17,7 +17,6 @@
     <string name="thinking">思考</string>
     <string name="web_search">网页搜索</string>
     <string name="ask_agora">向 Agora 提问...</string>
-    <string name="stop">停止</string>
     <string name="send">发送</string>
 
     <!-- Tool Display -->
@@ -30,17 +29,14 @@
     <string name="tool_web_search">网页搜索</string>
     <string name="tool_web_fetch">网页抓取</string>
     <string name="tool_web_fetch_done">已抓取 %1$s</string>
-    <string name="tool_web_fetching">正在抓取 %1$s…</string>
     <string name="tool_web_fetch_default">正在抓取网页</string>
     <string name="tool_web_fetch_failed">抓取失败</string>
     <string name="tool_search_conversations">搜索对话</string>
     <string name="tool_searching_web">正在网络搜索 \'%1$s\'</string>
     <string name="tool_searching_conversations">正在对话中搜索 \'%1$s\'</string>
     <string name="tool_search_failed">搜索失败</string>
-    <string name="tool_search_done">搜索完成</string>
     <string name="tool_web_search_done">搜索 \"%2$s\" 找到 %1$d 条结果</string>
     <string name="tool_web_search_done_default">搜索了网页</string>
-    <string name="tool_conversation_search_done">对话搜索完成</string>
     <string name="tool_conversation_search_done_for">搜索 \"%2$s\" 找到 %1$d 条对话</string>
     <string name="tool_list_shells">列出终端</string>
     <string name="tool_shell_listing">正在列出可用终端</string>
@@ -128,7 +124,6 @@
     <string name="prompts_edit_title">编辑系统指令</string>
     <string name="prompts_add_title">添加系统指令</string>
     <string name="prompts_title_hint">标题（例如：翻译器）</string>
-    <string name="prompts_content_hint">系统指令</string>
     <string name="prompts_delete_title">删除系统指令？</string>
     <string name="prompts_delete_text">确定要删除 \'%1$s\' 吗？此操作无法撤销。</string>
     <string name="template_title_required">标题不能为空</string>
@@ -272,7 +267,6 @@
     <string name="color_scheme_slate">岩灰</string>
     <string name="dynamic_color">动态颜色</string>
     <string name="dynamic_color_desc">根据壁纸使用系统生成的颜色（Android 12+）</string>
-    <string name="dynamic_color_overrides_scheme">动态颜色会覆盖所选配色方案</string>
 
     <!-- Language -->
     <string name="language_title">语言</string>
@@ -298,16 +292,9 @@
     <string name="search_method_keyword">关键词</string>
     <string name="search_method_rag">语义 (RAG)</string>
     <string name="embedding_title">嵌入模型</string>
-    <string name="embedding_source_label">来源</string>
-    <string name="embedding_source_remote">远程 API</string>
-    <string name="embedding_source_local">本地（设备端）</string>
     <string name="embedding_model_label">模型</string>
     <string name="embedding_base_url_label">基础 URL</string>
-    <string name="local_model_url_label">模型下载 URL</string>
-    <string name="local_model_url_hint">https://example.com/model.gguf</string>
-    <string name="local_model_status">状态</string>
     <string name="local_model_ready">模型已导入。</string>
-    <string name="local_model_not_ready">未指定模型</string>
     <string name="import_model">导入模型 (.gguf)</string>
     <string name="importing_model">导入中...</string>
     <string name="no_embedding_models">未配置嵌入模型</string>
@@ -317,7 +304,6 @@
     <string name="not_cached">未缓存</string>
     <string name="advanced_title">高级</string>
     <string name="rag_threshold_label">相似度阈值</string>
-    <string name="caching">缓存中…</string>
     <string name="auto_cache_title">缓存</string>
     <string name="auto_cache">自动缓存新消息</string>
     <string name="auto_cache_desc">使用选定的嵌入模型自动索引新消息。关闭后，消息仅在手動触发时才会被缓存。</string>
@@ -338,7 +324,6 @@
     <string name="search_found_results_no_query">找到 %1$d 条结果。</string>
     <string name="search_no_matches">未找到与 \'%1$s\' 相关的对话。</string>
 
-    <string name="unexpected_error">发生了意外错误。</string>
     <string name="unknown">未知</string>
     <string name="search_hint">搜索对话...</string>
     <string name="clear_search">清除搜索</string>
@@ -349,7 +334,6 @@
     <string name="search_no_response">搜索失败：无响应</string>
     <string name="search_no_results">未找到相关结果。</string>
     <string name="search_error_format">搜索错误：%1$s</string>
-    <string name="search_parse_error">解析搜索结果失败：%1$s</string>
     <string name="tool_call_failed">工具调用失败</string>
     <string name="database_incompatible">数据库不兼容</string>
     <string name="database_incompatible_desc">数据库版本较新，无法降级。请卸载并重新安装应用。</string>
@@ -372,7 +356,6 @@
     <string name="tool_lookup_default">查看了已保存的记忆</string>
     <string name="tool_update_active_failed">更新活跃记忆失败</string>
     <string name="tool_update_active_default">已更新活跃记忆</string>
-    <string name="tool_searching_web_default">正在搜索网页</string>
     <string name="tool_searching_conversations_default">正在搜索对话</string>
     <string name="tool_done">完成</string>
     <string name="tool_context">工具</string>
@@ -414,11 +397,9 @@
     <string name="remove">移除</string>
     <string name="menu">菜单</string>
     <string name="options">选项</string>
-    <string name="full_screen_image">全屏图片</string>
     <string name="video_thumbnail">视频缩略图</string>
     <string name="play">播放</string>
     <string name="video_preview">视频预览</string>
-    <string name="file">文件</string>
 
     <!-- Local Chat Provider -->
     <string name="local_chat_models">本地聊天模型</string>
@@ -448,7 +429,6 @@
     <string name="file_unknown_type">未知文件类型</string>
     <string name="file_unsupported_type">不支持的文件类型: %1$s</string>
     <string name="file_too_large">文件过大 (最大 20 MB)</string>
-    <string name="pdf_copy_failed">PDF 复制失败</string>
     <string name="pdf_render_failed">PDF 渲染失败</string>
 
     <!-- Data Control -->
@@ -464,7 +444,6 @@
     <string name="export_category_settings">设置</string>
     <string name="export_category_api_keys">API 密钥</string>
     <string name="export_api_keys_warning">API 密钥将以明文形式导出。仅在信任目标位置时启用。</string>
-    <string name="export_estimated_size">预计大小: %1$s</string>
     <string name="export_button">导出</string>
     <string name="exporting_label">导出中…</string>
     <string name="export_success">数据导出成功。</string>
@@ -495,38 +474,22 @@
     <string name="claude_import_strategy">导入策略</string>
     <string name="claude_import_replace">替换</string>
     <string name="claude_import_merge">合并</string>
-    <string name="claude_import_error">导入错误</string>
     <string name="claude_import_error_detail">导入失败: %1$s</string>
     <string name="claude_import_success">导入成功</string>
     <string name="claude_import_success_detail">已导入 %1$d 个对话 (%2$d 条消息)。</string>
-    <string name="claude_import_cancel">取消</string>
     <string name="claude_import_import">导入</string>
     <string name="claude_import_progress">导入中…</string>
-    <string name="claude_import_select_file_desc">选择从 Claude 导出的 .zip 文件。</string>
     <string name="claude_import_preview_title">导入预览</string>
     <string name="claude_import_no_data">此文件中没有可导入的数据。</string>
     <string name="gpt_import_title">从 ChatGPT 导入</string>
     <string name="gpt_import_subtitle">从 ChatGPT 导出的 .zip 文件中导入对话。</string>
-    <string name="gpt_import_select_file">选择 ChatGPT 导出文件</string>
-    <string name="gpt_import_no_file">未选择文件</string>
     <string name="gpt_import_conversations">对话</string>
     <string name="gpt_import_messages">消息</string>
-    <string name="gpt_import_human">用户消息</string>
-    <string name="gpt_import_assistant">ChatGPT 消息</string>
-    <string name="gpt_import_has_attachments">包含附件</string>
-    <string name="gpt_import_no_attachments">无附件</string>
-    <string name="gpt_import_strategy">导入策略</string>
-    <string name="gpt_import_replace">替换</string>
-    <string name="gpt_import_merge">合并</string>
-    <string name="gpt_import_error">导入错误</string>
     <string name="gpt_import_error_detail">导入失败: %1$s</string>
     <string name="gpt_import_success">导入成功</string>
     <string name="gpt_import_success_detail">已导入 %1$d 个对话 (%2$d 条消息)。</string>
-    <string name="gpt_import_cancel">取消</string>
     <string name="gpt_import_import">导入</string>
     <string name="gpt_import_progress">导入中…</string>
-    <string name="gpt_import_select_file_desc">选择从 ChatGPT 导出的 .zip 文件。</string>
-    <string name="gpt_import_preview_title">导入预览</string>
     <string name="gpt_import_no_data">此文件中没有可导入的数据。</string>
     <string name="select_all">全选</string>
     <string name="deselect_all">取消全选</string>

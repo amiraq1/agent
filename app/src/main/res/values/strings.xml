@@ -18,7 +18,6 @@
     <string name="thinking">Thinking</string>
     <string name="web_search">Web Search</string>
     <string name="ask_agora">Ask Agora anything...</string>
-    <string name="stop">Stop</string>
     <string name="send">Send</string>
 
     <!-- Tool Display -->
@@ -31,17 +30,14 @@
     <string name="tool_web_search">Web Search</string>
     <string name="tool_web_fetch">Web Fetch</string>
     <string name="tool_web_fetch_done">Fetched %1$s</string>
-    <string name="tool_web_fetching">Fetching %1$s…</string>
     <string name="tool_web_fetch_default">Fetching web page</string>
     <string name="tool_web_fetch_failed">Fetch failed</string>
     <string name="tool_search_conversations">Search Conversations</string>
     <string name="tool_searching_web">Searching \'%1$s\' on the web</string>
     <string name="tool_searching_conversations">Searching \'%1$s\' in conversations</string>
     <string name="tool_search_failed">Search failed</string>
-    <string name="tool_search_done">Search done</string>
     <string name="tool_web_search_done">Found %1$d results for \"%2$s\"</string>
     <string name="tool_web_search_done_default">Searched the web</string>
-    <string name="tool_conversation_search_done">Conversation search done</string>
     <string name="tool_conversation_search_done_for">Found %1$d conversations for \"%2$s\"</string>
     <string name="tool_list_shells">List Shells</string>
     <string name="tool_shell_listing">Listing available shells</string>
@@ -69,7 +65,6 @@
     <string name="tool_lookup_default">Looked through saved memories</string>
     <string name="tool_update_active_failed">Update active memory failed</string>
     <string name="tool_update_active_default">Updated active memory</string>
-    <string name="tool_searching_web_default">Searching the web</string>
     <string name="tool_searching_conversations_default">Searching conversations</string>
     <string name="tool_call_failed">Tool call failed</string>
     <string name="tool_done">Done</string>
@@ -162,7 +157,6 @@
     <string name="prompts_edit_title">Edit System Prompt</string>
     <string name="prompts_add_title">Add System Prompt</string>
     <string name="prompts_title_hint">Title (e.g. Translator)</string>
-    <string name="prompts_content_hint">System Prompt</string>
     <string name="prompts_delete_title">Delete System Instruction?</string>
     <string name="prompts_delete_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
     <string name="template_title_required">Title is required</string>
@@ -248,7 +242,6 @@
     <string name="shell_result_error">Error: %1$s</string>
     <string name="shell_result_exit_code">Exit code: %1$d</string>
     <string name="shell_result_server">Server: %1$s</string>
-    <string name="shell_list_count">%1$d shell servers:</string>
 
     <!-- Settings - Title Generation -->
     <string name="title_gen_auto">Auto-Generate Title</string>
@@ -307,7 +300,6 @@
     <string name="color_scheme_slate">Slate</string>
     <string name="dynamic_color">Dynamic Color</string>
     <string name="dynamic_color_desc">Use system-generated colors based on wallpaper (Android 12+)</string>
-    <string name="dynamic_color_overrides_scheme">Dynamic color overrides the selected color scheme</string>
 
     <!-- Language -->
     <string name="language_title">Language</string>
@@ -333,16 +325,9 @@
     <string name="search_method_keyword">Keyword</string>
     <string name="search_method_rag">Semantic (RAG)</string>
     <string name="embedding_title">Embedding</string>
-    <string name="embedding_source_label">Source</string>
-    <string name="embedding_source_remote">Remote API</string>
-    <string name="embedding_source_local">Local (On-Device)</string>
     <string name="embedding_model_label">Model</string>
     <string name="embedding_base_url_label">Base URL</string>
-    <string name="local_model_url_label">Model Download URL</string>
-    <string name="local_model_url_hint">https://example.com/model.gguf</string>
-    <string name="local_model_status">Status</string>
     <string name="local_model_ready">Model imported.</string>
-    <string name="local_model_not_ready">No model specified</string>
     <string name="import_model">Import Model (.gguf)</string>
     <string name="importing_model">Importing...</string>
     <string name="no_embedding_models">No embedding models configured</string>
@@ -352,7 +337,6 @@
     <string name="not_cached">Not cached</string>
     <string name="advanced_title">Advanced</string>
     <string name="rag_threshold_label">Similarity Threshold</string>
-    <string name="caching">Caching…</string>
     <string name="auto_cache_title">Caching</string>
     <string name="auto_cache">Auto-cache new messages</string>
     <string name="auto_cache_desc">Automatically index new messages with the selected embedding model. When off, messages are never cached until manually triggered.</string>
@@ -373,7 +357,6 @@
     <string name="search_found_results_no_query">Found %1$d results.</string>
     <string name="search_no_matches">Found 0 matches for \'%1$s\'.</string>
 
-    <string name="unexpected_error">An unexpected error occurred.</string>
     <string name="unknown">Unknown</string>
     <string name="search_hint">Search conversations...</string>
     <string name="clear_search">Clear search</string>
@@ -384,18 +367,15 @@
     <string name="search_no_response">Search failed: no response</string>
     <string name="search_no_results">No search results found.</string>
     <string name="search_error_format">Search error: %1$s</string>
-    <string name="search_parse_error">Failed to parse search results: %1$s</string>
 
     <!-- General -->
     <string name="back">Back</string>
     <string name="remove">Remove</string>
     <string name="menu">Menu</string>
     <string name="options">Options</string>
-    <string name="full_screen_image">Full screen image</string>
     <string name="video_thumbnail">Video thumbnail</string>
     <string name="play">Play</string>
     <string name="video_preview">Video preview</string>
-    <string name="file">File</string>
     <string name="total_tokens">Total: %1$d tokens</string>
     <string name="welcome_to_agora">Welcome to Agora.</string>
     <string name="database_incompatible">Database Incompatible</string>
@@ -439,7 +419,6 @@
     <string name="export_category_settings">Settings</string>
     <string name="export_category_api_keys">API Keys</string>
     <string name="export_api_keys_warning">API keys will be exported in plain text. Only enable if you trust the destination.</string>
-    <string name="export_estimated_size">Estimated size: %1$s</string>
     <string name="export_button">Export</string>
     <string name="exporting_label">Exporting…</string>
     <string name="export_success">Data exported successfully.</string>
@@ -473,38 +452,22 @@
     <string name="claude_import_strategy">Import Strategy</string>
     <string name="claude_import_replace">Replace</string>
     <string name="claude_import_merge">Merge</string>
-    <string name="claude_import_error">Import Error</string>
     <string name="claude_import_error_detail">Failed to import: %1$s</string>
     <string name="claude_import_success">Import Successful</string>
     <string name="claude_import_success_detail">Imported %1$d conversations (%2$d messages).</string>
-    <string name="claude_import_cancel">Cancel</string>
     <string name="claude_import_import">Import</string>
     <string name="claude_import_progress">Importing…</string>
-    <string name="claude_import_select_file_desc">Select a Claude export .zip file.</string>
     <string name="claude_import_preview_title">Import Preview</string>
     <string name="claude_import_no_data">This file contains no importable data.</string>
     <string name="gpt_import_title">Import from ChatGPT</string>
     <string name="gpt_import_subtitle">Import conversations from a ChatGPT export .zip file.</string>
-    <string name="gpt_import_select_file">Select ChatGPT export file</string>
-    <string name="gpt_import_no_file">No file selected</string>
     <string name="gpt_import_conversations">Conversations</string>
     <string name="gpt_import_messages">Messages</string>
-    <string name="gpt_import_human">From You</string>
-    <string name="gpt_import_assistant">From ChatGPT</string>
-    <string name="gpt_import_has_attachments">Has attachments</string>
-    <string name="gpt_import_no_attachments">No attachments</string>
-    <string name="gpt_import_strategy">Import Strategy</string>
-    <string name="gpt_import_replace">Replace</string>
-    <string name="gpt_import_merge">Merge</string>
-    <string name="gpt_import_error">Import Error</string>
     <string name="gpt_import_error_detail">Failed to import: %1$s</string>
     <string name="gpt_import_success">Import Successful</string>
     <string name="gpt_import_success_detail">Imported %1$d conversations (%2$d messages).</string>
-    <string name="gpt_import_cancel">Cancel</string>
     <string name="gpt_import_import">Import</string>
     <string name="gpt_import_progress">Importing…</string>
-    <string name="gpt_import_select_file_desc">Select a ChatGPT export .zip file.</string>
-    <string name="gpt_import_preview_title">Import Preview</string>
     <string name="gpt_import_no_data">This file contains no importable data.</string>
     <string name="select_all">Select All</string>
     <string name="deselect_all">Deselect All</string>
@@ -523,7 +486,6 @@
     <string name="file_unknown_type">Unknown file type</string>
     <string name="file_unsupported_type">Unsupported file type: %1$s</string>
     <string name="file_too_large">File too large (max 20 MB)</string>
-    <string name="pdf_copy_failed">Failed to copy PDF</string>
     <string name="pdf_render_failed">Failed to render PDF</string>
 
     <!-- Caching & Sync -->
