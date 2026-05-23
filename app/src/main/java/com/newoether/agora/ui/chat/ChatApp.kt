@@ -728,16 +728,16 @@ fun ChatApp(
                     .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
                     .onSizeChanged {
                         bottomBarHeightPx = it.height.toFloat()
-                    },
+                    }
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(8.dp),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
                 shadowElevation = 0.dp,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                shape = RoundedCornerShape(28.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .imePadding(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     ChatBottomBar(

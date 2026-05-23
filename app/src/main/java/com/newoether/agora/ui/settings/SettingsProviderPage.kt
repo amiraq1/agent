@@ -217,7 +217,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 52.dp)
+                                .heightIn(min = 56.dp)
                                 .clickable(enabled = !importingModel) { filePickerLauncher.launch(arrayOf("*/*")) }
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center
@@ -331,7 +331,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 52.dp)
+                                .heightIn(min = 56.dp)
                                 .clickable { showKeyDialog = ApiKeyEntry(name = "", key = "", provider = viewingProvider) }
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center

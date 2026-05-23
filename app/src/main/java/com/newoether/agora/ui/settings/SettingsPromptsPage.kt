@@ -176,7 +176,7 @@ private fun PromptList(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 52.dp)
+                            .heightIn(min = 56.dp)
                             .clickable { onAdd() }
                             .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
