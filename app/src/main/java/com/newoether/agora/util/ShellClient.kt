@@ -35,7 +35,7 @@ class ShellClient(
         return try {
             rawResponse = com.newoether.agora.api.HttpClient.fetchModels(
                 "$serverUrl/public-key",
-                mapOf("Authorization" to "Bearer $apiKey")
+                emptyMap()
             )
             if (rawResponse == null) {
                 lastError = "Server returned no response (check server URL and port)"
@@ -119,7 +119,6 @@ class ShellClient(
 
         val headers = mapOf(
             "Content-Type" to "application/octet-stream",
-            "Authorization" to "Bearer $apiKey",
             "X-Timestamp" to timestamp.toString(),
             "X-Signature" to signature,
             "X-Nonce" to nonce,
