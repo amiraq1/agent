@@ -17,14 +17,6 @@ object ShellCrypto {
     private const val GCM_TAG_SIZE = 128
     private const val HKDF_INFO = "conch-agora-v1"
 
-    // X25519 SPKI prefix (ASN.1 header for X25519 public key)
-    // 30 2E = SEQUENCE(46) ; 30 0B = SEQUENCE(11) ; 06 03 2B 65 6E = OID 1.3.101.110
-    // 05 00 = NULL ; 03 21 00 = BIT STRING(33) 0 unused
-    private val X25519_SPKI_PREFIX = byteArrayOf(
-        0x30, 0x2E, 0x30, 0x0B, 0x06, 0x03, 0x2B.toByte(), 0x65,
-        0x6E, 0x05, 0x00, 0x03, 0x21, 0x00
-    )
-
     private val secureRandom = SecureRandom()
     private val b64url = Base64.getUrlEncoder().withoutPadding()
     private val b64urlDecoder = Base64.getUrlDecoder()
@@ -43,6 +35,12 @@ object ShellCrypto {
         return b64url.encodeToString(rawKey)
     }
 
+    private val X25519_SPKI_PREFIX: ByteArray by lazy {
+        val kp = KeyPairGenerator.getInstance("X25519").generateKeyPair()
+        val encoded = kp.public.encoded
+        encoded.copyOfRange(0, encoded.size - 32)
+    }
+
     fun decodePublicKey(base64urlKey: String): java.security.PublicKey {
         val rawKey = b64urlDecoder.decode(base64urlKey)
         if (rawKey.size != 32) {
@@ -59,7 +57,7 @@ object ShellCrypto {
         ourPrivateKey: java.security.PrivateKey,
         theirPublicKey: java.security.PublicKey
     ): ByteArray {
-        val keyAgreement = KeyAgreement.getInstance("XDH")
+        val keyAgreement = KeyAgreement.getInstance("X25519")
         keyAgreement.init(ourPrivateKey)
         keyAgreement.doPhase(theirPublicKey, true)
         val sharedSecret = keyAgreement.generateSecret()
