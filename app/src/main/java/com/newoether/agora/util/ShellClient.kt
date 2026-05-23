@@ -114,8 +114,8 @@ class ShellClient(
         val bodySha256 = ShellCrypto.sha256Hex(bodyBytes)
         val timestamp = System.currentTimeMillis() / 1000
         val nonce = ShellCrypto.generateNonce()
-        val signature = ShellCrypto.sign(apiKey, timestamp, "POST", "/execute", bodySha256, nonce)
         val clientPubKey = ShellCrypto.encodePublicKey(ephemeralKP.public)
+        val signature = ShellCrypto.sign(apiKey, timestamp, "POST", "/execute", bodySha256, nonce, clientPubKey)
 
         val headers = mapOf(
             "Content-Type" to "application/octet-stream",

@@ -114,8 +114,8 @@ object ShellCrypto {
 
     // --- HMAC-SHA256 ---
 
-    fun sign(apiKey: String, timestamp: Long, method: String, path: String, bodySha256: String, nonce: String): String {
-        val message = "$timestamp|$method|$path|$bodySha256|$nonce"
+    fun sign(apiKey: String, timestamp: Long, method: String, path: String, bodySha256: String, nonce: String, clientPubKey: String): String {
+        val message = "$timestamp|$method|$path|$bodySha256|$nonce|$clientPubKey"
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(apiKey.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         return mac.doFinal(message.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
