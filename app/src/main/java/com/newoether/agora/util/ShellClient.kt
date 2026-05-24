@@ -200,10 +200,11 @@ class ShellClient(
     }
 
     suspend fun fileRead(path: String, offset: Long = 0, limit: Long = 0): FileReadResult {
-        val payload = buildJsonBodyFile(mapOf(
+        val limitVal = if (limit > 0) limit else 1048576
+        val payload = buildJsonBodyFileMixed(mapOf(
             "path" to path,
-            "offset" to offset.toString(),
-            "limit" to limit.toString()
+            "offset" to offset,
+            "limit" to limitVal
         ))
         val jsonStr = filePost("/file/read", payload)
             ?: return FileReadResult("", 0, 0, error = "No response from server")
@@ -260,6 +261,27 @@ class ShellClient(
             )
         } ?: emptyList()
         return Result.success(matches)
+    }
+
+    private fun buildJsonBodyFileMixed(params: Map<String, Any>): String {
+        val sb = StringBuilder()
+        sb.append("{")
+        var first = true
+        for ((key, value) in params) {
+            if (!first) sb.append(",")
+            sb.append("\"${escapeJson(key)}\":")
+            when (value) {
+                is Long, is Int -> sb.append(value.toString())
+                else -> {
+                    sb.append("\"")
+                    sb.append(escapeJson(value.toString()))
+                    sb.append("\"")
+                }
+            }
+            first = false
+        }
+        sb.append("}")
+        return sb.toString()
     }
 
     private fun buildJsonBodyFile(params: Map<String, String>): String {
