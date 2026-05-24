@@ -1,28 +1,30 @@
 Categories:
   - AI Chat
 License: MIT
-SourceCode: https://github.com/newo-ether/Agora
-IssueTracker: https://github.com/newo-ether/Agora/issues
-
 AuthorName: Newo Ether
 AuthorEmail: newoether2000@gmail.com
 
+SourceCode: https://github.com/newo-ether/Agora
+IssueTracker: https://github.com/newo-ether/Agora/issues
+
 Name: Agora
+AutoName: Agora
+
 RepoType: git
 Repo: https://github.com/newo-ether/Agora
+Binaries: https://github.com/newo-ether/Agora/releases/download/v%v/app-release.apk
 
 Builds:
-  - versionName: '1.0.4'
+  - versionName: 1.0.4
     versionCode: 4
-    commit: 8531ade95e5aa6152afb231de38183502e6f6d63
+    commit: 1a1a4212bab85952fd04a578a344fc5f760a1ff1
     subdir: app
     gradle:
       - yes
+
+AllowedAPKSigningKeys: 5de26f263163c220c06c23d6a82fc034d55591ec4d3ff0bad8b9dc9b7be1aa29
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 1.0.4
 CurrentVersionCode: 4
-
-Binaries: https://github.com/newo-ether/Agora/releases/download/v%v/app-release.apk
-AllowedAPKSigningKeys: 5de26f263163c220c06c23d6a82fc034d55591ec4d3ff0bad8b9dc9b7be1aa29
