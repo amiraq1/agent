@@ -121,7 +121,7 @@ dependencies {
 }
 
 tasks.whenTaskAdded {
-    if (name.contains("ArtProfile")) {
+    if (name.contains("ArtProfile") || name.contains("BaselineProfile") || name.contains("baselineProfile")) {
         enabled = false
     }
 }
