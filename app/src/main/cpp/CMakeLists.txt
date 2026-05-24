@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 project("agora_llama")
 
+# Reproducible build: normalize source paths in __FILE__ macros, no debug info
+add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}=. -g0)
+
 set(LLAMA_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../thirdparty/llama.cpp" CACHE PATH "llama.cpp source directory")
 
 # Build llama.cpp as a static library
@@ -16,3 +19,11 @@ add_library(agora_llama SHARED llama_jni.cpp llama_chat_jni.cpp)
 target_link_libraries(agora_llama llama log)
 
 target_include_directories(agora_llama PRIVATE ${LLAMA_CPP_DIR}/include)
+
+# Reproducible build: disable build-id (varies with build path), force hash-style
+target_link_options(agora_llama PRIVATE -Wl,--build-id=none -Wl,--hash-style=gnu)
+
+# Reproducible build: remove .comment section (NDK r26+ embeds platform-specific clang version)
+add_custom_command(TARGET agora_llama POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} --remove-section .comment $<TARGET_FILE:agora_llama>
+)
