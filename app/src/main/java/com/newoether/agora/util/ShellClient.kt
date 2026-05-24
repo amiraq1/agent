@@ -1,6 +1,7 @@
 package com.newoether.agora.util
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -146,6 +147,131 @@ class ShellClient(
             sb.append(",\"workdir\":\"")
             sb.append(escapeJson(workdir))
             sb.append("\"")
+        }
+        sb.append("}")
+        return sb.toString()
+    }
+
+    // --- File API ---
+
+    data class FileReadResult(
+        val content: String,
+        val lines: Int,
+        val totalLines: Int,
+        val error: String? = null
+    )
+
+    data class GrepMatch(
+        val path: String,
+        val line: Int,
+        val content: String
+    )
+
+    private suspend fun filePost(path: String, payload: String): String? {
+        if (apiKey.isBlank()) return null
+        val pubKey = serverPublicKey
+            ?: throw IllegalStateException("Server public key not available. Call fetchPublicKey() first.")
+
+        val ephemeralKP = ShellCrypto.generateEphemeralKeyPair()
+        val aesKey = ShellCrypto.deriveAesKey(ephemeralKP.private, pubKey)
+        val encryptedBody = ShellCrypto.encrypt(aesKey, payload.toByteArray(Charsets.UTF_8))
+        val bodyBytes = encryptedBody.toByteArray(Charsets.UTF_8)
+        val bodySha256 = ShellCrypto.sha256Hex(bodyBytes)
+        val timestamp = System.currentTimeMillis() / 1000
+        val nonce = ShellCrypto.generateNonce()
+        val clientPubKey = ShellCrypto.encodePublicKey(ephemeralKP.public)
+        val signature = ShellCrypto.sign(apiKey, timestamp, "POST", path, bodySha256, nonce, clientPubKey)
+
+        val headers = mapOf(
+            "Content-Type" to "application/octet-stream",
+            "X-Timestamp" to timestamp.toString(),
+            "X-Signature" to signature,
+            "X-Nonce" to nonce,
+            "X-Encryption" to "v1",
+            "X-Client-Public-Key" to clientPubKey
+        )
+
+        val rawResponse = com.newoether.agora.api.HttpClient.post(
+            "$serverUrl$path", encryptedBody, headers
+        ) ?: return null
+
+        val plaintext = ShellCrypto.decrypt(aesKey, rawResponse)
+        return String(plaintext, Charsets.UTF_8)
+    }
+
+    suspend fun fileRead(path: String, offset: Long = 0, limit: Long = 0): FileReadResult {
+        val payload = buildJsonBodyFile(mapOf(
+            "path" to path,
+            "offset" to offset.toString(),
+            "limit" to limit.toString()
+        ))
+        val jsonStr = filePost("/file/read", payload)
+            ?: return FileReadResult("", 0, 0, error = "No response from server")
+        val json = Json.parseToJsonElement(jsonStr).jsonObject
+        val error = json["error"]?.jsonPrimitive?.content
+        if (error != null) return FileReadResult("", 0, 0, error = error)
+        return FileReadResult(
+            content = json["content"]?.jsonPrimitive?.content ?: "",
+            lines = json["lines"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+            totalLines = json["totalLines"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+        )
+    }
+
+    suspend fun fileWrite(path: String, content: String): String? {
+        val payload = buildJsonBodyFile(mapOf(
+            "path" to path,
+            "content" to content
+        ))
+        val jsonStr = filePost("/file/write", payload)
+            ?: return "No response from server"
+        val json = Json.parseToJsonElement(jsonStr).jsonObject
+        return json["error"]?.jsonPrimitive?.content
+    }
+
+    suspend fun fileGlob(pattern: String, basePath: String = ""): Result<List<String>> {
+        val params = mutableMapOf("pattern" to pattern)
+        if (basePath.isNotBlank()) params["path"] = basePath
+        val payload = buildJsonBodyFile(params)
+        val jsonStr = filePost("/file/glob", payload)
+            ?: return Result.failure(Exception("No response from server"))
+        val json = Json.parseToJsonElement(jsonStr).jsonObject
+        val error = json["error"]?.jsonPrimitive?.content
+        if (error != null) return Result.failure(Exception(error))
+        val files = json["files"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+        return Result.success(files)
+    }
+
+    suspend fun fileGrep(pattern: String, basePath: String = "", fileGlob: String = ""): Result<List<GrepMatch>> {
+        val params = mutableMapOf("pattern" to pattern)
+        if (basePath.isNotBlank()) params["path"] = basePath
+        if (fileGlob.isNotBlank()) params["glob"] = fileGlob
+        val payload = buildJsonBodyFile(params)
+        val jsonStr = filePost("/file/grep", payload)
+            ?: return Result.failure(Exception("No response from server"))
+        val json = Json.parseToJsonElement(jsonStr).jsonObject
+        val error = json["error"]?.jsonPrimitive?.content
+        if (error != null) return Result.failure(Exception(error))
+        val matches = json["matches"]?.jsonArray?.map {
+            val obj = it.jsonObject
+            GrepMatch(
+                path = obj["path"]?.jsonPrimitive?.content ?: "",
+                line = obj["line"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                content = obj["content"]?.jsonPrimitive?.content ?: ""
+            )
+        } ?: emptyList()
+        return Result.success(matches)
+    }
+
+    private fun buildJsonBodyFile(params: Map<String, String>): String {
+        val sb = StringBuilder()
+        sb.append("{")
+        var first = true
+        for ((key, value) in params) {
+            if (!first) sb.append(",")
+            sb.append("\"${escapeJson(key)}\":\"")
+            sb.append(escapeJson(value))
+            sb.append("\"")
+            first = false
         }
         sb.append("}")
         return sb.toString()
