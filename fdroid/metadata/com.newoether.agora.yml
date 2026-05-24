@@ -20,6 +20,8 @@ Builds:
     commit: 1a1a4212bab85952fd04a578a344fc5f760a1ff1
     subdir: app
     submodules: true
+    scanignore:
+      - thirdparty/llama.cpp/examples/gguf-hash/deps
     gradle:
       - yes
 
