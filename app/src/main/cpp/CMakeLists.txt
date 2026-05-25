@@ -3,11 +3,12 @@ project("agora_llama")
 
 set(LLAMA_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../thirdparty/llama.cpp" CACHE PATH "llama.cpp source directory")
 
-# Reproducible build: normalize ALL source paths, no debug info
+# Reproducible build: deterministic source paths, no debug info, no .comment section
 add_compile_options(
     -ffile-prefix-map=${CMAKE_SOURCE_DIR}=.
     -ffile-prefix-map=${LLAMA_CPP_DIR}=llama.cpp
     -g0
+    -fno-ident
 )
 
 # Build llama.cpp as a static library
@@ -32,7 +33,18 @@ target_link_options(agora_llama PRIVATE
     -Wl,--threads=1
 )
 
-# Reproducible build: remove .comment section (NDK r26+ embeds platform-specific clang version)
-add_custom_command(TARGET agora_llama POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} --remove-section .comment $<TARGET_FILE:agora_llama>
+# Reproducible build: set SOURCE_DATE_EPOCH for deterministic timestamps
+if(DEFINED ENV{SOURCE_DATE_EPOCH})
+    add_definitions(-DSOURCE_DATE_EPOCH=$ENV{SOURCE_DATE_EPOCH})
+endif()
+
+# Reproducible build: remove .comment section using NDK tool
+find_program(LLVM_OBJCOPY llvm-objcopy
+    HINTS ${ANDROID_NDK}/toolchains/llvm/prebuilt/*/bin
+    NO_DEFAULT_PATH
 )
+if(LLVM_OBJCOPY)
+    add_custom_command(TARGET agora_llama POST_BUILD
+        COMMAND ${LLVM_OBJCOPY} --remove-section .comment $<TARGET_FILE:agora_llama>
+    )
+endif()
