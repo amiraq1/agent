@@ -1,1 +1,1 @@
-BYOK LLM client with multi-provider access, agentic workflows, and remote device control
+BYOK LLM client with multi-provider access, agentic workflows, remote control
