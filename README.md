@@ -16,6 +16,16 @@ Official LLM apps are often heavily restricted, wrapping capable AI models in sa
 
 Agora is a fully open-source, BYOK (Bring Your Own Key) Android client for power users. It connects directly to 8+ AI providers with no intermediary servers or tracking, supports non-linear conversation branching, runs local models on-device, and controls remote machines through an encrypted agent protocol. Built with Jetpack Compose and Kotlin coroutines.
 
+## Screenshots
+
+<table>
+<tr>
+<td width="33%"><img src="assets/screenshot_1.jpg" alt="Chat" width="100%"/></td>
+<td width="33%"><img src="assets/screenshot_2.jpg" alt="Tools" width="100%"/></td>
+<td width="33%"><img src="assets/screenshot_3.jpg" alt="Settings" width="100%"/></td>
+</tr>
+</table>
+
 ## Why Agora?
 
 - **No Middlemen:** Direct API connections. No telemetry, no tracking, no corporate servers logging your conversations. Everything lives locally in a Room database.
@@ -87,12 +97,6 @@ The model can invoke these tools autonomously in multi-round loops:
 - Image, video, and file attachment support with thumbnails
 - English and Chinese (中文) language support
 
-## Screenshots
-
-<div align="center">
-  <img src="assets/screenshot.jpg" alt="Agora Chat Screen" width="350"/>
-</div>
-
 ## Getting Started
 
 ### Prerequisites
@@ -102,33 +106,46 @@ The model can invoke these tools autonomously in multi-round loops:
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/newo-ether/Agora.git
-   ```
-2. Open the project in Android Studio.
-3. Sync Gradle and build.
+<table>
+<tr>
+<td width="33%"><b>① Clone</b><br/><code>git clone https://github.com/newo-ether/Agora.git</code></td>
+<td width="33%"><b>② Open</b><br/>Open the project in Android Studio.</td>
+<td width="33%"><b>③ Build</b><br/>Sync Gradle and build.</td>
+</tr>
+</table>
 
 ### Configuration
 
-1. Launch Agora on your device.
-2. Open **Settings** from the bottom navigation bar.
-3. Select a **Provider** and add your **API Key**.
-4. Browse and enable models under **Models** → "Sync from All Providers."
-5. Customize system prompts, context limits, web search, and memory settings.
+<table>
+<tr>
+<td width="20%"><b>① Launch</b><br/>Open Agora on your device.</td>
+<td width="20%"><b>② Settings</b><br/>Open <b>Settings</b> from the nav bar.</td>
+<td width="20%"><b>③ API Key</b><br/>Select a <b>Provider</b> and add your <b>API Key</b>.</td>
+<td width="20%"><b>④ Models</b><br/><b>Models</b> → "Sync from All Providers."</td>
+<td width="20%"><b>⑤ Customize</b><br/>System prompts, context, search, memory.</td>
+</tr>
+</table>
 
 ### Running Local Models
 
-1. Place a GGUF model file on your device.
-2. In Settings → Provider → Local, tap "Import GGUF Model" and select the file.
-3. Configure context size, temperature, and other parameters.
-4. Select your local model from the chat model picker.
+<table>
+<tr>
+<td width="25%"><b>① Place</b><br/>Put a GGUF model file on your device.</td>
+<td width="25%"><b>② Import</b><br/>Settings → Provider → Local → "Import GGUF Model".</td>
+<td width="25%"><b>③ Configure</b><br/>Set context size, temperature, and other parameters.</td>
+<td width="25%"><b>④ Select</b><br/>Choose your local model from the chat picker.</td>
+</tr>
+</table>
 
 ### Setting Up Remote Shell (Conch)
 
-1. Deploy the [Conch server](https://github.com/newo-ether/conch) on your target machine.
-2. In Agora → Settings → Shell Devices, add a device with its URL and API key.
-3. The model will auto-discover available shell devices and can execute commands, read/write files, and search code remotely.
+<table>
+<tr>
+<td width="33%"><b>① Deploy</b><br/>Deploy the <a href="https://github.com/newo-ether/conch">Conch server</a> on your target machine.</td>
+<td width="33%"><b>② Add Device</b><br/>Settings → Shell Devices → add URL and API key.</td>
+<td width="33%"><b>③ Use</b><br/>The model auto-discovers shell devices for commands, files, and search.</td>
+</tr>
+</table>
 
 ## Tech Stack
 
