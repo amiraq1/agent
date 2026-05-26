@@ -602,7 +602,7 @@ fun ChatApp(
                                             onClick = { focusManager.clearFocus(); scope.launch { drawerState.open() } },
                                             modifier = Modifier.size(44.dp)
                                         ) {
-                                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu), modifier = Modifier.size(22.dp))
+                                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu), modifier = Modifier.size(26.dp))
                                         }
                                         Spacer(modifier = Modifier.width(5.dp))
                                         if (isNewChatMode) {
@@ -652,14 +652,14 @@ fun ChatApp(
                                     ) {
                                         Spacer(modifier = Modifier.width(5.dp))
                                         IconButton(onClick = { showPromptDialog = true }, modifier = Modifier.size(44.dp)) {
-                                            Icon(Icons.Default.Psychology, contentDescription = stringResource(R.string.system_prompt), modifier = Modifier.size(22.dp))
+                                            Icon(Icons.Default.Psychology, contentDescription = stringResource(R.string.system_prompt), modifier = Modifier.size(26.dp))
                                         }
                                         IconButton(onClick = {
                                             isExpanded = false
                                             viewModel.createNewChat()
                                             inputFocusRequester.requestFocus()
                                         }, modifier = Modifier.size(44.dp)) {
-                                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat), modifier = Modifier.size(22.dp))
+                                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat), modifier = Modifier.size(26.dp))
                                         }
                                         Spacer(modifier = Modifier.width(5.dp))
                                     }
