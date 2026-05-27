@@ -2,6 +2,7 @@ package com.newoether.agora.ui.settings
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -39,10 +40,11 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val currentPreset = try { ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { ColorSchemePreset.MIDNIGHT }
     val currentStyle = try { SchemeStyle.valueOf(schemeStyleName) } catch (_: Exception) { SchemeStyle.TONAL_SPOT }
+    val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
         "LIGHT" -> false
         "DARK" -> true
-        else -> false
+        else -> systemDark
     }
     val previewScheme = remember(currentPreset, currentStyle, isDark) {
         colorSchemeForPreset(currentPreset, currentStyle, isDark)
