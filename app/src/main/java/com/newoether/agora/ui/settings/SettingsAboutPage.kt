@@ -135,7 +135,7 @@ fun SettingsAboutPage(onBack: () -> Unit) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
+                tonalElevation = 1.dp,
                 shadowElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
