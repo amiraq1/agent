@@ -36,7 +36,7 @@ fun PdfPageSelectDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceContainer,
             tonalElevation = 3.dp,
             modifier = Modifier.fillMaxWidth()
         ) {

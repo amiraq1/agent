@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -132,6 +133,16 @@ fun ChatApp(
     var showDeleteConfirmDialog by remember { mutableStateOf<String?>(null) }
     var showPromptDialog by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
+    val outerSpacerHeightPx = remember { Animatable(0f) }
+
+    LaunchedEffect(isExpanded) {
+        if (isExpanded) {
+            outerSpacerHeightPx.snapTo(with(density) { 44.dp.toPx() })
+            outerSpacerHeightPx.animateTo(0f, tween(250))
+        } else {
+            outerSpacerHeightPx.snapTo(0f)
+        }
+    }
 
     val configuration = LocalConfiguration.current
     val drawerWidth = configuration.screenWidthDp.dp * 0.8f
@@ -801,11 +812,15 @@ fun ChatApp(
                     },
                 color = Color.Transparent
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
-                        .onSizeChanged {
+                Column {
+                    if (outerSpacerHeightPx.value > 0f) {
+                        Spacer(modifier = Modifier.height(with(density) { outerSpacerHeightPx.value.toDp() }))
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isExpanded) Modifier.fillMaxHeight() else Modifier)
+                            .onSizeChanged {
                             bottomBarHeightPx = it.height.toFloat()
                         }
                         .navigationBarsPadding()
@@ -856,6 +871,7 @@ fun ChatApp(
                         onExpand = { isExpanded = true }
                     )
                 }
+            }
             }
         }
         }
