@@ -473,7 +473,7 @@ fun ChatBottomBar(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 8.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(48.dp).shadow(4.dp, RoundedCornerShape(100), clip = false).background(MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp), RoundedCornerShape(100)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(48.dp).shadow(4.dp, RoundedCornerShape(100), clip = false).background(MaterialTheme.colorScheme.surfaceColorAtElevation(12.dp), RoundedCornerShape(100)).padding(horizontal = 8.dp, vertical = 4.dp)) {
                 var showAddMenu by remember { mutableStateOf(false) }
                 var lastAddDismissTime by remember { mutableLongStateOf(0L) }
                 ExposedDropdownMenuBox(
@@ -495,6 +495,7 @@ fun ChatBottomBar(
                     }
 
                     ExposedDropdownMenu(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         expanded = showAddMenu,
                         onDismissRequest = {
                             if (showAddMenu) {
@@ -579,15 +580,16 @@ fun ChatBottomBar(
                         contentPadding = PaddingValues(8.dp)
                     ) {
                         Text(
-                            displayText, 
+                            displayText,
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                            maxLines = 1, 
-                            overflow = TextOverflow.Ellipsis, 
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             color = if (isModelValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                        ) 
+                        )
                     }
                     
                     ExposedDropdownMenu(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         expanded = activeMenu == "model", 
                         onDismissRequest = { 
                             if (activeMenu == "model") {
@@ -645,6 +647,7 @@ fun ChatBottomBar(
                     }
                     
                     ExposedDropdownMenu(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         expanded = activeMenu == "tools",
                         onDismissRequest = {
                             if (activeMenu == "tools") {
@@ -844,6 +847,7 @@ fun ChatBottomBar(
     // File rejection dialog
     if (rejectedMessage != null) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { rejectedMessage = null },
             title = { Text(stringResource(R.string.file_unsupported_title)) },
             text = { Text(rejectedMessage!!) },

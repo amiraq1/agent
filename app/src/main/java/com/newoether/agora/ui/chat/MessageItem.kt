@@ -532,6 +532,7 @@ fun MessageItem(
         } else stringResource(R.string.unknown)
 
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showInfoDialog = false },
             title = { Text(stringResource(R.string.message_info)) },
             text = {

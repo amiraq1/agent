@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.*
@@ -119,21 +120,21 @@ fun SystemPromptEditorPage(
         contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             TopAppBar(
-                title = { Text(if (isEdit) stringResource(R.string.prompts_edit_title) else stringResource(R.string.prompts_add_title)) },
+                title = { Text(if (isEdit) stringResource(R.string.prompts_edit_title) else stringResource(R.string.prompts_add_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
+                    IconButton(onClick = {
                         if (title.isBlank()) {
                             titleError = true
-                            return@TextButton
+                            return@IconButton
                         }
                         onSave(title, systemItems.toList(), userPrependItems.toList(), userPostpendItems.toList())
                     }) {
-                        Text(stringResource(R.string.provider_save))
+                        Icon(Icons.Default.Save, contentDescription = stringResource(R.string.provider_save))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -289,7 +290,7 @@ fun SystemPromptEditorPage(
             )
             Spacer(modifier = Modifier.height(6.dp))
             ElevatedCard(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().animateContentSize(tween(200))
             ) {
                 val previewText = PredefinedVariables.compile(
@@ -299,7 +300,7 @@ fun SystemPromptEditorPage(
                 Text(
                     text = previewText.ifEmpty { stringResource(R.string.template_preview_empty) },
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(12.dp)
+                    modifier = Modifier.padding(16.dp)
                 )
             }
 
@@ -375,6 +376,7 @@ private fun InsertBetweenButton(
                 )
             }
             DropdownMenu(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 shape = RoundedCornerShape(12.dp)

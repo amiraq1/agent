@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 enum class ThemeMode { LIGHT, DARK, FOLLOW_DEVICE }
@@ -13,7 +14,8 @@ enum class ThemeMode { LIGHT, DARK, FOLLOW_DEVICE }
 @Composable
 fun AgoraTheme(
     themeMode: ThemeMode = ThemeMode.FOLLOW_DEVICE,
-    colorSchemePreset: ColorSchemePreset = ColorSchemePreset.DEFAULT,
+    colorSchemePreset: ColorSchemePreset = ColorSchemePreset.MIDNIGHT,
+    schemeStyle: SchemeStyle = SchemeStyle.TONAL_SPOT,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -24,15 +26,14 @@ fun AgoraTheme(
         ThemeMode.FOLLOW_DEVICE -> systemDark
     }
 
-    val (lightScheme, darkScheme) = colorSchemeForPreset(colorSchemePreset)
-
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> darkScheme
-        else -> lightScheme
+        else -> remember(colorSchemePreset, schemeStyle, darkTheme) {
+            colorSchemeForPreset(colorSchemePreset, schemeStyle, darkTheme)
+        }
     }
 
     MaterialTheme(

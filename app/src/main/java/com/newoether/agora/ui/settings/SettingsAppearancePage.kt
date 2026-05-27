@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
 import com.newoether.agora.ui.theme.ColorSchemePreset
+import com.newoether.agora.ui.theme.SchemeStyle
 import com.newoether.agora.ui.theme.colorSchemeForPreset
 import com.newoether.agora.viewmodel.ChatViewModel
 
@@ -32,17 +33,20 @@ import com.newoether.agora.viewmodel.ChatViewModel
 fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val themeMode by viewModel.themeMode.collectAsState()
     val colorSchemeName by viewModel.colorScheme.collectAsState()
+    val schemeStyleName by viewModel.schemeStyle.collectAsState()
     val dynamicColor by viewModel.dynamicColor.collectAsState()
 
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val currentPreset = try { ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { ColorSchemePreset.DEFAULT }
+    val currentPreset = try { ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { ColorSchemePreset.MIDNIGHT }
+    val currentStyle = try { SchemeStyle.valueOf(schemeStyleName) } catch (_: Exception) { SchemeStyle.TONAL_SPOT }
     val isDark = when (themeMode) {
         "LIGHT" -> false
         "DARK" -> true
-        else -> false // system — use light for swatch preview
+        else -> false
     }
-    val schemePair = colorSchemeForPreset(currentPreset)
-    val previewScheme = if (isDark) schemePair.dark else schemePair.light
+    val previewScheme = remember(currentPreset, currentStyle, isDark) {
+        colorSchemeForPreset(currentPreset, currentStyle, isDark)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -106,7 +110,9 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = stringResource(R.string.color_scheme),
                 items = ColorSchemePreset.entries.map { preset ->
                     {
-                        val presetPrimary = colorSchemeForPreset(preset).light.primary
+                        val presetPrimary = remember(preset, currentStyle, isDark) {
+                            colorSchemeForPreset(preset, currentStyle, isDark).primary
+                        }
                         SettingsItem(
                             headlineContent = {
                                 Text(
@@ -132,6 +138,33 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             modifier = Modifier
                                 .alpha(schemeAlpha)
                                 .clickable(enabled = schemeAlpha > 0.5f) { viewModel.setColorScheme(preset.name) }
+                        )
+                    }
+                }
+            )
+
+            // ── Scheme Style ──
+            SettingsGroup(
+                title = stringResource(R.string.scheme_style),
+                items = SchemeStyle.entries.map { style ->
+                    {
+                        SettingsItem(
+                            headlineContent = {
+                                Text(
+                                    text = styleDisplayName(style),
+                                    fontWeight = if (style == currentStyle) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            trailingContent = {
+                                RadioButton(
+                                    selected = style == currentStyle,
+                                    onClick = { viewModel.setSchemeStyle(style.name) },
+                                    enabled = !dynamicColor || !isDynamicAvailable
+                                )
+                            },
+                            modifier = Modifier
+                                .alpha(schemeAlpha)
+                                .clickable(enabled = schemeAlpha > 0.5f) { viewModel.setSchemeStyle(style.name) }
                         )
                     }
                 }
@@ -178,10 +211,20 @@ private fun ThemeModeOption(label: String, icon: androidx.compose.ui.graphics.ve
 
 @Composable
 private fun presetDisplayName(preset: ColorSchemePreset): String = when (preset) {
-    ColorSchemePreset.DEFAULT -> stringResource(R.string.color_scheme_default)
-    ColorSchemePreset.OCEAN -> stringResource(R.string.color_scheme_ocean)
+    ColorSchemePreset.MIDNIGHT -> stringResource(R.string.color_scheme_midnight)
+    ColorSchemePreset.NORDIC -> stringResource(R.string.color_scheme_nordic)
     ColorSchemePreset.FOREST -> stringResource(R.string.color_scheme_forest)
     ColorSchemePreset.SUNSET -> stringResource(R.string.color_scheme_sunset)
     ColorSchemePreset.ROSE -> stringResource(R.string.color_scheme_rose)
+    ColorSchemePreset.LAVENDER -> stringResource(R.string.color_scheme_lavender)
     ColorSchemePreset.SLATE -> stringResource(R.string.color_scheme_slate)
+    ColorSchemePreset.OCEAN -> stringResource(R.string.color_scheme_ocean)
+}
+
+@Composable
+private fun styleDisplayName(style: SchemeStyle): String = when (style) {
+    SchemeStyle.TONAL_SPOT -> stringResource(R.string.scheme_style_tonal_spot)
+    SchemeStyle.EXPRESSIVE -> stringResource(R.string.scheme_style_expressive)
+    SchemeStyle.VIBRANT -> stringResource(R.string.scheme_style_vibrant)
+    SchemeStyle.NEUTRAL -> stringResource(R.string.scheme_style_neutral)
 }

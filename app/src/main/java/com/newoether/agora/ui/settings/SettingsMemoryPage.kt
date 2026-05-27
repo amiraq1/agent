@@ -161,6 +161,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                                 Icon(Icons.Default.MoreVert, stringResource(R.string.menu), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                                             }
                                             DropdownMenu(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                                 expanded = showFileMenu,
                                                 onDismissRequest = { showFileMenu = false },
                                                 shape = RoundedCornerShape(12.dp)
@@ -200,6 +201,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // Delete file confirmation
     showDeleteFileConfirm?.let { fileName ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showDeleteFileConfirm = null },
             title = { Text(stringResource(R.string.memory_delete_title)) },
             text = { Text(stringResource(R.string.memory_delete_text, fileName)) },
@@ -225,6 +227,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         var editDesc by remember { mutableStateOf(fileEditorDesc) }
 
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = {
                 showFileEditor = null
                 fileEditorContent = ""
@@ -309,6 +312,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // New File Dialog
     if (showNewFileDialog) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showNewFileDialog = false },
             title = { Text(stringResource(R.string.memory_add_title)) },
             text = {

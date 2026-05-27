@@ -88,14 +88,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by settingsManager.themeMode.collectAsState(initial = "FOLLOW_DEVICE")
             val colorSchemeName by settingsManager.colorScheme.collectAsState(initial = "DEFAULT")
+            val schemeStyleName by settingsManager.schemeStyle.collectAsState(initial = "TONAL_SPOT")
             val dynamicColor by settingsManager.dynamicColor.collectAsState(initial = true)
 
             val themeModeEnum = try { com.newoether.agora.ui.theme.ThemeMode.valueOf(themeMode) } catch (_: Exception) { com.newoether.agora.ui.theme.ThemeMode.FOLLOW_DEVICE }
-            val colorSchemePreset = try { com.newoether.agora.ui.theme.ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { com.newoether.agora.ui.theme.ColorSchemePreset.DEFAULT }
+            val colorSchemePreset = try { com.newoether.agora.ui.theme.ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { com.newoether.agora.ui.theme.ColorSchemePreset.MIDNIGHT }
+            val schemeStyle = try { com.newoether.agora.ui.theme.SchemeStyle.valueOf(schemeStyleName) } catch (_: Exception) { com.newoether.agora.ui.theme.SchemeStyle.TONAL_SPOT }
 
             AgoraTheme(
                 themeMode = themeModeEnum,
                 colorSchemePreset = colorSchemePreset,
+                schemeStyle = schemeStyle,
                 dynamicColor = dynamicColor
             ) {
                 val activity = LocalActivity.current

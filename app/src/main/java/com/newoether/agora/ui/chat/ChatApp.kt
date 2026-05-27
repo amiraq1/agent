@@ -476,6 +476,7 @@ fun ChatApp(
                                     }
 
                                     DropdownMenu(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                         expanded = showMenu,
                                         onDismissRequest = { showMenu = false },
                                         offset = pressOffset,
@@ -589,7 +590,7 @@ fun ChatApp(
                                 Surface(
                                     shape = RoundedCornerShape(50),
                                     color = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 2.dp,
+                                    tonalElevation = 4.dp,
                                     shadowElevation = 4.dp,
                                     modifier = Modifier.fillMaxHeight().widthIn(max = 260.dp)
                                 ) {
@@ -642,7 +643,7 @@ fun ChatApp(
                                 Surface(
                                     shape = RoundedCornerShape(50),
                                     color = MaterialTheme.colorScheme.surface,
-                                    tonalElevation = 2.dp,
+                                    tonalElevation = 4.dp,
                                     shadowElevation = 4.dp,
                                     modifier = Modifier.fillMaxHeight()
                                 ) {
@@ -820,7 +821,7 @@ fun ChatApp(
                         .imePadding()
                         .padding(8.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp,
+                    tonalElevation = 4.dp,
                     shadowElevation = 0.dp,
                     shape = RoundedCornerShape(28.dp)
                 ) {
@@ -871,6 +872,7 @@ fun ChatApp(
 
     if (showRenameDialog != null) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showRenameDialog = null },
             title = { Text(stringResource(R.string.rename_chat)) },
             text = {
@@ -903,6 +905,7 @@ fun ChatApp(
 
     if (showDeleteConfirmDialog != null) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showDeleteConfirmDialog = null },
             title = { Text(stringResource(R.string.delete_chat)) },
             text = { Text(stringResource(R.string.delete_chat_confirm)) },
@@ -933,6 +936,7 @@ fun ChatApp(
         }
 
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showPromptDialog = false },
             title = { Text(stringResource(R.string.conversation_prompt)) },
             text = {

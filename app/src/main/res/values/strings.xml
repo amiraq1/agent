@@ -292,12 +292,19 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="theme_mode_follow_device">Follow Device</string>
     <string name="color_scheme">Color Scheme</string>
-    <string name="color_scheme_default">Default</string>
-    <string name="color_scheme_ocean">Ocean</string>
+    <string name="color_scheme_midnight">Midnight</string>
+    <string name="color_scheme_nordic">Nordic</string>
     <string name="color_scheme_forest">Forest</string>
     <string name="color_scheme_sunset">Sunset</string>
     <string name="color_scheme_rose">Rose</string>
+    <string name="color_scheme_lavender">Lavender</string>
     <string name="color_scheme_slate">Slate</string>
+    <string name="color_scheme_ocean">Ocean</string>
+    <string name="scheme_style">Scheme Style</string>
+    <string name="scheme_style_tonal_spot">Tonal Spot</string>
+    <string name="scheme_style_expressive">Expressive</string>
+    <string name="scheme_style_vibrant">Vibrant</string>
+    <string name="scheme_style_neutral">Neutral</string>
     <string name="dynamic_color">Dynamic Color</string>
     <string name="dynamic_color_desc">Use system-generated colors based on wallpaper (Android 12+)</string>
 

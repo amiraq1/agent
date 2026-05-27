@@ -259,12 +259,19 @@
     <string name="theme_mode_dark">深色</string>
     <string name="theme_mode_follow_device">跟随系统</string>
     <string name="color_scheme">配色方案</string>
-    <string name="color_scheme_default">默认</string>
-    <string name="color_scheme_ocean">海洋</string>
+    <string name="color_scheme_midnight">午夜</string>
+    <string name="color_scheme_nordic">北欧</string>
     <string name="color_scheme_forest">森林</string>
     <string name="color_scheme_sunset">日落</string>
     <string name="color_scheme_rose">玫瑰</string>
+    <string name="color_scheme_lavender">薰衣草</string>
     <string name="color_scheme_slate">岩灰</string>
+    <string name="color_scheme_ocean">海洋</string>
+    <string name="scheme_style">方案风格</string>
+    <string name="scheme_style_tonal_spot">色调聚焦</string>
+    <string name="scheme_style_expressive">活泼</string>
+    <string name="scheme_style_vibrant">鲜艳</string>
+    <string name="scheme_style_neutral">中性</string>
     <string name="dynamic_color">动态颜色</string>
     <string name="dynamic_color_desc">根据壁纸使用系统生成的颜色（Android 12+）</string>
 

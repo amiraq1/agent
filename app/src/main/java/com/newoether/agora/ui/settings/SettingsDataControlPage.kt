@@ -278,6 +278,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         else stringResource(R.string.importing_label)
 
             AlertDialog(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 onDismissRequest = { },
                 title = { Text(label) },
                 text = {
@@ -319,6 +320,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // Invalid import error
     if (invalidImportMessage != null) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { invalidImportMessage = null },
             title = { Text(stringResource(R.string.data_import_title)) },
             text = { Text(invalidImportMessage!!) },
@@ -356,6 +358,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         val selectedMsgCount = preview.conversations.filter { it.uuid in dialogSelectedIds }.sumOf { it.messageCount }
 
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = {
                 showClaudeImportDialog = false
                 viewModel.clearClaudeImportState()
@@ -452,6 +455,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showClaudeSuccessDialog && claudeImportResult != null) {
         val result = claudeImportResult!!
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = {
                 showClaudeSuccessDialog = false
                 viewModel.clearClaudeImportState()
@@ -491,6 +495,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         val selectedMsgCount = preview.conversations.filter { it.uuid in dialogSelectedIds }.sumOf { it.messageCount }
 
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = {
                 showGptImportDialog = false
                 viewModel.clearGptImportState()
@@ -585,6 +590,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showGptSuccessDialog && gptImportResult != null) {
         val result = gptImportResult!!
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = {
                 showGptSuccessDialog = false
                 viewModel.clearGptImportState()
@@ -632,6 +638,7 @@ private fun ExportDataDialog(
     val anyChecked = exportConversations || exportMemories || exportPrompts || exportSettings || exportApiKeys
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.data_export_title), fontWeight = FontWeight.Normal) },
         text = {
@@ -709,6 +716,7 @@ private fun ImportPreviewDialog(
     var keysStrategy by remember { mutableStateOf(DataImporter.ImportStrategy.SKIP) }
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.import_preview_title)) },
         text = {

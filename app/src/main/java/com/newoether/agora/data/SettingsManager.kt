@@ -103,6 +103,7 @@ class SettingsManager(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val COLOR_SCHEME = stringPreferencesKey("color_scheme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val SCHEME_STYLE = stringPreferencesKey("scheme_style")
         val FIRST_LAUNCH_TIME = longPreferencesKey("first_launch_time")
         val RATING_PROMPT_SUBMITTED = booleanPreferencesKey("rating_prompt_submitted")
         val RATING_PROMPT_DISMISSED = booleanPreferencesKey("rating_prompt_dismissed")
@@ -196,6 +197,7 @@ class SettingsManager(private val context: Context) {
     val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: "FOLLOW_DEVICE" }
     val colorScheme: Flow<String> = context.dataStore.data.map { it[COLOR_SCHEME] ?: "DEFAULT" }
     val dynamicColor: Flow<Boolean> = context.dataStore.data.map { it[DYNAMIC_COLOR] ?: true }
+    val schemeStyle: Flow<String> = context.dataStore.data.map { it[SCHEME_STYLE] ?: "TONAL_SPOT" }
     val firstLaunchTime: Flow<Long?> = context.dataStore.data.map { it[FIRST_LAUNCH_TIME] }
     val ratingPromptSubmitted: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_SUBMITTED] ?: false }
     val ratingPromptDismissed: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_DISMISSED] ?: false }
@@ -371,6 +373,10 @@ class SettingsManager(private val context: Context) {
     }
     suspend fun saveDynamicColor(enabled: Boolean) {
         context.dataStore.edit { it[DYNAMIC_COLOR] = enabled }
+    }
+
+    suspend fun saveSchemeStyle(style: String) {
+        context.dataStore.edit { it[SCHEME_STYLE] = style }
     }
 
     suspend fun saveFirstLaunchTime(time: Long) {

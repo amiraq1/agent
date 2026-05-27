@@ -183,6 +183,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
     if (showProviderDialog) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showProviderDialog = false },
             title = { Text(stringResource(R.string.web_search_select_provider)) },
             text = {

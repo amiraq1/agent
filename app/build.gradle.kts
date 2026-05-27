@@ -122,6 +122,7 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.okhttp)
+    implementation(libs.material.color.utilities)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 

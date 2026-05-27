@@ -134,8 +134,8 @@ fun SettingsAboutPage(onBack: () -> Unit) {
             // -- Rating Section --
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                tonalElevation = 0.dp,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(

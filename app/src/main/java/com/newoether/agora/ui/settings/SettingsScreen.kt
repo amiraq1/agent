@@ -59,7 +59,8 @@ fun SettingsGroup(
                 }
                 Surface(
                     shape = shape,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     item()
@@ -257,7 +258,8 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         }
                                         Surface(
                                             shape = shape,
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            tonalElevation = 2.dp,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(shape)

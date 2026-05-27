@@ -80,6 +80,7 @@ fun SettingsPromptsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
     showDeletePromptConfirm?.let { entry ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onDismissRequest = { showDeletePromptConfirm = null },
             title = { Text(stringResource(R.string.prompts_delete_title)) },
             text = { Text(stringResource(R.string.prompts_delete_text, entry.title)) },
@@ -161,7 +162,7 @@ private fun PromptList(
                                     IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
                                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                     }
-                                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, shape = RoundedCornerShape(12.dp)) {
+                                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp)) {
                                         DropdownMenuItem(text = { Text(stringResource(R.string.provider_edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; onEdit(entry) })
                                         DropdownMenuItem(text = { Text(stringResource(R.string.provider_delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDeleteRequest(entry) })
                                     }
