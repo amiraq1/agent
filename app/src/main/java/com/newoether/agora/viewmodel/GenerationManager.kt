@@ -493,13 +493,14 @@ class GenerationManager(
                         val centerIdx = centerId?.let { indexMap[it] } ?: (range.first + range.last) / 2
                         cappedRange = ((centerIdx - halfN).coerceAtLeast(range.first)..(centerIdx + halfN).coerceAtMost(range.last))
                     }
-                    val windowMsgs = cappedRange.map { branch[it] }
+                    val windowMsgIds = branch.subList(cappedRange.first, cappedRange.last + 1).map { it.id }.toSet()
+                    val matchedInWindow = matchIds.count { it in windowMsgIds }
                     allWindows.add(SearchWindow(
                         conversationId = convId,
                         conversationTitle = conversation.title,
-                        messages = windowMsgs,
+                        messages = cappedRange.map { branch[it] },
                         topScore = score,
-                        matchCount = matchIds.count { it in branch.subList(range.first, range.last + 1).map { m -> m.id } }
+                        matchCount = matchedInWindow
                     ))
                 }
             }
