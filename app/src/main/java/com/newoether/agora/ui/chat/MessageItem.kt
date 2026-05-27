@@ -1688,8 +1688,10 @@ private fun RecomposeSafeMarkdown(
         if (!waitingForFade && !fading) {
             if (front == 0) {
                 if (buf0 != content) buf0 = content
+                buf1 = ""
             } else {
                 if (buf1 != content) buf1 = content
+                buf0 = ""
             }
         }
     }
