@@ -627,10 +627,12 @@ class GenerationManager(
         }
         val best = scored.maxOfOrNull { it.second } ?: 0f
         DebugLog.d("AgoraVM", "GM RAG: best cosine = ${"%.4f".format(best)}")
-        val filtered = scored.filter { it.second > ctx.ragThreshold }
-         .sortedByDescending { it.second }
-         .take(limit)
-        val messagesById = chatDao.getMessagesByIds(filtered.map { it.first.messageId }).associateBy { it.id }
+        val aboveThreshold = scored.filter { it.second > ctx.ragThreshold }
+        val messagesById = chatDao.getMessagesByIds(aboveThreshold.map { it.first.messageId }).associateBy { it.id }
+        val filtered = aboveThreshold
+            .filter { (messagesById[it.first.messageId]?.text?.length ?: 0) >= 10 }
+            .sortedByDescending { it.second }
+            .take(limit)
         filtered.mapNotNull { (embedding, score) -> messagesById[embedding.messageId]?.let { it to score } }
     }
 
