@@ -473,7 +473,7 @@ fun ChatBottomBar(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 8.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(48.dp).shadow(4.dp, RoundedCornerShape(100), clip = false).background(MaterialTheme.colorScheme.surfaceColorAtElevation(12.dp), RoundedCornerShape(100)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(48.dp).shadow(4.dp, RoundedCornerShape(100), clip = false).background(MaterialTheme.colorScheme.surfaceColorAtElevation(16.dp), RoundedCornerShape(100)).padding(horizontal = 8.dp, vertical = 4.dp)) {
                 var showAddMenu by remember { mutableStateOf(false) }
                 var lastAddDismissTime by remember { mutableLongStateOf(0L) }
                 ExposedDropdownMenuBox(
@@ -495,7 +495,7 @@ fun ChatBottomBar(
                     }
 
                     ExposedDropdownMenu(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         expanded = showAddMenu,
                         onDismissRequest = {
                             if (showAddMenu) {
@@ -589,7 +589,7 @@ fun ChatBottomBar(
                     }
                     
                     ExposedDropdownMenu(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         expanded = activeMenu == "model", 
                         onDismissRequest = { 
                             if (activeMenu == "model") {
@@ -647,7 +647,7 @@ fun ChatBottomBar(
                     }
                     
                     ExposedDropdownMenu(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         expanded = activeMenu == "tools",
                         onDismissRequest = {
                             if (activeMenu == "tools") {
@@ -847,7 +847,7 @@ fun ChatBottomBar(
     // File rejection dialog
     if (rejectedMessage != null) {
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { rejectedMessage = null },
             title = { Text(stringResource(R.string.file_unsupported_title)) },
             text = { Text(rejectedMessage!!) },

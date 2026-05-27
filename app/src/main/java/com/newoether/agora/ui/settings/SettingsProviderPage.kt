@@ -138,7 +138,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 IconButton(onClick = { showProviderMenu = true }, modifier = Modifier.size(24.dp)) {
                                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                 }
-                                DropdownMenu(expanded = showProviderMenu, onDismissRequest = { showProviderMenu = false }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp)) {
+                                DropdownMenu(expanded = showProviderMenu, onDismissRequest = { showProviderMenu = false }, containerColor = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showProviderMenu = false; showRenameProvider = true })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showProviderMenu = false; showDeleteProvider = true })
                                 }
@@ -185,7 +185,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                         }
                                         DropdownMenu(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                             expanded = showMenu,
                                             onDismissRequest = { showMenu = false },
                                             shape = RoundedCornerShape(12.dp)
@@ -312,7 +312,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
                                             Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options), modifier = Modifier.size(18.dp))
                                         }
-                                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp)) {
+                                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
                                             DropdownMenuItem(text = { Text(stringResource(R.string.provider_edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { showMenu = false; showKeyDialog = entry })
                                             DropdownMenuItem(text = { Text(stringResource(R.string.provider_delete), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteKeyConfirm = entry })
                                         }
@@ -360,7 +360,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     val idRegex = remember { Regex("^[a-z0-9._-]+\$") }
 
                     AlertDialog(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = {
                             scope.launch(Dispatchers.IO) {
                                 copiedFilePath?.let { java.io.File(it).delete() }
@@ -512,7 +512,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     val fm = LocalFocusManager.current
                     val idRegex = remember { Regex("^[a-z0-9._-]+\$") }
                     AlertDialog(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showEditDialog = null },
                         title = { Text(stringResource(R.string.edit)) },
                         text = {
@@ -632,7 +632,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 // Delete confirmation
                 showDeleteConfirm?.let { model ->
                     AlertDialog(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showDeleteConfirm = null },
                         title = { Text(stringResource(R.string.local_chat_delete_title)) },
                         text = { Text(stringResource(R.string.local_chat_delete_text, model.alias)) },
@@ -656,7 +656,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     var renameValue by remember { mutableStateOf(viewingProvider) }
                     var renameError by remember { mutableStateOf(false) }
                     AlertDialog(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showRenameProvider = false },
                         title = { Text(stringResource(R.string.custom_provider_rename_title)) },
                         text = {
@@ -690,7 +690,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
                 if (showDeleteProvider) {
                     AlertDialog(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showDeleteProvider = false },
                         title = { Text(stringResource(R.string.custom_provider_delete_title)) },
                         text = { Text(stringResource(R.string.custom_provider_delete_text, viewingProvider)) },
@@ -714,7 +714,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // Provider Selection Dialog
     if (showProviderDialog) {
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showProviderDialog = false },
             title = { Text(stringResource(R.string.provider_select_provider)) },
             text = {
@@ -784,7 +784,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         val isEdit = apiKeys.any { it.id == entry.id }
 
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showKeyDialog = null },
             title = { Text(if (isEdit) stringResource(R.string.provider_edit_key) else stringResource(R.string.provider_add_key_title)) },
             text = {
@@ -826,7 +826,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // Delete Key Confirmation
     showDeleteKeyConfirm?.let { entry ->
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeleteKeyConfirm = null },
             title = { Text(stringResource(R.string.provider_delete_key_title)) },
             text = { Text(stringResource(R.string.provider_delete_key_text, entry.name)) },
@@ -851,7 +851,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         var urlError by remember { mutableStateOf(false) }
 
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showAddCustomProviderDialog = false },
             title = { Text(stringResource(R.string.custom_provider_add_title)) },
             text = {

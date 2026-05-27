@@ -254,7 +254,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.options))
                                                 }
                                                 DropdownMenu(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                                     expanded = showMenuForModel == model.id,
                                                     onDismissRequest = { showMenuForModel = null },
                                                     shape = RoundedCornerShape(12.dp)
@@ -358,7 +358,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
         if (showRemoteDialog) {
             AlertDialog(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRemoteDialog = false; testStatus = null },
                 title = { Text(stringResource(R.string.add_remote_model)) },
                 text = {
@@ -464,7 +464,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
             }
             AlertDialog(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = {
                     if (localFilePath.isNotBlank()) File(localFilePath).delete()
                     showLocalDialog = false
@@ -524,7 +524,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         if (showRecacheConfirm != null) {
             val modelId = showRecacheConfirm!!
             AlertDialog(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRecacheConfirm = null },
                 title = { Text(stringResource(R.string.recache_confirm_title)) },
                 text = { Text(stringResource(R.string.recache_confirm_message)) },
@@ -543,7 +543,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         if (showDeleteDialog != null) {
             val modelId = showDeleteDialog!!
             AlertDialog(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showDeleteDialog = null },
                 title = { Text(stringResource(R.string.delete_model_title)) },
                 text = { Text(stringResource(R.string.delete_model_confirm)) },
@@ -562,7 +562,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         if (showRenameDialog != null) {
             val modelId = showRenameDialog!!
             AlertDialog(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRenameDialog = null },
                 title = { Text(stringResource(R.string.rename)) },
                 text = {

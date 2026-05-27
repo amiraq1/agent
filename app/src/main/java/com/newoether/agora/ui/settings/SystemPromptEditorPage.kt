@@ -376,7 +376,7 @@ private fun InsertBetweenButton(
                 )
             }
             DropdownMenu(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 shape = RoundedCornerShape(12.dp)

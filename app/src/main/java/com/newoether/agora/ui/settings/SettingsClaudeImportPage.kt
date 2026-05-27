@@ -154,7 +154,7 @@ fun SettingsClaudeImportPage(
     // Import strategy dialog
     if (showImportDialog) {
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showImportDialog = false },
             title = { Text(stringResource(R.string.claude_import_title)) },
             text = {
@@ -205,7 +205,7 @@ fun SettingsClaudeImportPage(
     if (showSuccessDialog && importResult != null) {
         val result = importResult!!
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showSuccessDialog = false },
             title = { Text(stringResource(R.string.claude_import_success)) },
             text = {

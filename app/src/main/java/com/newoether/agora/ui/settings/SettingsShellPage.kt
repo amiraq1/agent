@@ -303,7 +303,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 val deviceToDelete = shellDevices.find { it.id == deleteConfirmDeviceId }
                 val deviceName = deviceToDelete?.name?.ifBlank { stringResource(R.string.search_untitled) } ?: ""
                 AlertDialog(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     onDismissRequest = { deleteConfirmDeviceId = null },
                     title = { Text(stringResource(R.string.shell_delete_confirm_title)) },
                     text = { Text(stringResource(R.string.shell_delete_confirm_message, deviceName)) },

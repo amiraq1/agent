@@ -92,7 +92,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     if (showTitleModelDialog) {
         val enabledModelsList = enabledModels.toList()
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showTitleModelDialog = false },
             title = { Text(stringResource(R.string.title_gen_select_model)) },
             text = {

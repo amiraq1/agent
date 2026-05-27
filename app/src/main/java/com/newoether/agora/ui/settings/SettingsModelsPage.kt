@@ -167,7 +167,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     // Active Model Dialog
     if (showActiveModelDialog) {
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showActiveModelDialog = false },
             title = { Text(stringResource(R.string.models_select_default)) },
             text = {
@@ -210,7 +210,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         val aliasState = rememberTextFieldState(modelAliases[model] ?: "")
 
         AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showModelAliasDialog = null },
             title = { Text(stringResource(R.string.models_rename)) },
             text = {
