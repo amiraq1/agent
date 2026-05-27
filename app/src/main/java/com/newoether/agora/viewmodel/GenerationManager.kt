@@ -451,6 +451,7 @@ class GenerationManager(
                 // Build selected branch as indexed list
                 val branch = buildSelectedBranch(allMsgs, conversation.selectedBranchesJson)
                 val indexMap = branch.withIndex().associate { (i, m) -> m.id to i }
+                val branchMatchIds = matchIds.filter { it in indexMap }.toSet()
 
                 // For each match, expand window N/2 before and N/2 after
                 val windows = mutableListOf<Pair<IntRange, Float>>() // (range, score)
@@ -459,9 +460,9 @@ class GenerationManager(
                     val score = scoreByMessageId[matchId] ?: 1.0f
                     val before = halfN.coerceAtMost(centerIdx)
                     val after = halfN.coerceAtMost(branch.size - 1 - centerIdx)
-                    // Asymmetric fill
+                    // Asymmetric fill: compensate short sides with extra from the other side
                     val extraBefore = (halfN - before).coerceAtMost(branch.size - 1 - centerIdx - after)
-                    val extraAfter = (halfN - after - extraBefore).coerceAtMost(centerIdx - before)
+                    val extraAfter = (halfN - after - extraBefore).coerceAtLeast(0).coerceAtMost(centerIdx - before)
                     val start = (centerIdx - before - extraAfter).coerceAtLeast(0)
                     val end = (centerIdx + after + extraBefore).coerceAtMost(branch.size - 1)
                     windows.add((start..end) to score)
@@ -483,10 +484,6 @@ class GenerationManager(
                         merged.add(mergedRange to score)
                     }
                 }
-
-                // Only consider matches that are actually on the selected branch
-                val branchMatchIds = matchIds.filter { it in indexMap }.toSet()
-
                 // Convert to SearchWindow, apply cap
                 for ((range, score) in merged) {
                     var cappedRange = range
