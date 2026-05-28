@@ -13,7 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -200,11 +200,6 @@ fun SystemPromptEditorPage(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .then(
-                                    if (isSelected) Modifier
-                                        .shadow(2.dp, RoundedCornerShape(20.dp))
-                                    else Modifier
-                                )
                                 .background(bgColor, RoundedCornerShape(20.dp))
                                 .clip(RoundedCornerShape(20.dp))
                                 .clickable { selectedTab = index }
