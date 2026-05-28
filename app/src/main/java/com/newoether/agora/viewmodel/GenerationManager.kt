@@ -759,6 +759,7 @@ class GenerationManager(
             val html = com.newoether.agora.api.HttpClient.fetchModels(url)
                 ?: return buildJsonObject { put("type", "web_fetch"); put("url", url); put("error", "no_response") }.toString()
             val text = html
+                .take(80000)
                 .replace(Regex("<script[^>]*>[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), " ")
                 .replace(Regex("<style[^>]*>[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), " ")
                 .replace(Regex("<[^>]+>"), " ")
