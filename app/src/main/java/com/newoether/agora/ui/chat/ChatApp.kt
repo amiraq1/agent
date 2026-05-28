@@ -798,19 +798,18 @@ fun ChatApp(
                         }
                     }
 
-                    val atBottom by remember {
+                    val showButton by remember {
                         derivedStateOf {
-                            if (isNewChatMode) true
+                            if (isNewChatMode) false
                             else {
                                 val info = listState.layoutInfo
                                 val total = info.totalItemsCount
-                                total > 0 && info.visibleItemsInfo.any { it.index == total - 1 }
+                                total > 1 && info.visibleItemsInfo.none { it.index == total - 2 }
                             }
                         }
                     }
 
-                    val targetAlpha = if (atBottom) 0f else 1f
-                    val animAlpha by animateFloatAsState(targetAlpha, tween(300), label = "scrollBtnAlpha")
+                    val animAlpha by animateFloatAsState(if (showButton) 1f else 0f, tween(300), label = "scrollBtnAlpha")
 
                     FloatingActionButton(
                         onClick = {
