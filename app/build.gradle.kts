@@ -54,9 +54,12 @@ android {
         }
     }
 
+    val hasKeystore = keystoreProperties.getProperty("storeFile", ".").let { it != "." }
+    val releaseSigning = if (hasKeystore) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+
     buildTypes {
         release {
-            // Signing handled externally by apksigner for F-Droid reproducibility
+            signingConfig = releaseSigning
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -89,9 +92,18 @@ tasks.register<Copy>("copyReleaseApk") {
     include("*.apk")
 }
 
+tasks.register<Copy>("copyReleaseBundle") {
+    from("build/outputs/bundle/release")
+    into("release")
+    include("*.aab")
+}
+
 afterEvaluate {
     tasks.named("assembleRelease") {
         finalizedBy("copyReleaseApk")
+    }
+    tasks.named("bundleRelease") {
+        finalizedBy("copyReleaseBundle")
     }
 }
 

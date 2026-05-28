@@ -38,7 +38,7 @@ if ($LASTEXITCODE -ne 0) { $origSdk | Set-Content "$projectDir\local.properties"
 # Restore Windows SDK path (WSL build overwrites it)
 $origSdk | Set-Content "$projectDir\local.properties" -NoNewline
 
-$unsignedApk = "$projectDir\app\build\outputs\apk\release\app-release-unsigned.apk"
+$unsignedApk = "$projectDir\app\build\outputs\apk\release\app-release.apk"
 if (-not (Test-Path $unsignedApk)) {
     Write-Host "APK not found: $unsignedApk" -ForegroundColor Red
     exit 1
