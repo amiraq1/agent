@@ -39,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -795,6 +796,43 @@ fun ChatApp(
                         } else {
                             Box(modifier = Modifier.fillMaxSize())
                         }
+                    }
+
+                    val atBottom by remember {
+                        derivedStateOf {
+                            if (isNewChatMode) true
+                            else {
+                                val info = listState.layoutInfo
+                                val total = info.totalItemsCount
+                                total > 0 && info.visibleItemsInfo.any { it.index == total - 1 }
+                            }
+                        }
+                    }
+
+                    val targetAlpha = if (atBottom) 0f else 1f
+                    val animAlpha by animateFloatAsState(targetAlpha, tween(300), label = "scrollBtnAlpha")
+
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                scrollToLastUserMessage(animate = true)
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        shape = CircleShape,
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = bottomBarHeight + 16.dp)
+                            .size(40.dp)
+                            .alpha(animAlpha)
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = stringResource(R.string.scroll_to_bottom),
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
                     AnimatedVisibility(
