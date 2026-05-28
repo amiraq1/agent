@@ -22,7 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -62,7 +62,6 @@ fun SettingsGroup(
                     shape = shape,
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 1.dp,
-                    shadowElevation = 4.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     item()
@@ -264,7 +263,6 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                                             tonalElevation = 1.dp,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .shadow(4.dp, shape)
                                                 .clip(shape)
                                                 .clickable { selectedCategory = cat.key }
                                         ) {
