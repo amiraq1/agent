@@ -172,9 +172,10 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
 
         val submitted = settingsManager.ratingPromptSubmitted.first()
         val dismissed = settingsManager.ratingPromptDismissed.first()
-        if (!submitted && !dismissed && firstLaunch != null) {
-            val hoursElapsed = (now - firstLaunch) / (1000 * 60 * 60)
-            if (hoursElapsed >= 48) {
+        val msgCount = settingsManager.totalMessagesSent.first()
+        if (!submitted && !dismissed && firstLaunch != null && msgCount >= 3) {
+            val daysElapsed = (now - firstLaunch) / (1000 * 60 * 60 * 24)
+            if (daysElapsed >= 7) {
                 showRatingPrompt = true
             }
         }

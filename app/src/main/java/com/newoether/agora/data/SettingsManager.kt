@@ -110,6 +110,7 @@ class SettingsManager(private val context: Context) {
         val FIRST_LAUNCH_TIME = longPreferencesKey("first_launch_time")
         val RATING_PROMPT_SUBMITTED = booleanPreferencesKey("rating_prompt_submitted")
         val RATING_PROMPT_DISMISSED = booleanPreferencesKey("rating_prompt_dismissed")
+        val TOTAL_MESSAGES_SENT = intPreferencesKey("total_messages_sent")
     }
 
     val selectedModel: Flow<String> = context.dataStore.data.map { it[SELECTED_MODEL] ?: "gemini-1.5-flash" }
@@ -206,6 +207,7 @@ class SettingsManager(private val context: Context) {
     val firstLaunchTime: Flow<Long?> = context.dataStore.data.map { it[FIRST_LAUNCH_TIME] }
     val ratingPromptSubmitted: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_SUBMITTED] ?: false }
     val ratingPromptDismissed: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_DISMISSED] ?: false }
+    val totalMessagesSent: Flow<Int> = context.dataStore.data.map { it[TOTAL_MESSAGES_SENT] ?: 0 }
 
     suspend fun saveProviderBaseUrl(provider: String, url: String) {
         context.dataStore.edit { prefs ->
@@ -400,5 +402,9 @@ class SettingsManager(private val context: Context) {
 
     suspend fun saveRatingPromptDismissed(dismissed: Boolean) {
         context.dataStore.edit { it[RATING_PROMPT_DISMISSED] = dismissed }
+    }
+
+    suspend fun incrementMessagesSent() {
+        context.dataStore.edit { it[TOTAL_MESSAGES_SENT] = (it[TOTAL_MESSAGES_SENT] ?: 0) + 1 }
     }
 }

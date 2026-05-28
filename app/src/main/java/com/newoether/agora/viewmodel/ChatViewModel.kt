@@ -1747,6 +1747,7 @@ class ChatViewModel(
                 text = finalText, images = allImages, thoughts = null, status = MessageStatus.SUCCESS, participant = Participant.USER, timestamp = System.currentTimeMillis(),
                 attachmentMeta = attachmentMeta?.let { kotlinx.serialization.json.Json.encodeToString(it) }
             ))
+            settingsManager.incrementMessagesSent()
             val modelMessageId = UUID.randomUUID().toString()
             val startTime = System.currentTimeMillis() + 1
             chatDao.upsertMessage(MessageEntity(
