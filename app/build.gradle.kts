@@ -133,6 +133,7 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.okhttp)
     implementation(libs.material.color.utilities)
+    implementation(libs.lottie.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 

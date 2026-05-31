@@ -108,6 +108,7 @@ class SettingsManager(private val context: Context) {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val SCHEME_STYLE = stringPreferencesKey("scheme_style")
         val FIRST_LAUNCH_TIME = longPreferencesKey("first_launch_time")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val RATING_PROMPT_SUBMITTED = booleanPreferencesKey("rating_prompt_submitted")
         val RATING_PROMPT_DISMISSED = booleanPreferencesKey("rating_prompt_dismissed")
         val TOTAL_MESSAGES_SENT = intPreferencesKey("total_messages_sent")
@@ -205,6 +206,7 @@ class SettingsManager(private val context: Context) {
     val dynamicColor: Flow<Boolean> = context.dataStore.data.map { it[DYNAMIC_COLOR] ?: true }
     val schemeStyle: Flow<String> = context.dataStore.data.map { it[SCHEME_STYLE] ?: "TONAL_SPOT" }
     val firstLaunchTime: Flow<Long?> = context.dataStore.data.map { it[FIRST_LAUNCH_TIME] }
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_COMPLETED] ?: false }
     val ratingPromptSubmitted: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_SUBMITTED] ?: false }
     val ratingPromptDismissed: Flow<Boolean> = context.dataStore.data.map { it[RATING_PROMPT_DISMISSED] ?: false }
     val totalMessagesSent: Flow<Int> = context.dataStore.data.map { it[TOTAL_MESSAGES_SENT] ?: 0 }
@@ -394,6 +396,10 @@ class SettingsManager(private val context: Context) {
 
     suspend fun saveFirstLaunchTime(time: Long) {
         context.dataStore.edit { it[FIRST_LAUNCH_TIME] = time }
+    }
+
+    suspend fun saveOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { it[ONBOARDING_COMPLETED] = completed }
     }
 
     suspend fun saveRatingPromptSubmitted(submitted: Boolean) {

@@ -797,41 +797,60 @@ class ChatViewModel(
                     return@launch
                 }
                 val alreadyDone = total - toProcess.size
-                var processed = alreadyDone
                 var succeeded = 0
+                var attempted = 0
                 _cachingProgress.update { it + (modelId to (alreadyDone to total)) }
-                val releaseCallback: (() -> Unit)? = if (model.type == EmbeddingModelType.LOCAL) {
-                    { localProvider.releaseEngineBlocking() }
-                } else null
                 try {
-                    for (msg in toProcess) {
-                        if (embeddingModels.value.none { it.id == modelId }) return@launch
-                        val text = msg.text.take(8000)
-                        val embedding: FloatArray? = if (model.type == EmbeddingModelType.LOCAL) {
-                            if (LlamaEngine.isModelReady(model.localFilePath))
-                                LlamaEngine.computeEmbedding(text, model.localFilePath, releaseCallback)
-                            else null
-                        } else {
-                            val apiKey = resolveEmbeddingApiKey()
-                            if (apiKey == null) {
-                                if (!silent) _snackbarMessage.emit(SnackbarEvent(appContext.getString(R.string.no_api_key_configured)))
-                                return@launch
+                    if (model.type == EmbeddingModelType.LOCAL) {
+                        if (!LlamaEngine.isModelReady(model.localFilePath)) {
+                            if (!silent) _snackbarMessage.emit(SnackbarEvent("Local model file not found. Please re-import the model."))
+                            return@launch
+                        }
+                        // Batch: load GGUF model once, compute all embeddings, free once
+                        val texts = toProcess.map { it.text.take(8000) }
+                        val embeddings = LlamaEngine.computeEmbeddings(texts, model.localFilePath) {
+                            localProvider.releaseEngineBlocking()
+                        }
+                        for ((msg, embd) in toProcess.zip(embeddings)) {
+                            if (embeddingModels.value.none { it.id == modelId }) return@launch
+                            attempted++
+                            if (embd != null) {
+                                chatDao.upsertEmbedding(EmbeddingEntity(
+                                    messageId = msg.id,
+                                    modelId = modelId,
+                                    embedding = EmbeddingIndexer.floatsToBytes(embd),
+                                    chunkText = msg.text.take(500),
+                                    dimension = embd.size
+                                ))
+                                succeeded++
                             }
-                            val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
-                            EmbeddingClient.computeEmbedding(text, apiKey, model.remoteModelName, baseUrl)
+                            _cachingProgress.update { it + (modelId to (alreadyDone + attempted to total)) }
                         }
-                        if (embedding != null) {
-                            chatDao.upsertEmbedding(EmbeddingEntity(
-                                messageId = msg.id,
-                                modelId = modelId,
-                                embedding = EmbeddingIndexer.floatsToBytes(embedding),
-                                chunkText = text.take(500),
-                                dimension = embedding.size
-                            ))
-                            succeeded++
+                    } else {
+                        val apiKey = resolveEmbeddingApiKey()
+                        if (apiKey == null) {
+                            if (!silent) _snackbarMessage.emit(SnackbarEvent(appContext.getString(R.string.no_api_key_configured)))
+                            return@launch
                         }
-                        processed++
-                        _cachingProgress.update { it + (modelId to (processed to total)) }
+                        val baseUrl = model.remoteBaseUrl.ifBlank { resolveEmbeddingBaseUrl() }
+                        // Batch: send all texts to remote embedding API at once
+                        val texts = toProcess.map { it.text.take(8000) }
+                        val embeddings = EmbeddingClient.computeEmbeddings(texts, apiKey, model.remoteModelName, baseUrl)
+                        for ((msg, embd) in toProcess.zip(embeddings)) {
+                            if (embeddingModels.value.none { it.id == modelId }) return@launch
+                            attempted++
+                            if (embd != null) {
+                                chatDao.upsertEmbedding(EmbeddingEntity(
+                                    messageId = msg.id,
+                                    modelId = modelId,
+                                    embedding = EmbeddingIndexer.floatsToBytes(embd),
+                                    chunkText = msg.text.take(500),
+                                    dimension = embd.size
+                                ))
+                                succeeded++
+                            }
+                            _cachingProgress.update { it + (modelId to (alreadyDone + attempted to total)) }
+                        }
                     }
                 } finally {
                     _cachingProgress.update { it - modelId }

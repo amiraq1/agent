@@ -15,6 +15,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -37,6 +38,7 @@ import com.newoether.agora.service.AppForegroundTracker
 import com.newoether.agora.data.local.ChatDatabase
 import com.newoether.agora.ui.chat.ChatApp
 import com.newoether.agora.ui.chat.FullScreenMediaViewer
+import com.newoether.agora.ui.onboarding.WelcomeScreen
 import com.newoether.agora.ui.settings.SettingsScreen
 import com.newoether.agora.ui.theme.AgoraTheme
 import com.newoether.agora.viewmodel.ChatViewModel
@@ -119,10 +121,39 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 } else {
-                    val database = ChatDatabase.build(this)
-                    val factory = ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity)
-                    val viewModel: ChatViewModel = viewModel(factory = factory)
-                    MainNavigation(viewModel, settingsManager)
+                    var showOnboarding by remember { mutableStateOf<Boolean?>(null) }
+                    val onboardingScope = rememberCoroutineScope()
+
+                    LaunchedEffect(Unit) {
+                        showOnboarding = !settingsManager.onboardingCompleted.first()
+                    }
+
+                    when (showOnboarding) {
+                        null -> { /* loading — splash screen covers this */ }
+                        true -> {
+                            val systemDark = isSystemInDarkTheme()
+                            val isDark = when (themeModeEnum) {
+                                com.newoether.agora.ui.theme.ThemeMode.LIGHT -> false
+                                com.newoether.agora.ui.theme.ThemeMode.DARK -> true
+                                com.newoether.agora.ui.theme.ThemeMode.FOLLOW_DEVICE -> systemDark
+                            }
+                            WelcomeScreen(
+                                onComplete = {
+                                    onboardingScope.launch {
+                                        settingsManager.saveOnboardingCompleted(true)
+                                    }
+                                    showOnboarding = false
+                                },
+                                isDarkTheme = isDark
+                            )
+                        }
+                        false -> {
+                            val database = ChatDatabase.build(this)
+                            val factory = ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity)
+                            val viewModel: ChatViewModel = viewModel(factory = factory)
+                            MainNavigation(viewModel, settingsManager)
+                        }
+                    }
                 }
             }
         }

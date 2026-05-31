@@ -5,6 +5,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -79,6 +81,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+
+private val SCROLL_EASING = CubicBezierEasing(0.3f, 0.0f, 0.0f, 1.0f)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -200,7 +204,7 @@ fun ChatApp(
     }
 
 
-    suspend fun scrollToLastUserMessage(animate: Boolean = true, targetMessageId: String? = null) {
+    suspend fun scrollToLastUserMessage(animate: Boolean = true, targetMessageId: String? = null, easing: Easing = FastOutSlowInEasing) {
         if (messages.isEmpty() || viewportHeightPx == 0) return
 
         val targetIndex = if (targetMessageId != null) {
@@ -241,7 +245,7 @@ fun ChatApp(
 
                     val diff = targetScrollPx - currentOffsetPx
                     if (kotlin.math.abs(diff) > 2) {
-                        listState.animateScrollBy(diff, tween(600, easing = CubicBezierEasing(0.3f, 0.0f, 0.0f, 1.0f)))
+                        listState.animateScrollBy(diff, tween(600, easing = easing))
                     }
                 } else {
                     listState.scrollToItem(0, targetScrollPx.toInt())
@@ -587,8 +591,10 @@ fun ChatApp(
                 .onSizeChanged { viewportHeightPx = it.height }
         ) {
             val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-            val (targetCa, targetQa) = if (isNewChatMode) {
-                if (dark) 0.20f to 0.10f else 1.00f to 0.40f
+            val (targetCa, targetQa) = if (!dark) {
+                0.00f to 0.00f
+            } else if (isNewChatMode) {
+                0.20f to 0.10f
             } else {
                 0.02f to 0.01f
             }
@@ -813,7 +819,7 @@ fun ChatApp(
                     FloatingActionButton(
                         onClick = {
                             scope.launch {
-                                scrollToLastUserMessage(animate = true)
+                                scrollToLastUserMessage(animate = true, easing = SCROLL_EASING)
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp),

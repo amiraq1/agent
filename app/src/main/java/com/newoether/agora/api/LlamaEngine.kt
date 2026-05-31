@@ -25,6 +25,12 @@ object LlamaEngine {
     }
 
     fun computeEmbedding(text: String, modelPath: String, beforeLoad: (() -> Unit)? = null): FloatArray? {
+        val results = computeEmbeddings(listOf(text), modelPath, beforeLoad)
+        return results.firstOrNull()
+    }
+
+    fun computeEmbeddings(texts: List<String>, modelPath: String, beforeLoad: (() -> Unit)? = null): List<FloatArray?> {
+        if (texts.isEmpty()) return emptyList()
         return runBlocking {
             modelMutex.withLock {
                 beforeLoad?.invoke()
@@ -32,24 +38,26 @@ object LlamaEngine {
                 val handle = nativeLoadModel(modelPath)
                 if (handle == 0L) {
                     DebugLog.e(TAG, "Failed to load model (${System.currentTimeMillis() - start}ms): $modelPath")
-                    return@runBlocking null
+                    return@runBlocking texts.map { null }
                 }
-                DebugLog.d(TAG, "Model loaded in ${System.currentTimeMillis() - start}ms, dim=${nativeGetEmbeddingDim(handle)}")
-                val result = try {
-                    val embd = nativeComputeEmbedding(handle, text)
-                    if (embd == null) {
-                        DebugLog.e(TAG, "nativeComputeEmbedding returned null for text len=${text.length}")
-                    } else {
-                        DebugLog.d(TAG, "Embedding computed: dim=${embd.size}, elapsed=${System.currentTimeMillis() - start}ms")
+                DebugLog.d(TAG, "Model loaded in ${System.currentTimeMillis() - start}ms, dim=${nativeGetEmbeddingDim(handle)}, processing ${texts.size} texts")
+                try {
+                    texts.mapIndexed { i, text ->
+                        try {
+                            val embd = nativeComputeEmbedding(handle, text)
+                            if (embd == null) {
+                                DebugLog.e(TAG, "nativeComputeEmbedding returned null for text len=${text.length} (${i+1}/${texts.size})")
+                            }
+                            embd
+                        } catch (e: Exception) {
+                            DebugLog.e(TAG, "Embedding computation crashed for text ${i+1}/${texts.size}", e)
+                            null
+                        }
                     }
-                    embd
-                } catch (e: Exception) {
-                    DebugLog.e(TAG, "Embedding computation crashed", e)
-                    null
                 } finally {
                     nativeFreeModel(handle)
+                    DebugLog.d(TAG, "Batch complete: ${texts.size} texts in ${System.currentTimeMillis() - start}ms")
                 }
-                return@runBlocking result
             }
         }
     }
