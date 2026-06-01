@@ -164,8 +164,8 @@
     <string name="prompts_delete_text">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
     <string name="template_title_required">Title is required</string>
     <string name="template_tab_system">System Prompt</string>
-    <string name="template_tab_prepend">User Prepend</string>
-    <string name="template_tab_postpend">User Postpend</string>
+    <string name="template_tab_prepend">User Prefix</string>
+    <string name="template_tab_postpend">User Suffix</string>
     <string name="template_empty_hint">No items. Add text or variables below.</string>
     <string name="template_add_text">Add Text</string>
     <string name="template_add_variable">Add Variable</string>
