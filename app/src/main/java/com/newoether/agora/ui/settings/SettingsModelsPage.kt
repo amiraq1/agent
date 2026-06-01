@@ -142,7 +142,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             for ((providerIndex, entry) in providers.withIndex()) {
                 val (name, models) = entry
                 val transitionState = expandedProviders.getOrPut(name) { MutableTransitionState(false) }
-                val isExpanded = transitionState.currentState
+                val isExpanded = transitionState.targetState
                 val isLastProvider = providerIndex == providers.lastIndex
 
                 // ── Provider header ──
