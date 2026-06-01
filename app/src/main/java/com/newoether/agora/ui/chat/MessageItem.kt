@@ -1357,7 +1357,7 @@ fun MessageItem(
                                     }
                                     Box {
                                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.MoreVert, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                            Icon(Icons.Default.MoreVert, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         }
                                         DropdownMenu(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
