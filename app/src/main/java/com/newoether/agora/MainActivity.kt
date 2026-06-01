@@ -255,15 +255,19 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     }
 
     LaunchedEffect(Unit) {
+        var snackbarJob: Job? = null
         viewModel.snackbarMessage.collect { event ->
             snackbarHostState.currentSnackbarData?.dismiss()
-            val result = snackbarHostState.showSnackbar(
-                message = event.message,
-                actionLabel = event.actionLabel,
-                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
+            snackbarJob?.cancel()
+            snackbarJob = launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = event.message,
+                    actionLabel = event.actionLabel,
+                    duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    event.onAction?.invoke()
+                }
             }
         }
     }
