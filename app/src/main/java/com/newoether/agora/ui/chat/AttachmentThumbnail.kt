@@ -93,8 +93,7 @@ fun FileThumbnail(
 }
 
 data class ThumbnailClickHandlers(
-    val onImageClick: ((String) -> Unit)? = null,
-    val onVideoClick: ((String) -> Unit)? = null,
+    val onMediaClick: ((urls: List<String>, index: Int) -> Unit)? = null,
     val onFileClick: ((fileName: String, content: String) -> Unit)? = null,
     val onPdfClick: ((pages: List<String>, startIndex: Int) -> Unit)? = null
 )
@@ -108,6 +107,8 @@ fun AttachmentThumbnailItem(
     textContent: String? = null,
     pdfPages: List<String> = emptyList(),
     showFileName: Boolean = true,
+    allMediaUrls: List<String> = emptyList(),
+    mediaIndex: Int = 0,
     handlers: ThumbnailClickHandlers = ThumbnailClickHandlers(),
     modifier: Modifier = Modifier
 ) {
@@ -138,8 +139,8 @@ fun AttachmentThumbnailItem(
             }
         }
         "video" -> {
-            val clickMod = if (originalUri != null && handlers.onVideoClick != null)
-                Modifier.clip(RoundedCornerShape(8.dp)).clickable { handlers.onVideoClick(originalUri) } else Modifier
+            val clickMod = if (originalUri != null && handlers.onMediaClick != null)
+                Modifier.clip(RoundedCornerShape(8.dp)).clickable { handlers.onMediaClick(allMediaUrls, mediaIndex) } else Modifier
             Box(modifier = clickMod) {
                 coil.compose.AsyncImage(
                     model = imagePath,
@@ -161,7 +162,7 @@ fun AttachmentThumbnailItem(
         }
         else -> { // image
             if (imagePath.isNotEmpty()) {
-                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { handlers.onImageClick?.invoke(imagePath) }) {
+                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { handlers.onMediaClick?.invoke(allMediaUrls, mediaIndex) }) {
                     coil.compose.AsyncImage(
                         model = imagePath,
                         contentDescription = null,

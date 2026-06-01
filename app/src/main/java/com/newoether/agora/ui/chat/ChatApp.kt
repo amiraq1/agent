@@ -89,7 +89,7 @@ private val SCROLL_EASING = CubicBezierEasing(0.3f, 0.0f, 0.0f, 1.0f)
 fun ChatApp(
     viewModel: ChatViewModel,
     onOpenSettings: () -> Unit,
-    onImageClick: (String) -> Unit,
+    onMediaClick: (List<String>, Int) -> Unit,
     onFileContentClick: ((String, String) -> Unit)? = null,
     onPdfPagesClick: ((List<String>, Int) -> Unit)? = null,
     onSnackbarOffsetChanged: (androidx.compose.ui.unit.Dp) -> Unit = {}
@@ -767,7 +767,7 @@ fun ChatApp(
                                     }
                                 },
                                 onDelete = { id -> viewModel.deleteMessage(id) },
-                                onImageClick = onImageClick,
+                                onMediaClick = onMediaClick,
                                 onFileContentClick = onFileContentClick,
                                 onPdfPagesClick = onPdfPagesClick,
                                 contentPadding = PaddingValues(
@@ -938,7 +938,7 @@ fun ChatApp(
                         shellEnabled = shellEnabled,
                         onShellToggle = { viewModel.setShellEnabled(it) },
                         onModelSelect = { viewModel.setActiveModel(it) },
-                        onImageClick = onImageClick,
+                        onImageClick = { url -> onMediaClick(listOf(url), 0) },
                         onFileContentClick = { name, content -> viewModel.showFilePreview(name, content) },
                         modifier = Modifier,
                         textFieldState = textFieldState,

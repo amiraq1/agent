@@ -42,7 +42,7 @@ fun MessageList(
     onSwitchBranch: (String?, Int) -> Unit = { _, _ -> },
     onRegenerate: (String) -> Unit = {},
     onDelete: (String) -> Unit = {},
-    onImageClick: (String) -> Unit = {},
+    onMediaClick: (List<String>, Int) -> Unit = { _, _ -> },
     onFileContentClick: ((fileName: String, content: String) -> Unit)? = null,
     onPdfPagesClick: ((pages: List<String>, startIndex: Int) -> Unit)? = null
 ) {
@@ -107,7 +107,7 @@ fun MessageList(
                     onSwitchBranch = { direction -> onSwitchBranch(message.parentId, direction) },
                     onRegenerate = onRegenerate,
                     onDelete = onDelete,
-                    onImageClick = onImageClick,
+                    onMediaClick = onMediaClick,
                     onFileContentClick = onFileContentClick,
                     onPdfPagesClick = onPdfPagesClick,
                     onHeightChanged = { height -> messageHeights[message.id] = height }

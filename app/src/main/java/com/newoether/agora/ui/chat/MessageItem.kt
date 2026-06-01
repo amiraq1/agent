@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -506,7 +507,7 @@ fun MessageItem(
     onSwitchBranch: (Int) -> Unit = {},
     onRegenerate: (String) -> Unit = {},
     onDelete: (String) -> Unit = {},
-    onImageClick: (String) -> Unit = {},
+    onMediaClick: (List<String>, Int) -> Unit = { _, _ -> },
     onFileContentClick: ((fileName: String, content: String) -> Unit)? = null,
     onPdfPagesClick: ((pages: List<String>, startIndex: Int) -> Unit)? = null,
     onHeightChanged: (Int) -> Unit = {}
@@ -808,11 +809,23 @@ fun MessageItem(
                                     imageItems + metaOnlyItems
                                 }
 
+                                // Collect all image/video URLs for the pager
+                                val allMediaUrls = remember(displayItems) {
+                                    displayItems.mapNotNull { (_, imagePath, metaItem) ->
+                                        val t = resolveAttachmentType(imagePath, metaItem, ctx)
+                                        when (t) {
+                                            "image" -> if (imagePath.isNotEmpty()) imagePath else null
+                                            "video" -> metaItem?.originalUri
+                                            else -> null
+                                        }
+                                    }
+                                }
+
                                 androidx.compose.foundation.lazy.LazyRow(
                                     modifier = Modifier.padding(bottom = if (message.text.isNotEmpty()) 8.dp else 0.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    items(displayItems) { (index, imagePath, metaItem) ->
+                                    itemsIndexed(displayItems) { itemIdx, (index, imagePath, metaItem) ->
                                         val type = remember(imagePath, metaItem?.type) {
                                             resolveAttachmentType(imagePath, metaItem, ctx)
                                         }
@@ -829,6 +842,13 @@ fun MessageItem(
                                             } ?: emptyList()
                                         } else emptyList()
 
+                                        val mediaIndex = allMediaUrls.indexOf(
+                                            when (type) {
+                                                "video" -> metaItem?.originalUri
+                                                else -> imagePath
+                                            }
+                                        ).coerceAtLeast(0)
+
                                         AttachmentThumbnailItem(
                                             type = type,
                                             imagePath = imagePath,
@@ -836,9 +856,10 @@ fun MessageItem(
                                             originalUri = metaItem?.originalUri,
                                             textContent = metaItem?.textContent,
                                             pdfPages = pdfPages,
+                                            allMediaUrls = allMediaUrls,
+                                            mediaIndex = mediaIndex,
                                             handlers = ThumbnailClickHandlers(
-                                                onImageClick = onImageClick,
-                                                onVideoClick = { onImageClick(it) },
+                                                onMediaClick = onMediaClick,
                                                 onFileClick = onFileContentClick,
                                                 onPdfClick = onPdfPagesClick
                                             )

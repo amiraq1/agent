@@ -186,7 +186,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    var fullScreenImageUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var fullScreenMediaUrls by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    var fullScreenMediaIndex by rememberSaveable { mutableIntStateOf(0) }
     val pdfPages by viewModel.previewPdfPages.collectAsState()
     val pdfIndex by viewModel.previewPdfIndex.collectAsState()
     var savedPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -277,9 +278,10 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                 onOpenSettings = {
                     showSettings = true
                 },
-                onImageClick = { url ->
+                onMediaClick = { urls, index ->
                     focusManager.clearFocus()
-                    fullScreenImageUrl = url
+                    fullScreenMediaUrls = urls
+                    fullScreenMediaIndex = index
                 },
                 onFileContentClick = { name, content ->
                     focusManager.clearFocus()
@@ -288,7 +290,8 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                 onPdfPagesClick = { pages, idx ->
                     focusManager.clearFocus()
                     viewModel.showPdfPreview(pages, idx)
-                    fullScreenImageUrl = pages[idx]
+                    fullScreenMediaUrls = pages
+                    fullScreenMediaIndex = idx
                 },
                 onSnackbarOffsetChanged = { chatSnackbarOffset = it }
             )
@@ -330,22 +333,27 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
 
             // Full screen image preview
             AnimatedVisibility(
-                visible = fullScreenImageUrl != null,
+                visible = fullScreenMediaUrls != null,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                // Keep the last URL for the duration of the exit animation
-                var lastUrl by remember { mutableStateOf<String?>(null) }
-                LaunchedEffect(fullScreenImageUrl) {
-                    if (fullScreenImageUrl != null) lastUrl = fullScreenImageUrl
+                // Keep the last URLs for the duration of the exit animation
+                var lastUrls by remember { mutableStateOf<List<String>?>(null) }
+                var lastIndex by remember { mutableIntStateOf(0) }
+                LaunchedEffect(fullScreenMediaUrls) {
+                    if (fullScreenMediaUrls != null) {
+                        lastUrls = fullScreenMediaUrls
+                        lastIndex = fullScreenMediaIndex
+                    }
                 }
-                
-                val url = lastUrl ?: return@AnimatedVisibility
+
+                val urls = lastUrls ?: return@AnimatedVisibility
                 FullScreenMediaViewer(
-                    url = url,
+                    urls = urls,
+                    initialIndex = lastIndex,
                     pdfPages = savedPdfPages,
-                    onClose = { viewModel.clearPreviews(); fullScreenImageUrl = null },
-                    onNavigate = { fullScreenImageUrl = it }
+                    onClose = { viewModel.clearPreviews(); fullScreenMediaUrls = null },
+                    onNavigate = { idx -> fullScreenMediaIndex = idx }
                 )
             }
 
