@@ -524,18 +524,18 @@ fun MessageItem(
     var selectedSegmentIndex by remember { mutableIntStateOf(-1) }
     var currentThoughtBlockHeight by remember { mutableIntStateOf(0) }
     var stableCollapsedThoughtHeight by remember { mutableIntStateOf(0) }
+    // Capture the fully-settled collapsed height after collapse animation finishes.
+    // This lets calculateReportedHeight immediately report the post-collapse height
+    // even mid-animation, so extraPadding doesn't "chase" the shrinking thought block.
+    LaunchedEffect(isThoughtExpanded) {
+        if (!isThoughtExpanded) {
+            delay(500) // slightly longer than the 400ms collapse tween + mergedBottomPadding tween
+            stableCollapsedThoughtHeight = currentThoughtBlockHeight
+        }
+    }
     var showInfoDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    // Suppress height reports to LazyColumn during expand/collapse animation
-    // to prevent scroll-position drift when the animation is interrupted mid-way.
-    var suppressHeightReport by remember { mutableStateOf(false) }
-    LaunchedEffect(isThoughtExpanded) {
-        suppressHeightReport = true
-        delay(450) // slightly longer than the 400ms expand/collapse tween
-        suppressHeightReport = false
-    }
-    
     @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
 
@@ -604,7 +604,7 @@ fun MessageItem(
         return totalPx
     }
 
-    LaunchedEffect(message.text, message.status, isEditing) {
+    LaunchedEffect(message.text, message.status, isEditing, isThoughtExpanded) {
         kotlinx.coroutines.delay(50)
         onHeightChanged(calculateReportedHeight(currentTotalHeight, currentThoughtBlockHeight))
     }
@@ -732,9 +732,7 @@ fun MessageItem(
             .fillMaxWidth()
             .onSizeChanged {
                 currentTotalHeight = it.height
-                if (!suppressHeightReport) {
-                    onHeightChanged(calculateReportedHeight(it.height, currentThoughtBlockHeight))
-                }
+                onHeightChanged(calculateReportedHeight(it.height, currentThoughtBlockHeight))
             }
             .padding(vertical = 8.dp),
         horizontalAlignment = alignment
@@ -1121,6 +1119,7 @@ fun MessageItem(
                                     .fillMaxWidth()
                                     .padding(top = 8.dp, bottom = mergedBottomPadding + 6.dp)
                                     .noOpBringIntoView()
+                                    .onSizeChanged { currentThoughtBlockHeight = it.height }
                             ) {
                                 Column {
                                 Row(
