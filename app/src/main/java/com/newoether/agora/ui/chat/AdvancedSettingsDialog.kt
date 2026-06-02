@@ -42,7 +42,7 @@ fun AdvancedSettingsDialog(
     AlertDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.advanced_generation_title), fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.advanced_generation_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
@@ -53,11 +53,11 @@ fun AdvancedSettingsDialog(
                 // Context Window
                 AdvancedParamRow(
                     label = stringResource(R.string.context_window),
-                    value = contextWindow,
-                    defaultVal = gDefaults.contextWindow,
+                    value = contextWindow?.toFloat(),
+                    defaultVal = gDefaults.contextWindow?.toFloat(),
                     valueRange = 5f..100f,
                     format = { it.toInt().toString() },
-                    onChange = { contextWindow = it },
+                    onChange = { contextWindow = it.toInt() },
                     onReset = { contextWindow = null }
                 )
                 // Temperature
@@ -71,13 +71,13 @@ fun AdvancedSettingsDialog(
                     onReset = { temperature = null }
                 )
                 // Max Tokens
+                val maxTokensPresets = intArrayOf(256, 512, 1024, 2048, 4096, 8192, 16384, 32768)
                 AdvancedParamRow(
                     label = stringResource(R.string.gen_max_tokens),
                     value = maxTokens,
                     defaultVal = gDefaults.maxTokens,
-                    valueRange = 256f..32768f,
-                    steps = 31,
-                    format = { it.toInt().toString() },
+                    presets = maxTokensPresets,
+                    format = { it.toString() },
                     onChange = { maxTokens = it },
                     onReset = { maxTokens = null }
                 )
@@ -209,14 +209,15 @@ private fun AdvancedParamRow(
     label: String,
     value: Int?,
     defaultVal: Int?,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0,
-    format: (Float) -> String,
+    presets: IntArray,
+    format: (Int) -> String,
     onChange: (Int) -> Unit,
     onReset: () -> Unit
 ) {
+    fun toIndex(v: Int) = presets.indices.minByOrNull { kotlin.math.abs(presets[it] - v) } ?: 3
     val hasDefault = defaultVal != null
-    val sliderPos = (value ?: defaultVal ?: valueRange.start.toInt()).toFloat()
+    val effective = value ?: defaultVal ?: 4096
+    val index = toIndex(effective)
     val isOverride = value != null
     Column(
         modifier = Modifier
@@ -232,7 +233,7 @@ private fun AdvancedParamRow(
             )
             if (isOverride) {
                 Text(
-                    text = format(sliderPos),
+                    text = format(value!!),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -246,7 +247,7 @@ private fun AdvancedParamRow(
                 )
             } else if (hasDefault) {
                 Text(
-                    text = format(sliderPos),
+                    text = format(effective),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Normal
@@ -260,10 +261,10 @@ private fun AdvancedParamRow(
             }
         }
         Slider(
-            value = sliderPos,
-            onValueChange = { onChange(it.toInt()) },
-            valueRange = valueRange,
-            steps = steps,
+            value = index.toFloat(),
+            onValueChange = { onChange(presets[it.toInt().coerceIn(0, presets.lastIndex)]) },
+            valueRange = 0f..(presets.size - 1).toFloat(),
+            steps = presets.size - 2,
             modifier = Modifier.fillMaxWidth()
         )
     }

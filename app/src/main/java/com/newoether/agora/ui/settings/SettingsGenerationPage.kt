@@ -134,13 +134,13 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         )
                     },
                     {
+                        val maxTokensPresets = intArrayOf(256, 512, 1024, 2048, 4096, 8192, 16384, 32768)
                         GenParamSlider(
                             label = stringResource(R.string.gen_max_tokens),
                             desc = stringResource(R.string.gen_max_tokens_desc),
                             value = defaultMaxTokens,
-                            valueRange = 256f..32768f,
-                            steps = 31,
-                            format = { v -> v.toInt().toString() },
+                            presets = maxTokensPresets,
+                            format = { it.toString() },
                             onValueChange = { viewModel.setDefaultMaxTokens(it) },
                             onReset = { viewModel.setDefaultMaxTokens(null) }
                         )
@@ -269,20 +269,21 @@ private fun GenParamSlider(
     }
 }
 
-/** Int slider variant for Max Tokens. */
+/** Int slider variant with discrete preset values (used for max tokens). */
 @Composable
 private fun GenParamSlider(
     label: String,
     desc: String,
     value: Int?,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0,
-    format: (Float) -> String,
+    presets: IntArray,
+    format: (Int) -> String,
     onValueChange: (Int) -> Unit,
     onReset: () -> Unit
 ) {
+    fun toIndex(v: Int) = presets.indices.minByOrNull { kotlin.math.abs(presets[it] - v) } ?: 3
     val isDefault = value == null
-    val sliderPos = (value ?: valueRange.start.toInt()).toFloat()
+    val index = if (value != null) toIndex(value) else 3 // default to 4096
+    val sliderPos = index.toFloat()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -316,7 +317,7 @@ private fun GenParamSlider(
                         )
                     } else {
                         Text(
-                            text = format(sliderPos),
+                            text = format(value!!),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -338,9 +339,9 @@ private fun GenParamSlider(
                 )
                 Slider(
                     value = sliderPos,
-                    onValueChange = { onValueChange(it.toInt()) },
-                    valueRange = valueRange,
-                    steps = steps,
+                    onValueChange = { onValueChange(presets[it.toInt().coerceIn(0, presets.lastIndex)]) },
+                    valueRange = 0f..(presets.size - 1).toFloat(),
+                    steps = presets.size - 2,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
             }
