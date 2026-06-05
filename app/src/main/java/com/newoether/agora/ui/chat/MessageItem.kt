@@ -1495,6 +1495,7 @@ fun MessageItem(
 
         // ── Grab: interrupt animation, sync raw to current visual position ──
         fun grabSheet() {
+            if (dismissing) return
             if (snapJob?.isActive == true) {
                 snapJob?.cancel()
                 rawFraction = visualFraction.value
@@ -1538,7 +1539,7 @@ fun MessageItem(
         val sheetScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    if (phase != PHASE_FULL) {
+                    if (!dismissing && phase != PHASE_FULL) {
                         grabSheet()
                         val delta = -available.y / screenHeightPx
                         rawFraction = (rawFraction + delta).coerceIn(0f, FULL)
@@ -1552,6 +1553,7 @@ fun MessageItem(
                 override fun onPostScroll(
                     consumed: Offset, available: Offset, source: NestedScrollSource
                 ): Offset {
+                    if (dismissing) return Offset.Zero
                     // Exit Full → Half: content at top + finger dragging down
                     if (phase == PHASE_FULL
                         && available.y > 0f
@@ -1636,10 +1638,12 @@ fun MessageItem(
                                     var velEma = 0f
                                     detectVerticalDragGestures(
                                         onDragStart = {
+                                            if (dismissing) return@detectVerticalDragGestures
                                             velEma = 0f
                                             grabSheet()
                                         },
                                         onVerticalDrag = { change, dragAmount ->
+                                            if (dismissing) return@detectVerticalDragGestures
                                             change.consume()
                                             velEma = velEma * 0.5f + (-dragAmount).coerceIn(-1f, 1f) * 0.5f
                                             rawFraction = (rawFraction - dragAmount / screenHeightPx)
@@ -1648,6 +1652,7 @@ fun MessageItem(
                                             if (rawFraction >= FULL && dragAmount < 0f) phase = PHASE_FULL
                                         },
                                         onDragEnd = {
+                                            if (dismissing) return@detectVerticalDragGestures
                                             animateTo(snapTarget(rawFraction, velEma))
                                         }
                                     )
