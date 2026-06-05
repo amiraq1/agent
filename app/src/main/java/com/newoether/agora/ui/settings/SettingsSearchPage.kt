@@ -199,7 +199,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.no_embedding_models), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                 leadingContent = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) },
-                                modifier = Modifier.padding(vertical = 4.dp)
+                                modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
                     } else {

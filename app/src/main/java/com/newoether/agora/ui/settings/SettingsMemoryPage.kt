@@ -141,9 +141,11 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                     if (memoryFiles.isEmpty()) {
                         add {
+                            val emptyColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             SettingsItem(
-                                headlineContent = { Text(stringResource(R.string.memory_no_files), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-                                supportingContent = { Text(stringResource(R.string.memory_create_hint)) }
+                                headlineContent = { Text(stringResource(R.string.memory_no_files), color = emptyColor) },
+                                supportingContent = { Text(stringResource(R.string.memory_create_hint), color = emptyColor) },
+                                modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
                     } else {
