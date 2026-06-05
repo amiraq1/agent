@@ -175,6 +175,14 @@
     <string name="gen_default_value">默认</string>
     <string name="gen_reset">重置</string>
     <string name="generation_params">默认生成参数</string>
+    <string name="default_thinking">默认思考</string>
+    <string name="gen_thinking_enabled">思考</string>
+    <string name="gen_thinking_enabled_desc">启用模型思考/推理能力</string>
+    <string name="gen_thinking_level">思考深度</string>
+    <string name="gen_thinking_level_desc">控制思考深度；越高推理越深入</string>
+    <string name="gen_thinking_level_low">低</string>
+    <string name="gen_thinking_level_medium">中</string>
+    <string name="gen_thinking_level_high">高</string>
     <string name="advanced_settings">高级</string>
     <string name="advanced_generation_title">高级设置</string>
     <string name="advanced_per_conversation">逐对话覆盖</string>

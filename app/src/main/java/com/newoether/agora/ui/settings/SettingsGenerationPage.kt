@@ -1,12 +1,19 @@
 package com.newoether.agora.ui.settings
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
@@ -14,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
@@ -30,6 +38,8 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val defaultTopP by viewModel.defaultTopP.collectAsState()
     val defaultFrequencyPenalty by viewModel.defaultFrequencyPenalty.collectAsState()
     val defaultPresencePenalty by viewModel.defaultPresencePenalty.collectAsState()
+    val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
+    val thinkingLevel by viewModel.thinkingLevel.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -118,7 +128,99 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Section 2: Generation Parameters ──
+            // ── Section 2: Default Thinking ──
+            val thinkingLevels = listOf("low", "medium", "high")
+            val thinkingLevelLabels = listOf(
+                stringResource(R.string.gen_thinking_level_low),
+                stringResource(R.string.gen_thinking_level_medium),
+                stringResource(R.string.gen_thinking_level_high)
+            )
+            SettingsGroup(
+                title = stringResource(R.string.default_thinking),
+                items = listOf(
+                    {
+                        val icon = @Composable { Icon(painterResource(id = R.drawable.neurology_24), contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                        SettingsItem(
+                            headlineContent = { Text(stringResource(R.string.gen_thinking_enabled)) },
+                            supportingContent = { Text(stringResource(R.string.gen_thinking_enabled_desc)) },
+                            leadingContent = icon,
+                            trailingContent = {
+                                Switch(checked = thinkingEnabled, onCheckedChange = { viewModel.setThinkingEnabled(it) })
+                            },
+                            modifier = Modifier.clickable { viewModel.setThinkingEnabled(!thinkingEnabled) }
+                        )
+                    },
+                    {
+                        val icon = @Composable { Icon(painterResource(id = R.drawable.neurology_24), contentDescription = null, tint = if (thinkingEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                icon()
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.gen_thinking_level),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (thinkingEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.gen_thinking_level_desc),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        thinkingLevels.forEachIndexed { index, level ->
+                                            val selected = thinkingLevel == level
+                                            val primary = MaterialTheme.colorScheme.primary
+                                            val surface = MaterialTheme.colorScheme.surfaceContainerHigh
+                                            val startColor by animateColorAsState(
+                                                if (selected) primary else surface,
+                                                tween(300)
+                                            )
+                                            val endColor by animateColorAsState(
+                                                if (selected) primary else surface,
+                                                tween(300)
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(Brush.horizontalGradient(listOf(startColor, endColor)))
+                                                    .clickable(enabled = thinkingEnabled) { viewModel.setThinkingLevel(level) }
+                                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    thinkingLevelLabels[index],
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Section 3: Generation Parameters ──
             SettingsGroup(
                 title = stringResource(R.string.generation_params),
                 items = listOf(

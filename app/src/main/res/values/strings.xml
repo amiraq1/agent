@@ -211,6 +211,14 @@
     <string name="gen_default_value">Default</string>
     <string name="gen_reset">Reset</string>
     <string name="generation_params">Default Generation Parameters</string>
+    <string name="default_thinking">Default Thinking</string>
+    <string name="gen_thinking_enabled">Thinking</string>
+    <string name="gen_thinking_enabled_desc">Enable model thinking/reasoning capability</string>
+    <string name="gen_thinking_level">Thinking Level</string>
+    <string name="gen_thinking_level_desc">Controls thinking depth; higher = more thorough reasoning</string>
+    <string name="gen_thinking_level_low">Low</string>
+    <string name="gen_thinking_level_medium">Medium</string>
+    <string name="gen_thinking_level_high">High</string>
     <string name="advanced_settings">Advanced</string>
     <string name="advanced_generation_title">Advanced Settings</string>
     <string name="advanced_per_conversation">Per-conversation overrides</string>

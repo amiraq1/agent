@@ -201,7 +201,7 @@ class SettingsManager(private val context: Context) {
     val activeEmbeddingModelId: Flow<String> = context.dataStore.data.map { it[ACTIVE_EMBEDDING_MODEL_ID] ?: "" }
 
     val appLanguage: Flow<String> = context.dataStore.data.map { it[APP_LANGUAGE] ?: "system" }
-    val webSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[WEB_SEARCH_ENABLED] ?: false }
+    val webSearchEnabled: Flow<Boolean> = context.dataStore.data.map { it[WEB_SEARCH_ENABLED] ?: true }
     val webSearchProvider: Flow<String> = context.dataStore.data.map { it[WEB_SEARCH_PROVIDER] ?: "brave" }
     val webSearchApiKeys: Flow<Map<String, String>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[WEB_SEARCH_API_KEYS_JSON] ?: "{}"
@@ -233,7 +233,7 @@ class SettingsManager(private val context: Context) {
         try { json.decodeFromString<List<CustomProviderConfig>>(jsonStr) } catch (e: Exception) { emptyList() }
     }
 
-    val shellEnabled: Flow<Boolean> = context.dataStore.data.map { it[SHELL_ENABLED] ?: false }
+    val shellEnabled: Flow<Boolean> = context.dataStore.data.map { it[SHELL_ENABLED] ?: true }
     val shellDevices: Flow<List<ShellDeviceConfig>> = context.dataStore.data.map { pref ->
         val jsonStr = pref[SHELL_DEVICES_JSON] ?: "[]"
         try { json.decodeFromString<List<ShellDeviceConfig>>(jsonStr) } catch (e: Exception) { emptyList() }

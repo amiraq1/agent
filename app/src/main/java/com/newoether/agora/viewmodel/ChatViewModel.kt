@@ -1125,6 +1125,8 @@ class ChatViewModel(
     fun setWebSearchNumResults(n: Int) { viewModelScope.launch { settingsManager.saveWebSearchNumResults(n) } }
     fun setWebSearchBaseUrl(url: String) { viewModelScope.launch { settingsManager.saveWebSearchBaseUrl(url) } }
     fun setShellEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveShellEnabled(enabled) } }
+    fun setThinkingEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveThinkingEnabled(enabled) } }
+    fun setThinkingLevel(level: String) { viewModelScope.launch { settingsManager.saveThinkingLevel(level) } }
     fun setDefaultTemperature(v: Float?) { viewModelScope.launch { settingsManager.saveDefaultTemperature(v) } }
     fun setDefaultMaxTokens(v: Int?) { viewModelScope.launch { settingsManager.saveDefaultMaxTokens(v) } }
     fun setDefaultTopP(v: Float?) { viewModelScope.launch { settingsManager.saveDefaultTopP(v) } }
