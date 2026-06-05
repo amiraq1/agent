@@ -4,7 +4,7 @@ import com.newoether.agora.api.util.StreamingThinkTagParser
 
 class QwenProvider : BaseOpenAiProvider() {
     override val name: String = "Qwen"
-    override val defaultBaseUrl: String = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    override val defaultBaseUrl: String = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
     override suspend fun parseDeltaContent(
         delta: OpenAiDelta,

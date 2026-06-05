@@ -372,13 +372,15 @@ private fun toolSummary(seg: MessageSegment): String {
         "update_active_memory" -> if (isError) stringResource(R.string.tool_update_active_failed) else stringResource(R.string.tool_update_active_default)
         "web_search" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (isError) stringResource(R.string.tool_search_failed)
-            else {
+            if (isError) {
+                if (query != null) stringResource(R.string.tool_web_search_error, query)
+                else stringResource(R.string.tool_search_failed)
+            } else {
                 val resultCount = try {
                     Json.parseToJsonElement(content).jsonObject["results"]?.jsonArray?.size ?: 0
                 } catch (_: Exception) { 0 }
                 if (resultCount > 0 && query != null) stringResource(R.string.tool_web_search_done, resultCount, query)
-                else if (query != null) stringResource(R.string.tool_searching_web, query)
+                else if (query != null) stringResource(R.string.tool_web_search_no_result, query)
                 else stringResource(R.string.tool_web_search_done_default)
             }
         }
@@ -390,13 +392,15 @@ private fun toolSummary(seg: MessageSegment): String {
         }
         "search_conversations" -> {
             val query = argsJson?.get("query")?.let { (it as? JsonPrimitive)?.content }
-            if (isError) stringResource(R.string.tool_search_failed)
-            else {
+            if (isError) {
+                if (query != null) stringResource(R.string.tool_conversation_search_error, query)
+                else stringResource(R.string.tool_search_failed)
+            } else {
                 val convCount = try {
                     Json.parseToJsonElement(content).jsonObject["results"]?.jsonArray?.size ?: 0
                 } catch (_: Exception) { 0 }
                 if (convCount > 0 && query != null) stringResource(R.string.tool_conversation_search_done_for, convCount, query)
-                else if (query != null) stringResource(R.string.tool_searching_conversations, query)
+                else if (query != null) stringResource(R.string.tool_conversation_search_no_result, query)
                 else stringResource(R.string.tool_searching_conversations_default)
             }
         }
@@ -457,7 +461,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
                 Json.parseToJsonElement(result).jsonObject["results"]?.jsonArray?.size ?: 0
             } catch (_: Exception) { 0 }
             if (resultCount > 0 && query != null) stringResource(R.string.tool_web_search_done, resultCount, query)
-            else if (query != null) stringResource(R.string.tool_searching_web, query)
+            else if (query != null) stringResource(R.string.tool_web_search_no_result, query)
             else stringResource(R.string.tool_web_search_done_default)
         }
         "web_fetch" -> {
@@ -471,7 +475,7 @@ private fun toolResultSummary(toolName: String, toolArgs: String, result: String
                 Json.parseToJsonElement(result).jsonObject["results"]?.jsonArray?.size ?: 0
             } catch (_: Exception) { 0 }
             if (convCount > 0 && query != null) stringResource(R.string.tool_conversation_search_done_for, convCount, query)
-            else if (query != null) stringResource(R.string.tool_searching_conversations, query)
+            else if (query != null) stringResource(R.string.tool_conversation_search_no_result, query)
             else stringResource(R.string.tool_searching_conversations_default)
         }
         "list_shells" -> {

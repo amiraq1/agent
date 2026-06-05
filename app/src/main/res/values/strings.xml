@@ -36,6 +36,10 @@
     <string name="tool_searching_web">Searching \'%1$s\' on the web</string>
     <string name="tool_searching_conversations">Searching \'%1$s\' in conversations</string>
     <string name="tool_search_failed">Search failed</string>
+    <string name="tool_web_search_no_result">No result found for \'%1$s\'</string>
+    <string name="tool_web_search_error">Error searching for \'%1$s\'</string>
+    <string name="tool_conversation_search_no_result">No match found for \'%1$s\'</string>
+    <string name="tool_conversation_search_error">Error searching conversations for \'%1$s\'</string>
     <string name="tool_web_search_done">Found %1$d results for \"%2$s\"</string>
     <string name="tool_web_search_done_default">Searched the web</string>
     <string name="tool_conversation_search_done_for">Found %1$d conversations for \"%2$s\"</string>
