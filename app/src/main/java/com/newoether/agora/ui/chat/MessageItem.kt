@@ -1543,6 +1543,7 @@ fun MessageItem(
                         val delta = -available.y / screenHeightPx
                         rawFraction = (rawFraction + delta).coerceIn(0f, FULL)
                         coroutineScope.launch { visualFraction.snapTo(rawFraction) }
+                        if (rawFraction >= FULL && available.y < 0f) phase = PHASE_FULL
                         return available.copy(x = 0f)
                     }
                     return Offset.Zero // Full: let content scroll
@@ -1644,6 +1645,7 @@ fun MessageItem(
                                             rawFraction = (rawFraction - dragAmount / screenHeightPx)
                                                 .coerceIn(0f, FULL)
                                             coroutineScope.launch { visualFraction.snapTo(rawFraction) }
+                                            if (rawFraction >= FULL && dragAmount < 0f) phase = PHASE_FULL
                                         },
                                         onDragEnd = {
                                             animateTo(snapTarget(rawFraction, velEma))
