@@ -53,14 +53,33 @@ internal fun ZoomableImageItem(
     var animationJob by remember(url) { mutableStateOf<Job?>(null) }
     var lastCentroid by remember(url) { mutableStateOf(Offset.Unspecified) }
 
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // Scale factor that maps "fit between system bars" to user scale = 1f
+    val baseScale = remember(containerSize, imageSize, statusBarHeight, navBarHeight) {
+        if (containerSize == Size.Zero || imageSize == Size.Zero) 1f
+        else {
+            val imageAspect = imageSize.width / imageSize.height
+            val containerAspect = containerSize.width / containerSize.height
+            val fittedWidth = if (imageAspect > containerAspect) containerSize.width else containerSize.height * imageAspect
+            val fittedHeight = if (imageAspect > containerAspect) containerSize.width / imageAspect else containerSize.height
+            val barsPx = with(density) { statusBarHeight.toPx() + navBarHeight.toPx() }
+            val sHeight = if (fittedHeight > 0f) (containerSize.height - barsPx) / fittedHeight else 1f
+            val sWidth = if (fittedWidth > 0f) containerSize.width / fittedWidth else 1f
+            minOf(sHeight, sWidth).coerceIn(0.1f, 1f)
+        }
+    }
+
     fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
         if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
+        val effectiveScale = currentScale * baseScale
         val imageAspectRatio = imageSize.width / imageSize.height
         val containerAspectRatio = containerSize.width / containerSize.height
         val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
         val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
-        val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
-        val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
+        val maxX = (contentWidth * effectiveScale - containerSize.width).coerceAtLeast(0f) / 2f
+        val maxY = (contentHeight * effectiveScale - containerSize.height).coerceAtLeast(0f) / 2f
         return maxX to maxY
     }
 
@@ -158,12 +177,8 @@ internal fun ZoomableImageItem(
                                     logicalOffsetY = logicalOffsetY * r + (centroid.y - center.y) * (1f - r) + panChange.y
                                     val (maxX, maxY) = getMaxOffsets(newVisualScale)
                                     scale = newVisualScale
-                                    offsetX = if (logicalOffsetX > maxX) maxX + rubberBandValue(logicalOffsetX - maxX, containerSize.width)
-                                    else if (logicalOffsetX < -maxX) -maxX - rubberBandValue(-maxX - logicalOffsetX, containerSize.width)
-                                    else logicalOffsetX
-                                    offsetY = if (logicalOffsetY > maxY) maxY + rubberBandValue(logicalOffsetY - maxY, containerSize.height)
-                                    else if (logicalOffsetY < -maxY) -maxY - rubberBandValue(-maxY - logicalOffsetY, containerSize.height)
-                                    else logicalOffsetY
+                                    offsetX = logicalOffsetX.coerceIn(-maxX, maxX)
+                                    offsetY = logicalOffsetY.coerceIn(-maxY, maxY)
                                     if (consumeConditionally) {
                                         if (newVisualScale > 1.05f || zoomChange != 1f || abs(panChange.y) > abs(panChange.x)) {
                                             event.changes.forEach { if (it.positionChanged()) it.consume() }
@@ -186,7 +201,6 @@ internal fun ZoomableImageItem(
                             y = if (rawVelocity.y.isNaN()) 0f else rawVelocity.y.coerceIn(-maxV, maxV)
                         )
                         animationJob = scope.launch {
-                            val rbCoeff = 0.45f
                             if (scale < 0.95f || scale > 10.05f) {
                                 val sS = scale; val sX = offsetX; val sY = offsetY
                                 val targetS = scale.coerceIn(1f, 10f)
@@ -211,38 +225,30 @@ internal fun ZoomableImageItem(
                                 launch {
                                     val (maxX, _) = getMaxOffsets(scale)
                                     if (offsetX > maxX || offsetX < -maxX) {
-                                        val targetX = offsetX.coerceIn(-maxX, maxX)
-                                        AnimationState(offsetX, velocity.x * rbCoeff).animateTo(targetX, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetX = value }
+                                        offsetX = offsetX.coerceIn(-maxX, maxX)
                                     } else if (velocity.x != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
-                                        var hitX = false; var velX = 0f; var posX = 0f
                                         AnimationState(offsetX, velocity.x).animateDecay(decay) {
                                             val (curMaxX, _) = getMaxOffsets(scale)
-                                            if (value > curMaxX || value < -curMaxX) { velX = this.velocity; posX = value; hitX = true; cancelAnimation() }
-                                            else offsetX = value
-                                        }
-                                        if (hitX) {
-                                            val (curMaxX, _) = getMaxOffsets(scale)
-                                            AnimationState(posX, velX * rbCoeff).animateTo(posX.coerceIn(-curMaxX, curMaxX), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetX = value }
+                                            if (value > curMaxX || value < -curMaxX) {
+                                                offsetX = value.coerceIn(-curMaxX, curMaxX)
+                                                cancelAnimation()
+                                            } else offsetX = value
                                         }
                                     }
                                 }
                                 launch {
                                     val (_, maxY) = getMaxOffsets(scale)
                                     if (offsetY > maxY || offsetY < -maxY) {
-                                        val targetY = offsetY.coerceIn(-maxY, maxY)
-                                        AnimationState(offsetY, velocity.y * rbCoeff).animateTo(targetY, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetY = value }
+                                        offsetY = offsetY.coerceIn(-maxY, maxY)
                                     } else if (velocity.y != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
-                                        var hitY = false; var velY = 0f; var posY = 0f
                                         AnimationState(offsetY, velocity.y).animateDecay(decay) {
                                             val (_, curMaxY) = getMaxOffsets(scale)
-                                            if (value > curMaxY || value < -curMaxY) { velY = this.velocity; posY = value; hitY = true; cancelAnimation() }
-                                            else offsetY = value
-                                        }
-                                        if (hitY) {
-                                            val (_, curMaxY) = getMaxOffsets(scale)
-                                            AnimationState(posY, velY * rbCoeff).animateTo(posY.coerceIn(-curMaxY, curMaxY), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow)) { offsetY = value }
+                                            if (value > curMaxY || value < -curMaxY) {
+                                                offsetY = value.coerceIn(-curMaxY, curMaxY)
+                                                cancelAnimation()
+                                            } else offsetY = value
                                         }
                                     }
                                 }
@@ -252,8 +258,8 @@ internal fun ZoomableImageItem(
                     }
                 }
                 .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
+                    scaleX = scale * baseScale,
+                    scaleY = scale * baseScale,
                     translationX = offsetX,
                     translationY = offsetY
                 ),

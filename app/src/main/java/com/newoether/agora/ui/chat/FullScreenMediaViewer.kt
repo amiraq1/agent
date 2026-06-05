@@ -100,6 +100,7 @@ private fun PdfPager(
 ) {
     val pdfInitialPage = pdfPages.indexOf(url).coerceIn(0, pdfPages.size - 1)
     var currentScale by remember { mutableFloatStateOf(1f) }
+    var showOverlay by remember { mutableStateOf(true) }
     val pagerState = rememberPagerState(initialPage = pdfInitialPage) { pdfPages.size }
     LaunchedEffect(pagerState.currentPage) {
         val idx = pagerState.currentPage
@@ -117,32 +118,41 @@ private fun PdfPager(
         ) { page ->
             ZoomableImageItem(
                 url = pdfPages[page],
-                onTap = { onClose() },
+                onTap = { showOverlay = !showOverlay },
                 onScaleChanged = { if (page == pagerState.currentPage) currentScale = it },
                 consumeConditionally = true
             )
         }
-        Surface(
-            shape = RoundedCornerShape(50),
-            color = Color.Black.copy(alpha = 0.6f),
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp).statusBarsPadding()
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart).padding(20.dp).statusBarsPadding()
         ) {
-            Text(
-                "${pagerState.currentPage + 1} / ${pdfPages.size}",
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.surfaceContainer
+            ) {
+                Text(
+                    "${pagerState.currentPage + 1} / ${pdfPages.size}",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+            }
         }
-        IconButton(
-            onClick = { onClose() },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(16.dp)
-                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(24.dp)
         ) {
-            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = Color.White)
+            IconButton(
+                onClick = { onClose() },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 }
@@ -158,6 +168,7 @@ private fun MediaPager(
 ) {
     val context = LocalContext.current
     var currentScale by remember { mutableFloatStateOf(1f) }
+    var showOverlay by remember { mutableStateOf(true) }
     val pagerState = rememberPagerState(initialPage = initialIndex.coerceIn(0, urls.size - 1)) { urls.size }
     LaunchedEffect(pagerState.currentPage) { onNavigate(pagerState.currentPage) }
     BackHandler { onClose() }
@@ -184,35 +195,42 @@ private fun MediaPager(
             } else {
                 ZoomableImageItem(
                     url = mediaUrl,
-                    onTap = { onClose() },
+                    onTap = { showOverlay = !showOverlay },
                     onScaleChanged = { if (page == pagerState.currentPage) currentScale = it },
                     consumeConditionally = true
                 )
             }
         }
-        if (urls.size > 1) {
+        AnimatedVisibility(
+            visible = showOverlay && urls.size > 1,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart).padding(20.dp).statusBarsPadding()
+        ) {
             Surface(
                 shape = RoundedCornerShape(50),
-                color = Color.Black.copy(alpha = 0.6f),
-                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).statusBarsPadding()
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Text(
                     "${pagerState.currentPage + 1} / ${urls.size}",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                 )
             }
         }
-        IconButton(
-            onClick = { onClose() },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(16.dp)
-                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(24.dp)
         ) {
-            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = Color.White)
+            IconButton(
+                onClick = { onClose() },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 }
@@ -235,16 +253,36 @@ private fun SingleImage(
     var containerSize by remember { mutableStateOf(Size.Zero) }
     var imageSize by remember(url) { mutableStateOf(Size.Zero) }
     var animationJob by remember { mutableStateOf<Job?>(null) }
+    var showOverlay by remember { mutableStateOf(true) }
     var lastCentroid by remember { mutableStateOf(Offset.Unspecified) }
+
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // Scale factor that maps "fit between system bars" to user scale = 1f
+    val baseScale = remember(containerSize, imageSize, statusBarHeight, navBarHeight) {
+        if (containerSize == Size.Zero || imageSize == Size.Zero) 1f
+        else {
+            val imageAspect = imageSize.width / imageSize.height
+            val containerAspect = containerSize.width / containerSize.height
+            val fittedWidth = if (imageAspect > containerAspect) containerSize.width else containerSize.height * imageAspect
+            val fittedHeight = if (imageAspect > containerAspect) containerSize.width / imageAspect else containerSize.height
+            val barsPx = with(density) { statusBarHeight.toPx() + navBarHeight.toPx() }
+            val sHeight = if (fittedHeight > 0f) (containerSize.height - barsPx) / fittedHeight else 1f
+            val sWidth = if (fittedWidth > 0f) containerSize.width / fittedWidth else 1f
+            minOf(sHeight, sWidth).coerceIn(0.1f, 1f)
+        }
+    }
 
     fun getMaxOffsets(currentScale: Float): Pair<Float, Float> {
         if (imageSize == Size.Zero || containerSize == Size.Zero) return 0f to 0f
+        val effectiveScale = currentScale * baseScale
         val imageAspectRatio = imageSize.width / imageSize.height
         val containerAspectRatio = containerSize.width / containerSize.height
         val contentWidth = if (imageAspectRatio > containerAspectRatio) containerSize.width else containerSize.height * imageAspectRatio
         val contentHeight = if (imageAspectRatio > containerAspectRatio) containerSize.width / imageAspectRatio else containerSize.height
-        val maxX = (contentWidth * currentScale - containerSize.width).coerceAtLeast(0f) / 2f
-        val maxY = (contentHeight * currentScale - containerSize.height).coerceAtLeast(0f) / 2f
+        val maxX = (contentWidth * effectiveScale - containerSize.width).coerceAtLeast(0f) / 2f
+        val maxY = (contentHeight * effectiveScale - containerSize.height).coerceAtLeast(0f) / 2f
         return maxX to maxY
     }
 
@@ -261,7 +299,7 @@ private fun SingleImage(
             .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .pointerInput(url) {
                 detectTapGestures(
-                    onTap = { if (scale <= 1.05f) onClose() },
+                    onTap = { if (scale <= 1.05f) showOverlay = !showOverlay },
                     onDoubleTap = { tapOffset ->
                         animationJob?.cancel()
                         animationJob = scope.launch {
@@ -347,16 +385,8 @@ private fun SingleImage(
                                     logicalOffsetY = logicalOffsetY * r + (centroid.y - center.y) * (1f - r) + panChange.y
                                     val (maxX, maxY) = getMaxOffsets(newVisualScale)
                                     scale = newVisualScale
-                                    offsetX = when {
-                                        logicalOffsetX > maxX -> maxX + rubberBandValue(logicalOffsetX - maxX, containerSize.width)
-                                        logicalOffsetX < -maxX -> -maxX - rubberBandValue(-maxX - logicalOffsetX, containerSize.width)
-                                        else -> logicalOffsetX
-                                    }
-                                    offsetY = when {
-                                        logicalOffsetY > maxY -> maxY + rubberBandValue(logicalOffsetY - maxY, containerSize.height)
-                                        logicalOffsetY < -maxY -> -maxY - rubberBandValue(-maxY - logicalOffsetY, containerSize.height)
-                                        else -> logicalOffsetY
-                                    }
+                                    offsetX = logicalOffsetX.coerceIn(-maxX, maxX)
+                                    offsetY = logicalOffsetY.coerceIn(-maxY, maxY)
                                     event.changes.forEach { if (it.positionChanged()) it.consume() }
                                 }
                             }
@@ -372,7 +402,6 @@ private fun SingleImage(
                             y = if (rawVelocity.y.isNaN()) 0f else rawVelocity.y.coerceIn(-maxV, maxV)
                         )
                         animationJob = scope.launch {
-                            val rbCoeff = 0.45f
                             if (scale < 0.95f || scale > 10.05f) {
                                 val sS = scale; val sX = offsetX; val sY = offsetY
                                 val targetS = scale.coerceIn(1f, 10f)
@@ -395,47 +424,33 @@ private fun SingleImage(
                                 launch {
                                     val (maxX, _) = getMaxOffsets(scale)
                                     if (offsetX > maxX || offsetX < -maxX) {
-                                        val tgtX = offsetX.coerceIn(-maxX, maxX)
-                                        AnimationState(initialValue = offsetX, initialVelocity = velocity.x * rbCoeff)
-                                            .animateTo(tgtX, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy)) { offsetX = value }
+                                        offsetX = offsetX.coerceIn(-maxX, maxX)
                                     } else if (velocity.x != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
-                                        var hitX = false; var velX = 0f; var posX = 0f
                                         AnimationState(initialValue = offsetX, initialVelocity = velocity.x)
                                             .animateDecay(decay) {
                                                 val (curMaxX, _) = getMaxOffsets(scale)
-                                                if (value > curMaxX || value < -curMaxX) { velX = this.velocity; posX = value; hitX = true; cancelAnimation() }
-                                                else offsetX = value
+                                                if (value > curMaxX || value < -curMaxX) {
+                                                    offsetX = value.coerceIn(-curMaxX, curMaxX)
+                                                    cancelAnimation()
+                                                } else offsetX = value
                                             }
-                                        if (hitX) {
-                                            val (curMaxX, _) = getMaxOffsets(scale)
-                                            val ftgtX = posX.coerceIn(-curMaxX, curMaxX)
-                                            AnimationState(initialValue = posX, initialVelocity = velX * rbCoeff)
-                                                .animateTo(ftgtX, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy)) { offsetX = value }
-                                        }
                                     }
                                 }
                                 launch {
                                     val (_, maxY) = getMaxOffsets(scale)
                                     if (offsetY > maxY || offsetY < -maxY) {
-                                        val tgtY = offsetY.coerceIn(-maxY, maxY)
-                                        AnimationState(initialValue = offsetY, initialVelocity = velocity.y * rbCoeff)
-                                            .animateTo(tgtY, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy)) { offsetY = value }
+                                        offsetY = offsetY.coerceIn(-maxY, maxY)
                                     } else if (velocity.y != 0f) {
                                         val decay = splineBasedDecay<Float>(density)
-                                        var hitY = false; var velY = 0f; var posY = 0f
                                         AnimationState(initialValue = offsetY, initialVelocity = velocity.y)
                                             .animateDecay(decay) {
                                                 val (_, curMaxY) = getMaxOffsets(scale)
-                                                if (value > curMaxY || value < -curMaxY) { velY = this.velocity; posY = value; hitY = true; cancelAnimation() }
-                                                else offsetY = value
+                                                if (value > curMaxY || value < -curMaxY) {
+                                                    offsetY = value.coerceIn(-curMaxY, curMaxY)
+                                                    cancelAnimation()
+                                                } else offsetY = value
                                             }
-                                        if (hitY) {
-                                            val (_, curMaxY) = getMaxOffsets(scale)
-                                            val ftgtY = posY.coerceIn(-curMaxY, curMaxY)
-                                            AnimationState(initialValue = posY, initialVelocity = velY * rbCoeff)
-                                                .animateTo(ftgtY, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy)) { offsetY = value }
-                                        }
                                     }
                                 }
                             }
@@ -443,21 +458,24 @@ private fun SingleImage(
                         velocityTracker.resetTracking()
                     }
                 }
-                .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offsetX, translationY = offsetY),
+                .graphicsLayer(scaleX = scale * baseScale, scaleY = scale * baseScale, translationX = offsetX, translationY = offsetY),
             contentScale = ContentScale.Fit
         )
         if (imageSize == Size.Zero) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White, strokeWidth = 2.dp)
         }
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(16.dp)
-                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(24.dp)
         ) {
-            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = Color.White)
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 
