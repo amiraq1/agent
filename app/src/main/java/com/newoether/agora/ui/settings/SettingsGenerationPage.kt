@@ -172,7 +172,7 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     Text(
                                         text = stringResource(R.string.gen_thinking_level_desc),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (thinkingEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
                                     Row(
@@ -180,17 +180,31 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         thinkingLevels.forEachIndexed { index, level ->
-                                            val selected = thinkingLevel == level
+                                            val selected = thinkingLevel == level && thinkingEnabled
                                             val primary = MaterialTheme.colorScheme.primary
                                             val surface = MaterialTheme.colorScheme.surfaceContainerHigh
+                                            val disabledBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                             val startColor by animateColorAsState(
-                                                if (selected) primary else surface,
+                                                when {
+                                                    selected -> primary
+                                                    thinkingEnabled -> surface
+                                                    else -> disabledBg
+                                                },
                                                 tween(300)
                                             )
                                             val endColor by animateColorAsState(
-                                                if (selected) primary else surface,
+                                                when {
+                                                    selected -> primary
+                                                    thinkingEnabled -> surface
+                                                    else -> disabledBg
+                                                },
                                                 tween(300)
                                             )
+                                            val textColor = when {
+                                                selected -> MaterialTheme.colorScheme.onPrimary
+                                                thinkingEnabled -> MaterialTheme.colorScheme.onSurface
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                            }
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
@@ -206,7 +220,7 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                                     modifier = Modifier.fillMaxWidth(),
                                                     style = MaterialTheme.typography.labelLarge,
                                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                                    color = textColor
                                                 )
                                             }
                                         }
