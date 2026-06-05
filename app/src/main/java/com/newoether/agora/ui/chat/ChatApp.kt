@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -839,6 +840,7 @@ fun ChatApp(
                     }
 
                     val animAlpha by animateFloatAsState(if (showButton) 1f else 0f, tween(400), label = "scrollBtnAlpha")
+                    val animScale by animateFloatAsState(if (showButton) 1f else 0.6f, tween(400), label = "scrollBtnScale")
 
                     FloatingActionButton(
                         onClick = {
@@ -855,6 +857,7 @@ fun ChatApp(
                             .padding(bottom = bottomBarHeight + 16.dp)
                             .size(40.dp)
                             .alpha(animAlpha)
+                            .scale(animScale)
                     ) {
                         Icon(
                             Icons.Default.KeyboardArrowDown,
