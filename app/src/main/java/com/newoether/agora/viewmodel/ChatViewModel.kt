@@ -1105,6 +1105,41 @@ class ChatViewModel(
         return keys.firstOrNull()?.key
     }
 
+    data class EmbeddingKeyInfo(val provider: String, val key: String, val baseUrl: String)
+
+    fun resolveEmbeddingKeyForProvider(targetProvider: String): EmbeddingKeyInfo? {
+        val keys = apiKeys.value
+        // First try exact provider match
+        val match = keys.find { it.provider.equals(targetProvider, ignoreCase = true) }
+        if (match != null) {
+            val baseUrl = providerBaseUrls.value[match.provider] ?: resolveDefaultBaseUrlForProvider(match.provider)
+            return EmbeddingKeyInfo(match.provider, match.key, baseUrl)
+        }
+        // Fallback to any OpenAI-compatible key
+        val fallbackKeys = listOf("OpenAI", "DeepSeek", "Qwen", "Open Router", "Mistral", "OpenRouter")
+        for (fk in fallbackKeys) {
+            val entry = keys.find { it.provider.equals(fk, ignoreCase = true) }
+            if (entry != null) {
+                val baseUrl = providerBaseUrls.value[entry.provider] ?: resolveDefaultBaseUrlForProvider(entry.provider)
+                return EmbeddingKeyInfo(entry.provider, entry.key, baseUrl)
+            }
+        }
+        // Last resort: any key
+        val first = keys.firstOrNull() ?: return null
+        return EmbeddingKeyInfo(first.provider, first.key, resolveDefaultBaseUrlForProvider(first.provider))
+    }
+
+    private fun resolveDefaultBaseUrlForProvider(provider: String): String {
+        return when (provider.lowercase()) {
+            "openai" -> "https://api.openai.com/v1"
+            "mistral" -> "https://api.mistral.ai/v1"
+            "deepseek" -> "https://api.deepseek.com/v1"
+            "qwen" -> "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+            "open router", "openrouter" -> "https://openrouter.ai/api/v1"
+            else -> "https://api.openai.com/v1"
+        }
+    }
+
     private fun resolveEmbeddingBaseUrl(): String {
         return providerBaseUrls.value["OpenAI"] ?: "https://api.openai.com/v1"
     }
