@@ -106,6 +106,28 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 )
             )
 
+            // ── Dynamic Color ──
+            if (isDynamicAvailable) {
+                SettingsGroup(
+                    title = stringResource(R.string.dynamic_color),
+                    items = buildList {
+                        add {
+                            SettingsItem(
+                                headlineContent = { Text(stringResource(R.string.dynamic_color)) },
+                                supportingContent = { Text(stringResource(R.string.dynamic_color_desc)) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = dynamicColor,
+                                        onCheckedChange = { viewModel.setDynamicColor(it) }
+                                    )
+                                },
+                                modifier = Modifier.clickable { viewModel.setDynamicColor(!dynamicColor) }
+                            )
+                        }
+                    }
+                )
+            }
+
             // ── Color Scheme ──
             val schemeAlpha = if (dynamicColor && isDynamicAvailable) 0.38f else 1f
             SettingsGroup(
@@ -172,27 +194,6 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
             )
 
-            // ── Dynamic Color ──
-            if (isDynamicAvailable) {
-                SettingsGroup(
-                    title = stringResource(R.string.dynamic_color),
-                    items = buildList {
-                        add {
-                            SettingsItem(
-                                headlineContent = { Text(stringResource(R.string.dynamic_color)) },
-                                supportingContent = { Text(stringResource(R.string.dynamic_color_desc)) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = dynamicColor,
-                                        onCheckedChange = { viewModel.setDynamicColor(it) }
-                                    )
-                                },
-                                modifier = Modifier.clickable { viewModel.setDynamicColor(!dynamicColor) }
-                            )
-                        }
-                    }
-                )
-            }
         }
     }
 }
