@@ -24,6 +24,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.newoether.agora.R
@@ -78,8 +79,7 @@ fun TextFileViewer(
                         .padding(start = 16.dp, end = 16.dp, top = 96.dp, bottom = 56.dp)
                 ) {
                     Markdown(content = content, modifier = Modifier.fillMaxWidth(), typography = viewerTypography, padding = viewerPadding)
-                    Spacer(Modifier.height(80.dp))
-                }
+                                    }
             }
         } else {
             val scrollState = rememberScrollState()
@@ -99,8 +99,7 @@ fun TextFileViewer(
                         fontSize = 13.sp,
                         lineHeight = 20.sp
                     )
-                    Spacer(Modifier.height(80.dp))
-                }
+                                    }
             }
         }
 
@@ -143,6 +142,7 @@ fun TextFileViewer(
                         fileName,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
                     )
                 }

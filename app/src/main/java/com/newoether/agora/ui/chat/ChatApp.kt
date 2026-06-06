@@ -974,6 +974,7 @@ fun ChatApp(
                         onShellToggle = { enabled -> viewModel.updateConversationSetting(currentConversationId) { it.copy(shellEnabled = enabled) } },
                         onModelSelect = { viewModel.setActiveModel(it) },
                         onImageClick = { url -> onMediaClick(listOf(url), 0) },
+                        onAllMediaClick = { urls, idx -> onMediaClick(urls, idx) },
                         onFileContentClick = { name, content -> viewModel.showFilePreview(name, content) },
                         modifier = Modifier,
                         textFieldState = textFieldState,

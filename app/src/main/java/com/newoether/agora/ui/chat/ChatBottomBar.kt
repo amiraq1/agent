@@ -142,6 +142,7 @@ fun ChatBottomBar(
     onShellToggle: (Boolean) -> Unit = {},
     onModelSelect: (String) -> Unit,
     onImageClick: (String) -> Unit = {},
+    onAllMediaClick: ((urls: List<String>, index: Int) -> Unit)? = null,
     onFileContentClick: ((fileName: String, content: String) -> Unit)? = null,
     onPdfPagesClick: ((pages: List<String>, startIndex: Int) -> Unit)? = null,
     onPdfPreviewSelect: ((pages: List<String>, startIndex: Int) -> Unit)? = null,
@@ -345,6 +346,9 @@ fun ChatBottomBar(
 
             Column(modifier = Modifier.fillMaxWidth().then(if (isExpanded) Modifier.weight(1f) else Modifier).animateContentSize(tween(400))) {
         if (selectedAttachments.isNotEmpty() && !isExpanded) {
+            val allMediaUrls = selectedAttachments.filter {
+                it.type == "image" || it.type == "video"
+            }.map { it.uri }
             androidx.compose.foundation.lazy.LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -393,8 +397,14 @@ fun ChatBottomBar(
                                         onPdfPagesClick(paths, 0)
                                     } else Modifier
                                 }
-                                isVideo -> Modifier.clickable { onImageClick(uriStr) }
-                                else -> Modifier.clickable { onImageClick(uriStr) }
+                                isVideo -> {
+                                    val mediaIndex = allMediaUrls.indexOf(uriStr).coerceAtLeast(0)
+                                    Modifier.clickable { onAllMediaClick?.invoke(allMediaUrls, mediaIndex) }
+                                }
+                                else -> {
+                                    val mediaIndex = allMediaUrls.indexOf(uriStr).coerceAtLeast(0)
+                                    Modifier.clickable { onAllMediaClick?.invoke(allMediaUrls, mediaIndex) }
+                                }
                             }
                             val thumbModifier = Modifier
                                 .size(64.dp)
