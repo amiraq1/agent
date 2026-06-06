@@ -155,7 +155,7 @@ fun TextFileViewer(
                     onClick = onClose,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.shadow(8.dp, CircleShape)
+                    modifier = Modifier.size(48.dp).shadow(8.dp, CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Close,
