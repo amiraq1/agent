@@ -518,20 +518,26 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     Column {
                         // Provider selector (fully clickable)
                         var provExpanded by remember { mutableStateOf(false) }
-                        OutlinedTextField(
-                            value = provider.name,
-                            onValueChange = { },
-                            readOnly = true,
-                            label = { Text(stringResource(R.string.embedding_provider_label)) },
-                            trailingIcon = {
-                                IconButton(onClick = { provExpanded = true }) {
+                        Box(modifier = Modifier.fillMaxWidth().clickable { provExpanded = true }) {
+                            OutlinedTextField(
+                                value = provider.name,
+                                onValueChange = { },
+                                readOnly = true,
+                                enabled = false,
+                                label = { Text(stringResource(R.string.embedding_provider_label)) },
+                                trailingIcon = {
                                     Icon(Icons.Default.ArrowDropDown, null)
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().clickable { provExpanded = true }
-                        )
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            )
+                        }
                         DropdownMenu(
                             expanded = provExpanded,
                             onDismissRequest = { provExpanded = false },
