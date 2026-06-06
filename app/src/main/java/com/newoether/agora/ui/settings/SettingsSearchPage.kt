@@ -363,6 +363,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 remoteModelName = embeddingProviders[0].models.firstOrNull() ?: ""
                                 remoteBaseUrl = "https://api.openai.com/v1"
                                 for (i in remoteApiKeys.indices) { remoteApiKeys[i] = "" }
+                                remoteApiKeys[0] = viewModel.resolveEmbeddingKeyForProviderExact("OpenAI")?.key ?: ""
                                 remoteBatchSize = "8"
                                 isCustomModel = false
                                 testStatus = null
