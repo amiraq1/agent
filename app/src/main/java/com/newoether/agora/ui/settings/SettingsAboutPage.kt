@@ -96,44 +96,6 @@ fun SettingsAboutPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 )
             }))
 
-            // -- Links --
-            SettingsGroup(title = stringResource(R.string.about_links), items = listOf({
-                SettingsItem(
-                    headlineContent = { Text(stringResource(R.string.about_github), modifier = Modifier.padding(vertical = 6.dp)) },
-                    leadingContent = { Icon(Icons.Default.Code, contentDescription = null) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora") }
-                )
-            }, {
-                SettingsItem(
-                    headlineContent = { Text(stringResource(R.string.about_issue_tracker), modifier = Modifier.padding(vertical = 6.dp)) },
-                    leadingContent = { Icon(Icons.Default.BugReport, contentDescription = null) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/issues") }
-                )
-            }, {
-                SettingsItem(
-                    headlineContent = { Text(stringResource(R.string.about_contribute), modifier = Modifier.padding(vertical = 6.dp)) },
-                    leadingContent = { Icon(Icons.Default.VolunteerActivism, contentDescription = null) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/blob/master/CONTRIBUTING.md") }
-                )
-            }, {
-                SettingsItem(
-                    headlineContent = { Text(stringResource(R.string.about_source_code), modifier = Modifier.padding(vertical = 6.dp)) },
-                    leadingContent = { Icon(Icons.Default.Storage, contentDescription = null) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora") }
-                )
-            }, {
-                SettingsItem(
-                    headlineContent = { Text(stringResource(R.string.about_privacy_policy), modifier = Modifier.padding(vertical = 6.dp)) },
-                    leadingContent = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/blob/master/PRIVACY.md") }
-                )
-            }))
-
             // -- Updates --
             SettingsGroup(title = stringResource(R.string.about_updates), items = buildList {
                 add {
@@ -177,6 +139,37 @@ fun SettingsAboutPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     )
                 }
             })
+
+            // -- Links --
+            SettingsGroup(title = stringResource(R.string.about_links), items = listOf({
+                SettingsItem(
+                    headlineContent = { Text(stringResource(R.string.about_github), modifier = Modifier.padding(vertical = 6.dp)) },
+                    leadingContent = { Icon(Icons.Default.Code, contentDescription = null) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora") }
+                )
+            }, {
+                SettingsItem(
+                    headlineContent = { Text(stringResource(R.string.about_issue_tracker), modifier = Modifier.padding(vertical = 6.dp)) },
+                    leadingContent = { Icon(Icons.Default.BugReport, contentDescription = null) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/issues") }
+                )
+            }, {
+                SettingsItem(
+                    headlineContent = { Text(stringResource(R.string.about_contribute), modifier = Modifier.padding(vertical = 6.dp)) },
+                    leadingContent = { Icon(Icons.Default.VolunteerActivism, contentDescription = null) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/blob/master/CONTRIBUTING.md") }
+                )
+            }, {
+                SettingsItem(
+                    headlineContent = { Text(stringResource(R.string.about_privacy_policy), modifier = Modifier.padding(vertical = 6.dp)) },
+                    leadingContent = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/blob/master/PRIVACY.md") }
+                )
+            }))
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
