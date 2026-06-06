@@ -1260,7 +1260,7 @@ class ChatViewModel(
         return withContext(Dispatchers.IO) {
             try {
                 val result = EmbeddingClient.computeEmbedding("test connection", apiKey, modelName, url)
-                if (result != null) "OK (dim=${result.size})" else "Failed"
+                if (result != null) "OK (dim=${result.size})" else "Request failed. Check API key, URL, and model name."
             } catch (e: Exception) {
                 e.message ?: "Error"
             }

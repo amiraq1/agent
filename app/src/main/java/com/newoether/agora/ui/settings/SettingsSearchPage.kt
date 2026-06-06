@@ -574,35 +574,16 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.height(12.dp))
                         // API Key
                         val currentKey = remoteApiKeys[selectedProviderIdx]
-                        if (selectedProviderIdx == 0) {
-                            // OpenAI: read-only, auto-resolved key
-                            val openAiKeyInfo = viewModel.resolveEmbeddingKeyForProviderExact("OpenAI")
-                            OutlinedTextField(
-                                value = if (openAiKeyInfo != null) stringResource(R.string.embedding_using_key, openAiKeyInfo.provider) else stringResource(R.string.embedding_no_key),
-                                onValueChange = { },
-                                readOnly = true,
-                                label = { Text(stringResource(R.string.embedding_api_key)) },
-                                trailingIcon = {
-                                    if (openAiKeyInfo != null)
-                                        Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
-                                },
-                                singleLine = true,
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        } else {
-                            // Other providers: editable
-                            OutlinedTextField(
-                                value = currentKey,
-                                onValueChange = { remoteApiKeys[selectedProviderIdx] = it },
-                                label = { Text(stringResource(R.string.embedding_api_key)) },
-                                placeholder = { Text(stringResource(R.string.embedding_api_key_hint)) },
-                                visualTransformation = PasswordVisualTransformation(),
-                                singleLine = true,
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        OutlinedTextField(
+                            value = currentKey,
+                            onValueChange = { remoteApiKeys[selectedProviderIdx] = it },
+                            label = { Text(stringResource(R.string.embedding_api_key)) },
+                            placeholder = { Text(stringResource(R.string.embedding_api_key_hint)) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         // Base URL
                         OutlinedTextField(
@@ -692,7 +673,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         testStatus?.let { status ->
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = status,
                                 style = MaterialTheme.typography.bodySmall,
