@@ -444,7 +444,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRemoteDialog = false; testStatus = null },
-                title = { Text(stringResource(R.string.add_remote_model)) },
+                title = { Text(stringResource(R.string.add_remote_model), fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
                         OutlinedTextField(
@@ -553,7 +553,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     if (localFilePath.isNotBlank()) File(localFilePath).delete()
                     showLocalDialog = false
                 },
-                title = { Text(stringResource(R.string.add_local_model)) },
+                title = { Text(stringResource(R.string.add_local_model), fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
                         OutlinedTextField(
@@ -610,7 +610,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRecacheConfirm = null },
-                title = { Text(stringResource(R.string.recache_confirm_title)) },
+                title = { Text(stringResource(R.string.recache_confirm_title), fontWeight = FontWeight.Bold) },
                 text = { Text(stringResource(R.string.recache_confirm_message)) },
                 confirmButton = {
                     TextButton(onClick = {
@@ -629,7 +629,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showDeleteDialog = null },
-                title = { Text(stringResource(R.string.delete_model_title)) },
+                title = { Text(stringResource(R.string.delete_model_title), fontWeight = FontWeight.Bold) },
                 text = { Text(stringResource(R.string.delete_model_confirm)) },
                 confirmButton = {
                     TextButton(onClick = {
@@ -648,7 +648,7 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { showRenameDialog = null },
-                title = { Text(stringResource(R.string.rename)) },
+                title = { Text(stringResource(R.string.rename), fontWeight = FontWeight.Bold) },
                 text = {
                     OutlinedTextField(
                         value = renameText,

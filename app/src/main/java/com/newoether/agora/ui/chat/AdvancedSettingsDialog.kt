@@ -42,7 +42,7 @@ fun AdvancedSettingsDialog(
     AlertDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.advanced_generation_title)) },
+        title = { Text(stringResource(R.string.advanced_generation_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())

@@ -206,7 +206,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeleteFileConfirm = null },
-            title = { Text(stringResource(R.string.memory_delete_title)) },
+            title = { Text(stringResource(R.string.memory_delete_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.memory_delete_text, fileName)) },
             confirmButton = {
                 TextButton(
@@ -236,7 +236,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 fileEditorContent = ""
                 fileEditorDesc = ""
             },
-            title = { Text(if (isActiveMemory) stringResource(R.string.memory_edit_active) else stringResource(R.string.memory_edit)) },
+            title = { Text(if (isActiveMemory) stringResource(R.string.memory_edit_active) else stringResource(R.string.memory_edit), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
@@ -317,7 +317,7 @@ fun SettingsMemoryPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showNewFileDialog = false },
-            title = { Text(stringResource(R.string.memory_add_title)) },
+            title = { Text(stringResource(R.string.memory_add_title), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {

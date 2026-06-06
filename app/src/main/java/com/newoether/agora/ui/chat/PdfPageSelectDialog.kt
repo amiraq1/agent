@@ -43,7 +43,8 @@ fun PdfPageSelectDialog(
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     "Select PDF Pages",
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(

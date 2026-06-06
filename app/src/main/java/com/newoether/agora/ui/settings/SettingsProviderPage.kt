@@ -370,7 +370,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             showAddDialog = false
                             copiedFilePath = null
                         },
-                        title = { Text(stringResource(R.string.add_local_chat_model)) },
+                        title = { Text(stringResource(R.string.add_local_chat_model), fontWeight = FontWeight.Bold) },
                         text = {
                             Column(
                                 Modifier
@@ -516,7 +516,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showEditDialog = null },
-                        title = { Text(stringResource(R.string.edit)) },
+                        title = { Text(stringResource(R.string.edit), fontWeight = FontWeight.Bold) },
                         text = {
                             Column(
                                 Modifier
@@ -636,7 +636,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showDeleteConfirm = null },
-                        title = { Text(stringResource(R.string.local_chat_delete_title)) },
+                        title = { Text(stringResource(R.string.local_chat_delete_title), fontWeight = FontWeight.Bold) },
                         text = { Text(stringResource(R.string.local_chat_delete_text, model.alias)) },
                         confirmButton = {
                             TextButton(
@@ -660,7 +660,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showRenameProvider = false },
-                        title = { Text(stringResource(R.string.custom_provider_rename_title)) },
+                        title = { Text(stringResource(R.string.custom_provider_rename_title), fontWeight = FontWeight.Bold) },
                         text = {
                             Column(Modifier.fillMaxWidth()) {
                                 OutlinedTextField(
@@ -694,7 +694,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         onDismissRequest = { showDeleteProvider = false },
-                        title = { Text(stringResource(R.string.custom_provider_delete_title)) },
+                        title = { Text(stringResource(R.string.custom_provider_delete_title), fontWeight = FontWeight.Bold) },
                         text = { Text(stringResource(R.string.custom_provider_delete_text, viewingProvider)) },
                         confirmButton = {
                             TextButton(
@@ -718,7 +718,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showProviderDialog = false },
-            title = { Text(stringResource(R.string.provider_select_provider)) },
+            title = { Text(stringResource(R.string.provider_select_provider), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     providers.forEach { p ->
@@ -789,7 +789,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showKeyDialog = null },
-            title = { Text(if (isEdit) stringResource(R.string.provider_edit_key) else stringResource(R.string.provider_add_key_title)) },
+            title = { Text(if (isEdit) stringResource(R.string.provider_edit_key) else stringResource(R.string.provider_add_key_title), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
@@ -831,7 +831,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeleteKeyConfirm = null },
-            title = { Text(stringResource(R.string.provider_delete_key_title)) },
+            title = { Text(stringResource(R.string.provider_delete_key_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.provider_delete_key_text, entry.name)) },
             confirmButton = {
                 TextButton(
@@ -856,7 +856,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showAddCustomProviderDialog = false },
-            title = { Text(stringResource(R.string.custom_provider_add_title)) },
+            title = { Text(stringResource(R.string.custom_provider_add_title), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {

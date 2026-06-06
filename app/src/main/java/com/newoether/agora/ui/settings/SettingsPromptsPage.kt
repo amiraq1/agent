@@ -82,7 +82,7 @@ fun SettingsPromptsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeletePromptConfirm = null },
-            title = { Text(stringResource(R.string.prompts_delete_title)) },
+            title = { Text(stringResource(R.string.prompts_delete_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.prompts_delete_text, entry.title)) },
             confirmButton = {
                 TextButton(

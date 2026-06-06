@@ -236,7 +236,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showActiveModelDialog = false },
-            title = { Text(stringResource(R.string.models_select_default)) },
+            title = { Text(stringResource(R.string.models_select_default), fontWeight = FontWeight.Bold) },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(enabledModels.toList()) { model ->
@@ -279,7 +279,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showModelAliasDialog = null },
-            title = { Text(stringResource(R.string.models_rename)) },
+            title = { Text(stringResource(R.string.models_rename), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Column(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {

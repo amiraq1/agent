@@ -305,7 +305,7 @@ fun SettingsShellPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 AlertDialog(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     onDismissRequest = { deleteConfirmDeviceId = null },
-                    title = { Text(stringResource(R.string.shell_delete_confirm_title)) },
+                    title = { Text(stringResource(R.string.shell_delete_confirm_title), fontWeight = FontWeight.Bold) },
                     text = { Text(stringResource(R.string.shell_delete_confirm_message, deviceName)) },
                     confirmButton = {
                         TextButton(

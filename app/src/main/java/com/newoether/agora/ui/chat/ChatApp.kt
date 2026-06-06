@@ -992,7 +992,7 @@ fun ChatApp(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showRenameDialog = null },
-            title = { Text(stringResource(R.string.rename_chat)) },
+            title = { Text(stringResource(R.string.rename_chat), fontWeight = FontWeight.Bold) },
             text = {
                 val fm = LocalFocusManager.current
                 Box(Modifier.fillMaxWidth().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { fm.clearFocus() }) {
@@ -1025,7 +1025,7 @@ fun ChatApp(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeleteConfirmDialog = null },
-            title = { Text(stringResource(R.string.delete_chat)) },
+            title = { Text(stringResource(R.string.delete_chat), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.delete_chat_confirm)) },
             confirmButton = {
                 TextButton(
@@ -1056,7 +1056,7 @@ fun ChatApp(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showPromptDialog = false },
-            title = { Text(stringResource(R.string.conversation_prompt)) },
+            title = { Text(stringResource(R.string.conversation_prompt), fontWeight = FontWeight.Bold) },
             text = {
                 LazyColumn {
                     item {

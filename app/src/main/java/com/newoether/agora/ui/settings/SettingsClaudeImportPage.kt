@@ -156,7 +156,7 @@ fun SettingsClaudeImportPage(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showImportDialog = false },
-            title = { Text(stringResource(R.string.claude_import_title)) },
+            title = { Text(stringResource(R.string.claude_import_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
@@ -207,7 +207,7 @@ fun SettingsClaudeImportPage(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showSuccessDialog = false },
-            title = { Text(stringResource(R.string.claude_import_success)) },
+            title = { Text(stringResource(R.string.claude_import_success), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("${stringResource(R.string.claude_import_conversations)}: ${result.conversationsImported}")

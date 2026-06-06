@@ -94,7 +94,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showTitleModelDialog = false },
-            title = { Text(stringResource(R.string.title_gen_select_model)) },
+            title = { Text(stringResource(R.string.title_gen_select_model), fontWeight = FontWeight.Bold) },
             text = {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {

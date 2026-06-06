@@ -280,7 +280,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
             AlertDialog(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 onDismissRequest = { },
-                title = { Text(label) },
+                title = { Text(label, fontWeight = FontWeight.Bold) },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         LinearProgressIndicator(
@@ -322,7 +322,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { invalidImportMessage = null },
-            title = { Text(stringResource(R.string.data_import_title)) },
+            title = { Text(stringResource(R.string.data_import_title), fontWeight = FontWeight.Bold) },
             text = { Text(invalidImportMessage!!) },
             confirmButton = {
                 TextButton(onClick = { invalidImportMessage = null }) {
@@ -363,7 +363,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 showClaudeImportDialog = false
                 viewModel.clearClaudeImportState()
             },
-            title = { Text(stringResource(R.string.claude_import_title)) },
+            title = { Text(stringResource(R.string.claude_import_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     // Fixed header
@@ -460,7 +460,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 showClaudeSuccessDialog = false
                 viewModel.clearClaudeImportState()
             },
-            title = { Text(stringResource(R.string.claude_import_success)) },
+            title = { Text(stringResource(R.string.claude_import_success), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(stringResource(R.string.claude_import_success_detail, result.conversationsImported, result.messagesImported))
@@ -500,7 +500,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 showGptImportDialog = false
                 viewModel.clearGptImportState()
             },
-            title = { Text(stringResource(R.string.gpt_import_title)) },
+            title = { Text(stringResource(R.string.gpt_import_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
@@ -595,7 +595,7 @@ fun SettingsDataControlPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 showGptSuccessDialog = false
                 viewModel.clearGptImportState()
             },
-            title = { Text(stringResource(R.string.gpt_import_success)) },
+            title = { Text(stringResource(R.string.gpt_import_success), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(stringResource(R.string.gpt_import_success_detail, result.conversationsImported, result.messagesImported))
@@ -640,7 +640,7 @@ private fun ExportDataDialog(
     AlertDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.data_export_title), fontWeight = FontWeight.Normal) },
+        title = { Text(stringResource(R.string.data_export_title), fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 CheckRow(exportConversations, { exportConversations = it },
@@ -718,7 +718,7 @@ private fun ImportPreviewDialog(
     AlertDialog(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.import_preview_title)) },
+        title = { Text(stringResource(R.string.import_preview_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(

@@ -557,7 +557,7 @@ fun MessageItem(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showInfoDialog = false },
-            title = { Text(stringResource(R.string.message_info)) },
+            title = { Text(stringResource(R.string.message_info), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(stringResource(R.string.time_with_label, dateString), style = MaterialTheme.typography.bodyMedium)
@@ -577,7 +577,7 @@ fun MessageItem(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_message_title)) },
+            title = { Text(stringResource(R.string.delete_message_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(R.string.delete_message_confirm)) },
             confirmButton = {
                 TextButton(

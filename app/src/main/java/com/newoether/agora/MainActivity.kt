@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.newoether.agora.ui.settings.RatingForm
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
                 if (needsErrorDialog) {
                     AlertDialog(
                         onDismissRequest = { activity?.finish() },
-                        title = { Text(stringResource(R.string.database_incompatible)) },
+                        title = { Text(stringResource(R.string.database_incompatible), fontWeight = FontWeight.Bold) },
                         text = { Text(stringResource(R.string.database_incompatible_desc)) },
                         dismissButton = {
                             TextButton(onClick = { activity?.finish() }) { Text(stringResource(R.string.quit)) }

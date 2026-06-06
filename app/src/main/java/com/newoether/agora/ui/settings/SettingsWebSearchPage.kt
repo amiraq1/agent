@@ -220,7 +220,7 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { showProviderDialog = false },
-            title = { Text(stringResource(R.string.web_search_select_provider)) },
+            title = { Text(stringResource(R.string.web_search_select_provider), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     val providers = listOf(

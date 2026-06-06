@@ -903,7 +903,7 @@ fun ChatBottomBar(
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             onDismissRequest = { rejectedMessage = null },
-            title = { Text(stringResource(R.string.file_unsupported_title)) },
+            title = { Text(stringResource(R.string.file_unsupported_title), fontWeight = FontWeight.Bold) },
             text = { Text(rejectedMessage!!) },
             confirmButton = {
                 TextButton(onClick = { rejectedMessage = null }) {
