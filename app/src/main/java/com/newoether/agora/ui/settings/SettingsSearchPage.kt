@@ -805,6 +805,16 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = localBatchSize,
+                            onValueChange = { localBatchSize = it.filter { c -> c.isDigit() } },
+                            label = { Text(stringResource(R.string.embedding_batch_size)) },
+                            supportingText = { Text(stringResource(R.string.embedding_batch_size_desc)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         if (localFilePath.isNotBlank()) {
                             SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.local_model_ready)) },
@@ -817,16 +827,6 @@ fun SettingsSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                 Text(stringResource(R.string.import_model))
                             }
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = localBatchSize,
-                            onValueChange = { localBatchSize = it.filter { c -> c.isDigit() } },
-                            label = { Text(stringResource(R.string.embedding_batch_size)) },
-                            supportingText = { Text(stringResource(R.string.embedding_batch_size_desc)) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
                         if (isImporting) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 16.dp), strokeWidth = 2.dp)
                         }
