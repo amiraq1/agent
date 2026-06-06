@@ -196,19 +196,19 @@ private fun PdfPager(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Checkbox(
                         checked = currentPage in pdfSelectedPages,
                         onCheckedChange = { onTogglePdfPage(currentPage) },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         "${pdfSelectedPages.size} selected",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(end = 8.dp)
+                        modifier = Modifier.padding(end = 12.dp)
                     )
                 }
             }
@@ -364,7 +364,7 @@ private fun SingleImage(
             .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .pointerInput(url) {
                 detectTapGestures(
-                    onTap = { if (scale <= 1.05f) showOverlay = !showOverlay },
+                    onTap = { showOverlay = !showOverlay },
                     onDoubleTap = { tapOffset ->
                         animationJob?.cancel()
                         animationJob = scope.launch {

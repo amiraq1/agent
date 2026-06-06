@@ -99,7 +99,7 @@ internal fun ZoomableImageItem(
             .onSizeChanged { containerSize = Size(it.width.toFloat(), it.height.toFloat()) }
             .pointerInput(url) {
                 detectTapGestures(
-                    onTap = { if (scale <= 1.05f) onTap() },
+                    onTap = { onTap() },
                     onDoubleTap = { tapOffset ->
                         animationJob?.cancel()
                         animationJob = scope.launch {
