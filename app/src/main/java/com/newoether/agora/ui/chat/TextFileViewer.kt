@@ -1,10 +1,16 @@
 package com.newoether.agora.ui.chat
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -12,12 +18,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.newoether.agora.R
+import com.newoether.agora.ui.theme.MonoFamily
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
+import com.mikepenz.markdown.model.markdownPadding
 
 private fun isMarkdownFile(fileName: String): Boolean =
     fileName.endsWith(".md", true) || fileName.endsWith(".markdown", true)
@@ -32,58 +45,122 @@ fun TextFileViewer(
     BackHandler(enabled = true) { onClose() }
 
     val isMarkdown = remember(fileName) { isMarkdownFile(fileName) }
-    val bgColor = if (isMarkdown) MaterialTheme.colorScheme.background else Color(0xFF1A1A1A)
+    var showOverlay by remember { mutableStateOf(true) }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(bgColor)
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // Content — first child, behind buttons
+        val t = MaterialTheme.typography
+        val viewerTypography = markdownTypography(
+            text = t.bodyLarge,
+            h1 = t.headlineMedium,
+            h2 = t.headlineSmall,
+            h3 = t.titleLarge,
+            h4 = t.titleMedium,
+            h5 = t.titleSmall,
+            h6 = t.titleSmall,
+            code = t.bodyMedium.copy(fontFamily = MonoFamily, fontSize = 13.sp),
+            inlineCode = t.bodyMedium.copy(fontFamily = MonoFamily, fontSize = 13.sp),
+        )
+        val viewerPadding = markdownPadding(block = 7.dp)
+
+        // Content
         if (isMarkdown) {
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 56.dp)
-            ) {
-                Markdown(content = content, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(80.dp))
+            SelectionContainer {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                        .pointerInput(Unit) {}
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = 16.dp, end = 16.dp, top = 96.dp, bottom = 56.dp)
+                ) {
+                    Markdown(content = content, modifier = Modifier.fillMaxWidth(), typography = viewerTypography, padding = viewerPadding)
+                    Spacer(Modifier.height(80.dp))
+                }
             }
         } else {
             val scrollState = rememberScrollState()
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(scrollState)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 56.dp)
-            ) {
-                Text(content, color = Color.White.copy(alpha = 0.9f),
-                    fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 20.sp)
-                Spacer(Modifier.height(80.dp))
+            SelectionContainer {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {}
+                        .verticalScroll(scrollState)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(start = 20.dp, end = 20.dp, top = 96.dp, bottom = 56.dp)
+                ) {
+                    Text(
+                        content,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(80.dp))
+                }
             }
         }
 
-        // Top gradient bar — second child
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)))
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+        // Top alpha gradient
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            Text(fileName, color = Color.White.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.labelMedium)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(Brush.verticalGradient(
+                        0.0f to MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
+                        0.6f to MaterialTheme.colorScheme.background.copy(alpha = 0.80f),
+                        1.0f to Color.Transparent
+                    ))
+            )
         }
 
-        // Close button — last child, on top of everything
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(8.dp)
+        // Top overlay — filename + close button, midline aligned
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Icon(Icons.Default.Close, "Close", tint = Color.White)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.shadow(8.dp, RoundedCornerShape(50))
+                ) {
+                    Text(
+                        fileName,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    onClick = onClose,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.shadow(8.dp, CircleShape)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.provider_close),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(48.dp).padding(12.dp)
+                    )
+                }
+            }
         }
     }
 }
