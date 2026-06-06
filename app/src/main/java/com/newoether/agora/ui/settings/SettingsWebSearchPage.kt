@@ -191,34 +191,36 @@ fun SettingsWebSearchPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsGroup(title = stringResource(R.string.web_search_advanced), items = buildList {
                     add {
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Row(verticalAlignment = Alignment.Top) {
-                                Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        stringResource(R.string.web_search_num_results),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        stringResource(R.string.web_search_num_results_desc, webSearchNumResults),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
-                                    Slider(
-                                        value = webSearchNumResults.toFloat(),
-                                        onValueChange = { viewModel.setWebSearchNumResults(it.toInt()) },
-                                        valueRange = 1f..10f,
-                                        steps = 8,
-                                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                                    )
-                                }
+                            Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.web_search_num_results),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    stringResource(R.string.web_search_num_results_desc, webSearchNumResults),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                Slider(
+                                    value = webSearchNumResults.toFloat(),
+                                    onValueChange = { viewModel.setWebSearchNumResults(it.toInt()) },
+                                    valueRange = 1f..10f,
+                                    steps = 8,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .offset(x = (-12).dp)
+                                        .padding(top = 4.dp)
+                                )
                             }
                         }
                     }
