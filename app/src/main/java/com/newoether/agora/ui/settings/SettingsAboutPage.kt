@@ -21,16 +21,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
+import com.newoether.agora.viewmodel.ChatViewModel
+import com.newoether.agora.util.UpdateInfo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsAboutPage(onBack: () -> Unit) {
+fun SettingsAboutPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val packageInfo = remember {
         try { context.packageManager.getPackageInfo(context.packageName, 0) } catch (_: Exception) { null }
     }
     val versionName = packageInfo?.versionName ?: "?"
     val versionCode = packageInfo?.longVersionCode ?: 0
+
+    val autoUpdateCheck by viewModel.autoUpdateCheck.collectAsState()
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    var isChecking by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val focusManager = LocalFocusManager.current
 
@@ -123,6 +133,50 @@ fun SettingsAboutPage(onBack: () -> Unit) {
                     modifier = Modifier.clickable { openUrl("https://github.com/newo-ether/Agora/blob/master/PRIVACY.md") }
                 )
             }))
+
+            // -- Updates --
+            SettingsGroup(title = stringResource(R.string.about_updates), items = buildList {
+                add {
+                    SettingsItem(
+                        headlineContent = {
+                            Text(
+                                if (isChecking) stringResource(R.string.about_checking)
+                                else updateStatus ?: stringResource(R.string.about_check_updates)
+                            )
+                        },
+                        supportingContent = { Text(stringResource(R.string.about_check_updates_desc)) },
+                        leadingContent = { Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            if (isChecking) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            }
+                        },
+                        modifier = Modifier.clickable(enabled = !isChecking) {
+                            isChecking = true
+                            scope.launch {
+                                val info = withContext(Dispatchers.IO) { viewModel.checkForUpdates() }
+                                updateStatus = if (info != null) {
+                                    context.getString(R.string.about_update_available, info.version)
+                                } else {
+                                    context.getString(R.string.about_up_to_date, versionName)
+                                }
+                                isChecking = false
+                            }
+                        }
+                    )
+                }
+                add {
+                    SettingsItem(
+                        headlineContent = { Text(stringResource(R.string.about_auto_update)) },
+                        supportingContent = { Text(stringResource(R.string.about_auto_update_desc)) },
+                        leadingContent = { Icon(Icons.Default.Sync, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Switch(checked = autoUpdateCheck, onCheckedChange = { viewModel.setAutoUpdateCheck(it) })
+                        },
+                        modifier = Modifier.clickable { viewModel.setAutoUpdateCheck(!autoUpdateCheck) }
+                    )
+                }
+            })
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(

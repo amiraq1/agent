@@ -92,6 +92,22 @@ class ChatViewModel(
     private val providers = builtInProviders.toMutableMap()
 
     init {
+        // Auto-check for updates on launch
+        viewModelScope.launch(Dispatchers.IO) {
+            if (settingsManager.autoUpdateCheck.first()) {
+                val info = com.newoether.agora.util.UpdateChecker.check(getCurrentVersion())
+                if (info != null) {
+                    _snackbarMessage.emit(SnackbarEvent(
+                        "Update available: v${info.version}",
+                        "View"
+                    ) {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(info.url))
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        getApplication<android.app.Application>().startActivity(intent)
+                    })
+                }
+            }
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val models = settingsManager.embeddingModels.first()
             val activeId = settingsManager.activeEmbeddingModelId.first()
@@ -289,6 +305,7 @@ class ChatViewModel(
     val accessActiveMemory = settingsManager.accessActiveMemory.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val ragSearchEnabled = settingsManager.ragSearchEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val autoCacheEnabled = settingsManager.autoCacheEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val autoUpdateCheck = settingsManager.autoUpdateCheck.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val modelSearchMethod = settingsManager.modelSearchMethod.stateIn(viewModelScope, SharingStarted.Eagerly, "keyword")
     val manualSearchMethod = settingsManager.manualSearchMethod.stateIn(viewModelScope, SharingStarted.Eagerly, "keyword")
     val embeddingModels = settingsManager.embeddingModels.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -796,6 +813,14 @@ class ChatViewModel(
     fun setAccessActiveMemory(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAccessActiveMemory(enabled) } }
     fun setRagSearchEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveRagSearchEnabled(enabled) } }
     fun setAutoCacheEnabled(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAutoCacheEnabled(enabled) } }
+    fun setAutoUpdateCheck(enabled: Boolean) { viewModelScope.launch { settingsManager.saveAutoUpdateCheck(enabled) } }
+    fun getCurrentVersion(): String {
+        return try { appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName ?: "?" } catch (_: Exception) { "?" }
+    }
+    suspend fun checkForUpdates(): com.newoether.agora.util.UpdateInfo? {
+        val current = getCurrentVersion()
+        return com.newoether.agora.util.UpdateChecker.check(current)
+    }
     fun setModelSearchMethod(method: String) { viewModelScope.launch { settingsManager.saveModelSearchMethod(method) } }
     fun setManualSearchMethod(method: String) { viewModelScope.launch { settingsManager.saveManualSearchMethod(method) } }
     fun addEmbeddingModel(config: EmbeddingModelConfig) {

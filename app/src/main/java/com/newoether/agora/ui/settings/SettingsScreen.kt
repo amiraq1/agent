@@ -204,7 +204,7 @@ fun SettingsScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 "memory" -> SettingsMemoryPage(viewModel, onBack = { selectedCategory = null })
                 "datacontrol" -> SettingsDataControlPage(viewModel, onBack = { selectedCategory = null })
                 "appearance" -> SettingsAppearancePage(viewModel, onBack = { selectedCategory = null })
-                "about" -> SettingsAboutPage(onBack = { selectedCategory = null })
+                "about" -> SettingsAboutPage(viewModel, onBack = { selectedCategory = null })
                 else -> {
                     Scaffold(
                         containerColor = MaterialTheme.colorScheme.background,
