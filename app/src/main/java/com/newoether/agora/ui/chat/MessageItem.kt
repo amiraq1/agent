@@ -1108,16 +1108,29 @@ fun MessageItem(
                             val isToolInProgress = isLastTool && lastSeg.toolResult == null
                             val isThinking = message.status == MessageStatus.THINKING
                             val isToolCalling = message.status == MessageStatus.TOOL_CALLING
+                            val toolCount = segs.count { it.type == "tool" && it.toolResult != null }
+                            val thoughtMs = message.thoughtTimeMs
+                            val hasThought = thoughtMs != null && thoughtMs > 0
                             val collapsedTitle = when {
                                 isThinking -> message.thoughtTitle ?: stringResource(R.string.thinking_ellipsis)
                                 isToolCalling || isToolInProgress -> toolDisplayName(lastSeg.toolName)
                                 else -> {
-                                    if (message.thoughtTimeMs != null && message.thoughtTimeMs > 0) {
-                                        val seconds = message.thoughtTimeMs / 1000
-                                        if (seconds >= 60) stringResource(R.string.thought_for_minutes, seconds / 60, seconds % 60)
-                                        else stringResource(R.string.thought_for_seconds, seconds)
-                                    } else if (message.thoughtTitle != null) message.thoughtTitle
-                                    else stringResource(R.string.thinking_complete)
+                                    if (hasThought) {
+                                        val s = (thoughtMs / 1000).toInt()
+                                        if (toolCount > 0) {
+                                            if (s >= 60) stringResource(R.string.thought_for_minutes_called_tools, s / 60, s % 60, toolCount)
+                                            else stringResource(R.string.thought_for_seconds_called_tools, s, toolCount)
+                                        } else {
+                                            if (s >= 60) stringResource(R.string.thought_for_minutes, s / 60, s % 60)
+                                            else stringResource(R.string.thought_for_seconds, s)
+                                        }
+                                    } else if (toolCount > 0) {
+                                        stringResource(R.string.called_n_tools, toolCount)
+                                    } else if (message.thoughtTitle != null) {
+                                        message.thoughtTitle
+                                    } else {
+                                        stringResource(R.string.thinking_complete)
+                                    }
                                 }
                             }
                             val mergedBottomPadding by animateDpAsState(
@@ -1143,6 +1156,8 @@ fun MessageItem(
                                         .padding(10.dp)
                                 ) {
                                     if (isToolCalling || isToolInProgress) {
+                                        Icon(Icons.Default.Build, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    } else if (!isThinking && !hasThought && toolCount > 0) {
                                         Icon(Icons.Default.Build, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                                     } else {
                                         Icon(androidx.compose.ui.res.painterResource(id = com.newoether.agora.R.drawable.neurology_24), null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
