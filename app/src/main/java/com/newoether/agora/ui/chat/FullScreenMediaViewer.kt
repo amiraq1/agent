@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +58,8 @@ fun FullScreenMediaViewer(
     urls: List<String>,
     initialIndex: Int = 0,
     pdfPages: List<String>,
+    pdfSelectedPages: Set<Int>? = null,
+    onTogglePdfPage: ((Int) -> Unit)? = null,
     onClose: () -> Unit,
     onNavigate: (Int) -> Unit
 ) {
@@ -96,7 +99,7 @@ fun FullScreenMediaViewer(
     }
 
     if (isPdf) {
-        PdfPager(pdfPages, url, onClose, onNavigate)
+        PdfPager(pdfPages, url, pdfSelectedPages, onTogglePdfPage, onClose, onNavigate)
         return
     }
 
@@ -115,6 +118,8 @@ fun FullScreenMediaViewer(
 private fun PdfPager(
     pdfPages: List<String>,
     url: String,
+    pdfSelectedPages: Set<Int>? = null,
+    onTogglePdfPage: ((Int) -> Unit)? = null,
     onClose: () -> Unit,
     onNavigate: (Int) -> Unit
 ) {
@@ -173,6 +178,38 @@ private fun PdfPager(
                     modifier = Modifier.shadow(8.dp, CircleShape)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.provider_close), tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(48.dp).padding(12.dp))
+                }
+            }
+        }
+
+        // Bottom-left selection capsule
+        if (pdfSelectedPages != null && onTogglePdfPage != null) {
+            val currentPage = pagerState.currentPage
+            AnimatedVisibility(
+                visible = showOverlay,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(24.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = currentPage in pdfSelectedPages,
+                        onCheckedChange = { onTogglePdfPage(currentPage) },
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "${pdfSelectedPages.size} selected",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
                 }
             }
         }

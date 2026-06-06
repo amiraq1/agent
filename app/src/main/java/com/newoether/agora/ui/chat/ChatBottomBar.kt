@@ -144,6 +144,12 @@ fun ChatBottomBar(
     onImageClick: (String) -> Unit = {},
     onFileContentClick: ((fileName: String, content: String) -> Unit)? = null,
     onPdfPagesClick: ((pages: List<String>, startIndex: Int) -> Unit)? = null,
+    onPdfPreviewSelect: ((pages: List<String>, startIndex: Int) -> Unit)? = null,
+    onPdfViewerClosed: (() -> Unit)? = null,
+    pdfViewerSelection: Set<Int> = emptySet(),
+    onTogglePdfSelection: ((Int) -> Unit)? = null,
+    onInitPdfSelection: ((Set<Int>) -> Unit)? = null,
+    fullScreenViewerUrls: List<String>? = null,
     modifier: Modifier = Modifier,
     textFieldState: TextFieldState = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState() },
     focusRequester: FocusRequester = FocusRequester(),
@@ -176,6 +182,7 @@ fun ChatBottomBar(
     var pendingPdfRenderedPaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingPdfIsRendering by remember { mutableStateOf(false) }
     var pendingPdfRenderProgress by remember { mutableStateOf(0 to 0) }
+    var pdfDialogHiddenForPreview by remember { mutableStateOf(false) }
 
     // Video slicing dialog state
     var showVideoSliceDialog by remember { mutableStateOf(false) }
@@ -184,6 +191,14 @@ fun ChatBottomBar(
     var pendingVideoQueue by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val context = LocalContext.current
+
+    // Restore PDF dialog after viewer closes
+    LaunchedEffect(fullScreenViewerUrls) {
+        if (fullScreenViewerUrls == null && pdfDialogHiddenForPreview && pendingPdfUri != null) {
+            showPdfPageDialog = true
+            pdfDialogHiddenForPreview = false
+        }
+    }
 
     // Helper: process next video in queue, showing slice dialog
     fun processNextVideo() {
@@ -294,6 +309,8 @@ fun ChatBottomBar(
                     pendingPdfIsRendering = true
                     pendingPdfRenderProgress = 0 to minOf(pageCount, 50)
                     showPdfPageDialog = true
+                    // Initialize selection to first 5 pages
+                    onInitPdfSelection?.invoke((0 until minOf(pageCount, 5)).toSet())
                     coroutineScope.launch(Dispatchers.IO) {
                         val paths = com.newoether.agora.util.PdfPageRenderer.renderAllPages(
                             context, uri, maxPages = 50,
@@ -368,7 +385,12 @@ fun ChatBottomBar(
                                 }
                                 isPdf -> {
                                     if (onPdfPagesClick != null) Modifier.clickable {
-                                        onPdfPagesClick(emptyList(), 0) // pages rendered on send, preview with placeholder
+                                        val allPaths = attachment.preRenderedPaths ?: emptyList()
+                                        val sel = attachment.selectedPages
+                                        val paths = if (sel != null && allPaths.isNotEmpty()) {
+                                            allPaths.filterIndexed { i, _ -> i in sel }
+                                        } else allPaths
+                                        onPdfPagesClick(paths, 0)
                                     } else Modifier
                                 }
                                 isVideo -> Modifier.clickable { onImageClick(uriStr) }
@@ -934,7 +956,18 @@ fun ChatBottomBar(
             thumbnailPaths = pendingPdfRenderedPaths,
             isLoading = pendingPdfIsRendering,
             renderProgress = pendingPdfRenderProgress,
-            onPreviewPage = { index -> onPdfPagesClick?.invoke(pendingPdfRenderedPaths, index) },
+            selectedPages = pdfViewerSelection,
+            onTogglePage = { onTogglePdfSelection?.invoke(it) },
+            onSelectAll = { select -> onTogglePdfSelection?.let { toggle ->
+                (0 until pendingPdfPages.coerceIn(1, 50)).forEach { i ->
+                    if ((i in pdfViewerSelection) != select) toggle(i)
+                }
+            }},
+            onPreviewPage = { index ->
+                showPdfPageDialog = false
+                pdfDialogHiddenForPreview = true
+                onPdfPreviewSelect?.invoke(pendingPdfRenderedPaths, index)
+            },
             onConfirm = { selection ->
                 showPdfPageDialog = false
                 selectedAttachments = selectedAttachments + com.newoether.agora.model.SelectedAttachment(

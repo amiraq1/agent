@@ -31,13 +31,15 @@ fun PdfPageSelectDialog(
     thumbnailPaths: List<String> = emptyList(),
     isLoading: Boolean = false,
     renderProgress: Pair<Int, Int> = 0 to 0,
+    selectedPages: Set<Int> = emptySet(),
+    onTogglePage: ((Int) -> Unit)? = null,
+    onSelectAll: ((Boolean) -> Unit)? = null,
     onPreviewPage: ((Int) -> Unit)? = null,
     onConfirm: (PdfPageSelection) -> Unit,
     onDismiss: () -> Unit
 ) {
     val effectiveTotal = totalPages.coerceIn(1, 50)
-    var selected by remember(effectiveTotal) { mutableStateOf((0 until minOf(effectiveTotal, 5)).toSet()) }
-    var selectAll by remember(effectiveTotal) { mutableStateOf(selected.size == effectiveTotal) }
+    val selectAll = selectedPages.size == effectiveTotal
 
     val hasThumbnails = thumbnailPaths.isNotEmpty() && !isLoading
 
@@ -70,13 +72,12 @@ fun PdfPageSelectDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "${selected.size} selected",
+                        "${selectedPages.size} selected",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                     TextButton(onClick = {
-                        selected = if (selectAll) emptySet() else (0 until effectiveTotal).toSet()
-                        selectAll = !selectAll
+                        onSelectAll?.invoke(!selectAll)
                     }) {
                         Text(if (selectAll) "Deselect All" else "Select All")
                     }
@@ -112,7 +113,7 @@ fun PdfPageSelectDialog(
                             ) {
                                 for (pageIdx in row) {
                                     val page = pageIdx + 1
-                                    val isSelected = pageIdx in selected
+                                    val isSelected = pageIdx in selectedPages
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
@@ -167,10 +168,7 @@ fun PdfPageSelectDialog(
                                                 .padding(4.dp)
                                                 .clip(RoundedCornerShape(3.dp))
                                                 .background(Color.Black.copy(alpha = 0.45f))
-                                                .clickable {
-                                                    selected = if (isSelected) selected - pageIdx else selected + pageIdx
-                                                    selectAll = selected.size == effectiveTotal
-                                                }
+                                                .clickable { onTogglePage?.invoke(pageIdx) }
                                                 .padding(2.dp)
                                         ) {
                                             Checkbox(
@@ -202,11 +200,11 @@ fun PdfPageSelectDialog(
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        onClick = { onConfirm(PdfPageSelection(selected, effectiveTotal)) },
+                        onClick = { onConfirm(PdfPageSelection(selectedPages, effectiveTotal)) },
                         shape = RoundedCornerShape(50),
-                        enabled = selected.isNotEmpty()
+                        enabled = selectedPages.isNotEmpty()
                     ) {
-                        Text("Send ${selected.size} pages")
+                        Text("Send ${selectedPages.size} pages")
                     }
                 }
             }

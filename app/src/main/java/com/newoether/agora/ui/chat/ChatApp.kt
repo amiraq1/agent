@@ -93,6 +93,11 @@ fun ChatApp(
     onMediaClick: (List<String>, Int) -> Unit,
     onFileContentClick: ((String, String) -> Unit)? = null,
     onPdfPagesClick: ((List<String>, Int) -> Unit)? = null,
+    onPdfPreviewSelect: ((List<String>, Int) -> Unit)? = null,
+    pdfViewerSelection: Set<Int> = emptySet(),
+    onTogglePdfSelection: ((Int) -> Unit)? = null,
+    onInitPdfSelection: ((Set<Int>) -> Unit)? = null,
+    fullScreenViewerUrls: List<String>? = null,
     onSnackbarOffsetChanged: (androidx.compose.ui.unit.Dp) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
@@ -979,6 +984,12 @@ fun ChatApp(
                         onExpand = { isExpanded = true },
                         showWebSearch = webSearchApiKeys.isNotEmpty() && globalWebSearch,
                         showShell = shellDevices.isNotEmpty() && globalShell,
+                        onPdfPagesClick = onPdfPagesClick,
+                        onPdfPreviewSelect = onPdfPreviewSelect,
+                        pdfViewerSelection = pdfViewerSelection,
+                        onTogglePdfSelection = onTogglePdfSelection,
+                        onInitPdfSelection = onInitPdfSelection,
+                        fullScreenViewerUrls = fullScreenViewerUrls,
                         onAdvancedClick = { showAdvancedDialog = true }
                     )
                 }

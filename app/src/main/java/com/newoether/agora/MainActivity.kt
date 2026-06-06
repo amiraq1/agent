@@ -189,6 +189,14 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var fullScreenMediaUrls by remember { mutableStateOf<List<String>?>(null) }
     var fullScreenMediaIndex by remember { mutableIntStateOf(0) }
+    var pdfViewerSelection by remember { mutableStateOf(setOf<Int>()) }
+    val onTogglePdfSelection: (Int) -> Unit = { page ->
+        pdfViewerSelection = if (page in pdfViewerSelection) pdfViewerSelection - page else pdfViewerSelection + page
+    }
+    val onInitPdfSelection: (Set<Int>) -> Unit = { selection ->
+        pdfViewerSelection = selection
+    }
+    var pdfPreviewFromDialog by remember { mutableStateOf(false) }
     val pdfPages by viewModel.previewPdfPages.collectAsState()
     val pdfIndex by viewModel.previewPdfIndex.collectAsState()
     var savedPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -297,7 +305,19 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                     viewModel.showPdfPreview(pages, idx)
                     fullScreenMediaUrls = pages
                     fullScreenMediaIndex = idx
+                    pdfPreviewFromDialog = false
                 },
+                onPdfPreviewSelect = { pages, idx ->
+                    focusManager.clearFocus()
+                    viewModel.showPdfPreview(pages, idx)
+                    fullScreenMediaUrls = pages
+                    fullScreenMediaIndex = idx
+                    pdfPreviewFromDialog = true
+                },
+                pdfViewerSelection = pdfViewerSelection,
+                onTogglePdfSelection = onTogglePdfSelection,
+                onInitPdfSelection = onInitPdfSelection,
+                fullScreenViewerUrls = fullScreenMediaUrls,
                 onSnackbarOffsetChanged = { chatSnackbarOffset = it }
             )
 
@@ -342,13 +362,19 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                // Keep the last URLs for the duration of the exit animation
+                // Keep the last values for the duration of the exit animation
                 var lastUrls by remember { mutableStateOf<List<String>?>(null) }
                 var lastIndex by remember { mutableIntStateOf(0) }
+                var lastPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
+                var lastPdfSelectedPages by remember { mutableStateOf<Set<Int>>(emptySet()) }
+                var lastPdfTogglePage by remember { mutableStateOf<((Int) -> Unit)?>(null) }
                 LaunchedEffect(fullScreenMediaUrls) {
                     if (fullScreenMediaUrls != null) {
                         lastUrls = fullScreenMediaUrls
                         lastIndex = fullScreenMediaIndex
+                        lastPdfPages = savedPdfPages
+                        lastPdfSelectedPages = if (pdfPreviewFromDialog) pdfViewerSelection else emptySet()
+                        lastPdfTogglePage = if (pdfPreviewFromDialog) onTogglePdfSelection else null
                     }
                 }
 
@@ -356,8 +382,10 @@ fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
                 FullScreenMediaViewer(
                     urls = urls,
                     initialIndex = lastIndex,
-                    pdfPages = savedPdfPages,
-                    onClose = { viewModel.clearPreviews(); fullScreenMediaUrls = null },
+                    pdfPages = lastPdfPages,
+                    pdfSelectedPages = if (lastPdfPages.isNotEmpty()) lastPdfSelectedPages else null,
+                    onTogglePdfPage = lastPdfTogglePage,
+                    onClose = { viewModel.clearPreviews(); fullScreenMediaUrls = null; pdfPreviewFromDialog = false },
                     onNavigate = { idx -> fullScreenMediaIndex = idx }
                 )
             }
