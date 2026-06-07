@@ -27,3 +27,5 @@ build_output.txt
 /.gemini/
 build.ps1
 deploy.ps1
+build_fdroid.ps1
+logs/
