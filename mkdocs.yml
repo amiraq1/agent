@@ -43,6 +43,24 @@ plugins:
         - locale: zh
           name: 中文
           build: true
+          nav_translations:
+            Home: 首页
+            Getting Started: 快速开始
+            Conversations: 对话
+            API Providers: API 提供商
+            System Prompts: 系统提示词
+            Agentic Tools: 代理工具
+            Overview: 概述
+            Web Search: 网络搜索
+            Remote Shell (Conch): 远程 Shell (Conch)
+            Knowledge Management: 知识管理
+            Conversation Search: 对话搜索
+            Embedding / RAG: 嵌入 / RAG
+            Memory & Cache: 记忆与缓存
+            Local Models: 本地模型
+            PDF Import: PDF 导入
+            Data Portability: 数据迁移
+            FAQ: 常见问题
   - search
 
 markdown_extensions:
