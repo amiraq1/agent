@@ -74,33 +74,27 @@ The model will stream its response in real time.
 
 ## App Layout
 
-Agora has a clean, three-area layout:
+Agora has a clean layout centered around the chat screen:
 
-### Navigation Bar
+### Top Bar
 
-The bottom bar has four tabs:
-
-| Tab | Icon | Description |
-|-----|------|-------------|
-| **Tools** | :material-hammer-wrench: | View and test available tools (web search, shell, code execution) |
-| **Conversations** | :material-message-text: | Chat interface — compose messages and view responses |
-| **Settings** | :material-cog: | Configure providers, models, prompts, and more |
+- **Conversation title** — displays the current conversation name (tap to rename)
+- **Hamburger menu** (:material-menu:) — opens the conversations drawer
+- **Overflow menu** (:material-dots-vertical:) — per-conversation settings (model, system prompt, generation params)
 
 ### Conversations Drawer
 
-Tap the **hamburger menu** (:material-menu:) or swipe right from the left edge to open the conversations drawer:
+Tap the **hamburger menu** or swipe right from the left edge to open:
 
 - **Search bar** — find past conversations by keyword or semantic search
-- **Conversation list** — all your conversations, newest first
-- **New Chat** button — start a fresh conversation
+- **Conversation list** — all conversations, newest first
+- **Settings** (:material-cog:) — configure providers, models, prompts, and more
+- **New Chat** — start a fresh conversation
 
 ### Chat Screen
 
-The chat screen contains:
-
 - **Message area** — scrollable conversation history with markdown rendering
-- **Bottom bar** — text input, model selector, and attachment button
-- **Top bar** — conversation title, drawer toggle, and overflow menu
+- **Bottom bar** — text input, model selector, attachment button (+), and send button
 
 ---
 
