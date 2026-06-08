@@ -97,14 +97,34 @@ fun WelcomeScreen(onComplete: () -> Unit, isDarkTheme: Boolean = true) {
             lightVideoResName = "welcome_video_3_light"
         ),
         WelcomePage(
-            title = "Agentic Tool Calling",
-            description = "Web search, code execution, file operations — your AI agent can do it all."
-        ),
-        WelcomePage(
             title = "You're All Set!",
-            description = "Start chatting with full control over your data and privacy."
+            description = "Start chatting with full control over your data and privacy.",
+            darkVideoResId = R.raw.welcome_video_4,
+            lightVideoResName = "welcome_video_4_light"
         )
     )
+
+    // Preload all video players — prepare but don't play until first visit
+    val players = remember {
+        pages.map { page ->
+            val resId = resolveVideoRes(isDarkTheme, page.darkVideoResId, page.lightVideoResName, context)
+            resId?.let {
+                val uri = "android.resource://${context.packageName}/$it"
+                ExoPlayer.Builder(context).build().apply {
+                    repeatMode = Player.REPEAT_MODE_ALL
+                    playWhenReady = false
+                    setMediaItem(MediaItem.fromUri(uri))
+                    prepare()
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { players.forEach { it?.release() } }
+    }
+
+    val visitedPages = remember { mutableSetOf<Int>() }
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
@@ -114,6 +134,14 @@ fun WelcomeScreen(onComplete: () -> Unit, isDarkTheme: Boolean = true) {
         targetValue = if (showContent) 1f else 0f,
         animationSpec = tween(600)
     )
+
+    // Start playback on first visit to each page
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage !in visitedPages) {
+            visitedPages.add(pagerState.currentPage)
+            players[pagerState.currentPage]?.playWhenReady = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(2000)
@@ -181,8 +209,7 @@ fun WelcomeScreen(onComplete: () -> Unit, isDarkTheme: Boolean = true) {
                                 .weight(1.8f),
                             contentAlignment = Alignment.Center
                         ) {
-                            val resId = resolveVideoRes(isDarkTheme, page.darkVideoResId, page.lightVideoResName, context)
-                            resId?.let { LoopVideo(resId = it) }
+                        players[index]?.let { LoopVideo(player = it) }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -287,21 +314,19 @@ fun WelcomeScreen(onComplete: () -> Unit, isDarkTheme: Boolean = true) {
 }
 
 @Composable
-private fun LoopVideo(resId: Int) {
+private fun LoopVideo(player: ExoPlayer) {
     val context = LocalContext.current
     var isReady by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(
         targetValue = if (isReady) 1f else 0f,
         animationSpec = tween(400)
     )
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            repeatMode = Player.REPEAT_MODE_ALL
-            playWhenReady = true
-        }
-    }
 
     DisposableEffect(player) {
+        // Player may already be ready (preloaded) — check immediately
+        if (player.playbackState == Player.STATE_READY) {
+            isReady = true
+        }
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) {
@@ -313,13 +338,6 @@ private fun LoopVideo(resId: Int) {
         onDispose { player.removeListener(listener) }
     }
 
-    LaunchedEffect(resId) {
-        isReady = false
-        val uri = "android.resource://${context.packageName}/$resId"
-        player.setMediaItem(MediaItem.fromUri(uri))
-        player.prepare()
-    }
-    DisposableEffect(Unit) { onDispose { player.release() } }
     AndroidView(
         factory = { PlayerView(context).apply { this.player = player; useController = false } },
         modifier = Modifier.fillMaxSize().alpha(alpha)
