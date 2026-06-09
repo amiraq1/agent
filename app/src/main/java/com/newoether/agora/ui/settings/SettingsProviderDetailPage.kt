@@ -120,30 +120,27 @@ fun SettingsProviderDetailPage(
                 TextFieldState(if (savedUrl.isNullOrBlank()) providerInstance.defaultBaseUrl else savedUrl)
             }
             LaunchedEffect(baseUrlState.text) { delay(500); viewModel.setProviderBaseUrl(providerName, baseUrlState.text.toString()) }
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                        Icon(painterResource(R.drawable.link_24), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(stringResource(R.string.provider_base_url), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Box(modifier = Modifier.noOpBringIntoView()) {
-                        OutlinedTextField(
-                            state = baseUrlState,
-                            placeholder = { Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
+            SettingsGroup(
+                title = stringResource(R.string.provider_base_url),
+                items = listOf {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                            Icon(painterResource(R.drawable.link_24), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.provider_base_url), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Box(modifier = Modifier.noOpBringIntoView()) {
+                            OutlinedTextField(
+                                state = baseUrlState,
+                                placeholder = { Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) },
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
+            )
 
             // Local models
             if (isLocal) {
