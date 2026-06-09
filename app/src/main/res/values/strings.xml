@@ -155,15 +155,15 @@
     <string name="provider_edit">Edit</string>
     <string name="provider_cancel">Cancel</string>
     <string name="custom_provider_badge">Custom</string>
-    <string name="custom_provider_add">Add Custom Provider</string>
-    <string name="custom_provider_add_title">Add Custom Provider</string>
+    <string name="custom_provider_add">Add</string>
+    <string name="custom_provider_add_title">Add Provider</string>
     <string name="custom_provider_name_label">Provider Name</string>
     <string name="custom_provider_name_error">Name already exists or is invalid</string>
     <string name="custom_provider_url_error">Base URL is required</string>
-    <string name="custom_provider_delete_title">Delete Custom Provider</string>
+    <string name="custom_provider_delete_title">Delete Provider</string>
     <string name="custom_provider_delete_text">Delete provider \"%1$s\" and all its data? This action cannot be undone.</string>
-    <string name="custom_provider_rename">Rename Provider</string>
-    <string name="custom_provider_rename_title">Rename Custom Provider</string>
+    <string name="custom_provider_rename">Save</string>
+    <string name="custom_provider_rename_title">Rename Provider</string>
 
     <!-- Settings - Prompts Page -->
     <string name="prompts_title">System Prompts</string>

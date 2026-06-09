@@ -119,15 +119,15 @@
     <string name="provider_edit">编辑</string>
     <string name="provider_cancel">取消</string>
     <string name="custom_provider_badge">自定义</string>
-    <string name="custom_provider_add">添加自定义提供商</string>
-    <string name="custom_provider_add_title">添加自定义提供商</string>
+    <string name="custom_provider_add">添加</string>
+    <string name="custom_provider_add_title">添加提供商</string>
     <string name="custom_provider_name_label">提供商名称</string>
     <string name="custom_provider_name_error">名称已存在或无效</string>
     <string name="custom_provider_url_error">需要提供 Base URL</string>
-    <string name="custom_provider_delete_title">删除自定义提供商</string>
+    <string name="custom_provider_delete_title">删除提供商</string>
     <string name="custom_provider_delete_text">删除提供商 \"%1$s\" 及其所有数据？此操作无法撤销。</string>
-    <string name="custom_provider_rename">重命名提供商</string>
-    <string name="custom_provider_rename_title">重命名自定义提供商</string>
+    <string name="custom_provider_rename">保存</string>
+    <string name="custom_provider_rename_title">重命名提供商</string>
 
     <!-- Settings - Prompts Page -->
     <string name="prompts_title">系统指令</string>
