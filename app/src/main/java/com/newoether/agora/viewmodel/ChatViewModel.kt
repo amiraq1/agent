@@ -2146,24 +2146,21 @@ class ChatViewModel(
                 effectiveSettings, currentId
             )
             try {
-                withTimeout(Constants.GENERATION_TIMEOUT_MS) {
-                    generationManager.generate(
-                        conversationId = currentId,
-                        modelMessageId = modelMessageId,
-                        startTime = startTime,
-                        isRegenerate = false,
-                        replaceMessageId = null,
-                        modelName = currentActiveModel.value,
-                        config = config,
-                        ctx = genCtx,
-                        generationJob = generationJob,
-                        onStreamUpdate = { _streamingMessage.value = it },
-                        onLoadingChange = { _isLoading.value = it },
-                        onGeneratingIdChange = { _generatingInConversationId.value = it },
-                        onStreamClear = { onStreamClear() }
-                    )
-                }
-            } catch (_: TimeoutCancellationException) {
+                generationManager.generate(
+                    conversationId = currentId,
+                    modelMessageId = modelMessageId,
+                    startTime = startTime,
+                    isRegenerate = false,
+                    replaceMessageId = null,
+                    modelName = currentActiveModel.value,
+                    config = config,
+                    ctx = genCtx,
+                    generationJob = generationJob,
+                    onStreamUpdate = { _streamingMessage.value = it },
+                    onLoadingChange = { _isLoading.value = it },
+                    onGeneratingIdChange = { _generatingInConversationId.value = it },
+                    onStreamClear = { onStreamClear() }
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

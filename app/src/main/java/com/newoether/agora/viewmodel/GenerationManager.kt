@@ -1918,7 +1918,7 @@ class GenerationManager(
             var toolRound = 0
             toolPath = currentPath
 
-            while (toolCallDataList.isNotEmpty() && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive && toolRound < Constants.MAX_TOOL_ROUNDS) {
+            while (toolCallDataList.isNotEmpty() && currentStatus != MessageStatus.ERROR && currentCoroutineContext().isActive) {
                 toolRound++
                 val roundToolList = roundToolSegments.toList()
                 roundToolSegments.clear()
