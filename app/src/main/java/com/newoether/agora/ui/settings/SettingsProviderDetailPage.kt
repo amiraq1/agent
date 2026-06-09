@@ -200,7 +200,7 @@ fun SettingsProviderDetailPage(
                         title = stringResource(R.string.provider_api_keys),
                         items = buildList {
                             add {
-                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                                         Icon(Icons.Default.Key, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
                                         Spacer(modifier = Modifier.width(16.dp))

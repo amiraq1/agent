@@ -149,7 +149,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
 
                         Spacer(modifier = Modifier.height(8.dp))
                         val localConfigured = localChatModels.isNotEmpty()
-                        SettingsGroup(title = "", items = listOf {
+                        SettingsGroup(title = stringResource(R.string.local_models_title), items = listOf {
                             SettingsItem(
                                 headlineContent = { Text(stringResource(R.string.local_title)) },
                                 supportingContent = { Text(if (localConfigured) stringResource(R.string.provider_local_models_summary, localChatModels.size) else stringResource(R.string.not_configured)) },
