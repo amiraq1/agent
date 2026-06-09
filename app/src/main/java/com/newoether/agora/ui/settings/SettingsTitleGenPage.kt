@@ -28,6 +28,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val modelAliases by viewModel.modelAliases.collectAsState()
     val enabledModels by viewModel.enabledModels.collectAsState()
     var showTitleModelDialog by remember { mutableStateOf(false) }
+    val showDocFab by viewModel.showDocumentationFab.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -45,7 +46,9 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-        }
+        },
+        floatingActionButton = { if (showDocFab) DocumentationFab("title-generation.md") },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -86,6 +89,7 @@ fun SettingsTitleGenPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 }
             )
+            if (showDocFab) { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 

@@ -36,6 +36,7 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val colorSchemeName by viewModel.colorScheme.collectAsState()
     val schemeStyleName by viewModel.schemeStyle.collectAsState()
     val dynamicColor by viewModel.dynamicColor.collectAsState()
+    val showDocFab by viewModel.showDocumentationFab.collectAsState()
 
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val currentPreset = try { ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { ColorSchemePreset.MIDNIGHT }
@@ -66,7 +67,9 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-        }
+        },
+        floatingActionButton = { if (showDocFab) DocumentationFab("appearance.md") },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -194,6 +197,7 @@ fun SettingsAppearancePage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 }
             )
 
+            if (showDocFab) { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }

@@ -40,6 +40,7 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val defaultPresencePenalty by viewModel.defaultPresencePenalty.collectAsState()
     val thinkingEnabled by viewModel.thinkingEnabled.collectAsState()
     val thinkingLevel by viewModel.thinkingLevel.collectAsState()
+    val showDocFab by viewModel.showDocumentationFab.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -57,7 +58,9 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-        }
+        },
+        floatingActionButton = { if (showDocFab) DocumentationFab("generation.md") },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -297,6 +300,7 @@ fun SettingsGenerationPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                 )
             )
 
+            if (showDocFab) { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }

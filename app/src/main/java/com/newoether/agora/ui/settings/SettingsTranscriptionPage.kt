@@ -37,6 +37,7 @@ fun SettingsTranscriptionPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     var showModelDialog by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showMenuForModel by remember { mutableStateOf<String?>(null) }
+    val showDocFab by viewModel.showDocumentationFab.collectAsState()
 
     val availableToAdd = remember(enabledModels, transcriptionEnabledModels) {
         enabledModels.filter { it !in transcriptionEnabledModels }.sortedBy { it }
@@ -58,7 +59,9 @@ fun SettingsTranscriptionPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-        }
+        },
+        floatingActionButton = { if (showDocFab) DocumentationFab("transcription.md") },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { padding ->
         Column(
             modifier = Modifier
@@ -230,6 +233,7 @@ fun SettingsTranscriptionPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     }
                 })
             )
+            if (showDocFab) { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 

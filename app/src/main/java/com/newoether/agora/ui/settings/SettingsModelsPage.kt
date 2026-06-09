@@ -59,6 +59,7 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val expandedProviders = remember { mutableStateMapOf<String, MutableTransitionState<Boolean>>() }
     val modelBlockHeights = remember { mutableStateMapOf<String, Float>() }
 
+    val showDocFab by viewModel.showDocumentationFab.collectAsState()
     val providers = availableModels.entries.filter { it.value.isNotEmpty() }
 
     Scaffold(
@@ -77,7 +78,9 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-        }
+        },
+        floatingActionButton = { if (showDocFab) DocumentationFab("models.md") },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -248,6 +251,9 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+            if (showDocFab) {
+                item(key = "doc_spacer") { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
     }
