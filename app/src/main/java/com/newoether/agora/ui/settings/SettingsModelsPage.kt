@@ -314,12 +314,12 @@ fun SettingsModelsPage(viewModel: ChatViewModel, onBack: () -> Unit) {
  */
 @Composable
 private fun SectionLabel(text: String, firstInPage: Boolean) {
-    val topPadding = if (firstInPage) 12.dp else 36.dp
+    val topPadding = if (firstInPage) 12.dp else 24.dp
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = topPadding, bottom = 12.dp)
+        modifier = Modifier.padding(start = 32.dp, end = 16.dp, top = topPadding, bottom = 12.dp)
     )
 }
 
