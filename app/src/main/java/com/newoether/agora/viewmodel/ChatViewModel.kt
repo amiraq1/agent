@@ -1037,8 +1037,9 @@ class ChatViewModel(
     fun deleteLocalChatModel(uuid: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val model = localChatModels.value.find { it.id == uuid }
-            if (model != null && model.localFilePath.isNotBlank()) {
-                java.io.File(model.localFilePath).delete()
+            if (model != null) {
+                if (model.localFilePath.isNotBlank()) java.io.File(model.localFilePath).delete()
+                if (model.mmprojPath.isNotBlank()) java.io.File(model.mmprojPath).delete()
             }
             val models = localChatModels.value.filter { it.id != uuid }
             settingsManager.saveLocalChatModels(models)
@@ -1060,6 +1061,9 @@ class ChatViewModel(
         viewModelScope.launch {
             if (isLocalModelIdTaken(newModelId, excludeId = uuid)) return@launch
             val oldModel = localChatModels.value.find { it.id == uuid } ?: return@launch
+            if (oldModel.mmprojPath.isNotBlank() && oldModel.mmprojPath != mmprojPath) {
+                java.io.File(oldModel.mmprojPath).delete()
+            }
             val models = localChatModels.value.map {
                 if (it.id == uuid) it.copy(modelId = newModelId, alias = newAlias, nCtx = nCtx, temperature = temperature, topP = topP, maxTokens = maxTokens, mmprojPath = mmprojPath)
                 else it
