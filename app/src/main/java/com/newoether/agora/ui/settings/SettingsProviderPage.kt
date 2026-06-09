@@ -57,6 +57,16 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
     val customProviders by viewModel.customProviders.collectAsState()
     val providers = listOf("Google", "OpenAI", "Anthropic", "DeepSeek", "Qwen", "Ollama", "Open Router", "Local") + customProviders.map { it.name }
 
+    // mmproj file picker for local model edit dialog
+    var mmprojPickedUri by remember { mutableStateOf<String?>(null) }
+    val mmprojLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            mmprojPickedUri = uri.toString()
+        }
+    }
+
     // No-op bring-into-view to prevent auto-scrolling on text field focus
     val showDocFab by viewModel.showDocumentationFab.collectAsState()
 
@@ -574,15 +584,36 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     shape = RoundedCornerShape(16.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 )
+                                // Sync file picker result into the text field
+                                LaunchedEffect(mmprojPickedUri) {
+                                    if (mmprojPickedUri != null) {
+                                        editMmprojPath = mmprojPickedUri!!
+                                        mmprojPickedUri = null
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedTextField(
-                                    value = editMmprojPath,
-                                    onValueChange = { editMmprojPath = it },
-                                    label = { Text(stringResource(R.string.local_mmproj_path)) },
-                                    placeholder = { Text(stringResource(R.string.local_mmproj_path_hint)) },
-                                    shape = RoundedCornerShape(16.dp),
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth()
-                                )
+                                ) {
+                                    OutlinedTextField(
+                                        value = editMmprojPath,
+                                        onValueChange = { editMmprojPath = it },
+                                        label = { Text(stringResource(R.string.local_mmproj_path)) },
+                                        placeholder = { Text(stringResource(R.string.local_mmproj_path_hint)) },
+                                        shape = RoundedCornerShape(16.dp),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    FilledTonalButton(
+                                        onClick = { mmprojLauncher.launch(arrayOf("*/*")) },
+                                        modifier = Modifier.height(56.dp),
+                                        shape = RoundedCornerShape(16.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp)
+                                    ) {
+                                        Text("…", style = MaterialTheme.typography.titleMedium)
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedTextField(
                                     value = editTemp,
