@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.R
 import com.newoether.agora.util.noOpBringIntoView
@@ -584,7 +585,7 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     shape = RoundedCornerShape(16.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                // Sync file picker result into the text field
+                                // Sync file picker result
                                 LaunchedEffect(mmprojPickedUri) {
                                     if (mmprojPickedUri != null) {
                                         editMmprojPath = mmprojPickedUri!!
@@ -592,26 +593,30 @@ fun SettingsProviderPage(viewModel: ChatViewModel, onBack: () -> Unit) {
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    OutlinedTextField(
-                                        value = editMmprojPath,
-                                        onValueChange = { editMmprojPath = it },
-                                        label = { Text(stringResource(R.string.local_mmproj_path)) },
-                                        placeholder = { Text(stringResource(R.string.local_mmproj_path_hint)) },
-                                        shape = RoundedCornerShape(16.dp),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    FilledTonalButton(
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val hasMmproj = editMmprojPath.isNotBlank()
+                                    val label = if (hasMmproj) {
+                                        editMmprojPath.split("/").lastOrNull() ?: stringResource(R.string.local_mmproj_path)
+                                    } else {
+                                        stringResource(R.string.local_mmproj_path)
+                                    }
+                                    OutlinedButton(
                                         onClick = { mmprojLauncher.launch(arrayOf("*/*")) },
-                                        modifier = Modifier.height(56.dp),
                                         shape = RoundedCornerShape(16.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp)
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = if (hasMmproj) MaterialTheme.colorScheme.primary
+                                                          else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     ) {
-                                        Text("…", style = MaterialTheme.typography.titleMedium)
+                                        Icon(Icons.Default.Add, stringResource(R.string.local_mmproj_path), modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                                if (editMmprojPath.isNotBlank()) {
+                                    TextButton(onClick = { editMmprojPath = "" }) {
+                                        Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
