@@ -61,6 +61,13 @@ plugins:
             PDF Import: PDF 导入
             Data Portability: 数据迁移
             FAQ: 常见问题
+            Models: 模型
+            Manage Models: 管理模型
+            Generation: 生成参数
+            Parameters: 生成设置
+            Title Generation: 标题生成
+            Image Transcription: 图像转录
+            Appearance: 外观
   - search
 
 markdown_extensions:
@@ -78,6 +85,12 @@ nav:
   - Getting Started: getting-started.md
   - Conversations: conversations.md
   - API Providers: provider.md
+  - Models:
+      - Manage Models: models.md
+  - Generation:
+      - Parameters: generation.md
+      - Title Generation: title-generation.md
+  - Image Transcription: transcription.md
   - System Prompts: system-prompts.md
   - Agentic Tools:
       - Overview: tools.md
@@ -90,4 +103,5 @@ nav:
   - Local Models: local-model.md
   - PDF Import: pdf-import.md
   - Data Portability: import-export.md
+  - Appearance: appearance.md
   - FAQ: faq.md
