@@ -13,6 +13,8 @@ object Constants {
     const val MAX_FILE_CONTENT_READ_LENGTH = 500_000
     /** Max characters to fetch from a web page */
     const val MAX_WEB_FETCH_HTML_LENGTH = 80_000
-    /** Timeout for a single generation request (ms) */
-    const val GENERATION_TIMEOUT_MS = 120_000L
+    /** Timeout for a single generation request including all tool-call rounds (ms) */
+    const val GENERATION_TIMEOUT_MS = 300_000L
+    /** Maximum tool-call rounds per generation to prevent infinite loops */
+    const val MAX_TOOL_ROUNDS = 10
 }
