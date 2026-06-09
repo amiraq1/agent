@@ -20,6 +20,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.newoether.agora.model.ChatMessage
+import com.newoether.agora.model.MessageStatus
 import com.newoether.agora.model.Participant
 import com.newoether.agora.util.Constants
 
@@ -93,7 +94,12 @@ fun MessageList(
                         onEditMessage(id, text)
                         editingMessageId = null
                     },
-                    isStreaming = isLastMessage && isLoading && message.participant == Participant.MODEL,
+                    // Exclude terminal messages from isStreaming to prevent checkmark flash
+                    // when isLoading flips true before the new message is in the DB.
+                    isStreaming = isLastMessage && isLoading && message.participant == Participant.MODEL
+                        && message.status != MessageStatus.SUCCESS
+                        && message.status != MessageStatus.ERROR
+                        && message.status != MessageStatus.STOPPED,
                     isLoading = isLoading,
                     isEditingAllowed = (editingMessageId == null || editingMessageId == message.id) && !isLoading,
                     isEditing = editingMessageId == message.id,
