@@ -53,10 +53,7 @@ fun SettingsProviderDetailPage(
     val localChatModels by viewModel.localChatModels.collectAsState()
     val activeLocalId by viewModel.activeLocalChatModelId.collectAsState()
 
-    val isCustom = customProviders.any { it.name == providerName }
     val isLocal = providerName == "Local"
-    val isOllama = providerName == "Ollama"
-    val needBaseUrl = isOllama || isCustom
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -116,28 +113,26 @@ fun SettingsProviderDetailPage(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
-            // Base URL (Ollama + custom)
-            if (needBaseUrl) {
-                val providerInstance = viewModel.getProviderInstance(providerName)
-                val savedUrl = providerBaseUrls[providerName]
-                val baseUrlState = remember(providerName, savedUrl) {
-                    TextFieldState(if (savedUrl.isNullOrBlank()) providerInstance.defaultBaseUrl else savedUrl)
-                }
-                LaunchedEffect(baseUrlState.text) { delay(500); viewModel.setProviderBaseUrl(providerName, baseUrlState.text.toString()) }
-                SettingsGroup(title = stringResource(R.string.provider_connection), items = listOf {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Box(modifier = Modifier.noOpBringIntoView()) {
-                            OutlinedTextField(
-                                state = baseUrlState,
-                                placeholder = { Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) },
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
-                        }
-                    }
-                })
+            // Base URL
+            val providerInstance = viewModel.getProviderInstance(providerName)
+            val savedUrl = providerBaseUrls[providerName]
+            val baseUrlState = remember(providerName, savedUrl) {
+                TextFieldState(if (savedUrl.isNullOrBlank()) providerInstance.defaultBaseUrl else savedUrl)
             }
+            LaunchedEffect(baseUrlState.text) { delay(500); viewModel.setProviderBaseUrl(providerName, baseUrlState.text.toString()) }
+            SettingsGroup(title = stringResource(R.string.provider_connection), items = listOf {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Box(modifier = Modifier.noOpBringIntoView()) {
+                        OutlinedTextField(
+                            state = baseUrlState,
+                            placeholder = { Text(providerInstance.defaultBaseUrl, style = MaterialTheme.typography.bodyMedium) },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                    }
+                }
+            })
 
             // Local models
             if (isLocal) {
