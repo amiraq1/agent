@@ -225,7 +225,9 @@ fun parseLatexSpans(text: String): List<LatexSpan> {
     }
 
     // FSM: bridge markdown formatting markers (** __ ~~) across inline LaTeX spans
-    data class Pending(val marker: String, val fromIdx: Int)
+    // openBoldAfterRemove: marker at START → content after removePrefix IS inside bold
+    //                      marker at END   → content after removeSuffix is NOT inside bold
+    data class Pending(val marker: String, val fromIdx: Int, val openBoldAfterRemove: Boolean)
     val stack = mutableListOf<Pending>()
     val markers = listOf("**", "__", "~~")
     val isBold: (String) -> Boolean = { it == "**" || it == "__" }
@@ -234,8 +236,10 @@ fun parseLatexSpans(text: String): List<LatexSpan> {
         val span = spans[idx]
         if (span.isLatex) continue
         val s = span.content
-        // Skip spans where the marker is already self-contained
-        if (markers.any { s.startsWith(it) && s.endsWith(it) && s.length >= it.length * 2 }) continue
+        // Skip spans that already have at least one complete marker pair (e.g. **bold** mid-text)
+        // split count > 2 means a closing marker exists somewhere in the span — let the library render it
+        val trimmed = s.trim()
+        if (markers.any { trimmed.split(it).size > 2 }) continue
 
         var resolved = false
         for (m in markers) {
@@ -243,26 +247,48 @@ fun parseLatexSpans(text: String): List<LatexSpan> {
             if (pending == null) continue
 
             if (s.startsWith(m)) {
-                // pending.end ← m: resolve, marker was at end of pending, at start here
+                // Closing ** at start → content after closing is OUTSIDE bold
                 stack.remove(pending)
                 val bold = isBold(m)
-                for (j in pending.fromIdx..idx) {
+                // pending span: bold only if opening was at start (content after opening IS inside)
+                if (pending.openBoldAfterRemove) {
+                    spans[pending.fromIdx] = spans[pending.fromIdx].copy(
+                        bold = spans[pending.fromIdx].bold || bold,
+                        strikethrough = spans[pending.fromIdx].strikethrough || !bold
+                    )
+                }
+                // intermediate spans (LaTeX): always inside bold
+                for (j in (pending.fromIdx + 1) until idx) {
                     val old = spans[j]
                     spans[j] = old.copy(bold = old.bold || bold, strikethrough = old.strikethrough || !bold)
                 }
+                // closing span: NOT bold (marker at start → content after it is outside)
                 spans[pending.fromIdx] = spans[pending.fromIdx].copy(content = spans[pending.fromIdx].content.removeSuffix(m))
                 spans[idx] = spans[idx].copy(content = s.removePrefix(m))
                 resolved = true
                 break
             }
             if (s.endsWith(m)) {
-                // pending.start ← m: resolve, marker was at start of pending, at end here
+                // Closing ** at end → content before closing is INSIDE bold
                 stack.remove(pending)
                 val bold = isBold(m)
-                for (j in pending.fromIdx..idx) {
+                // pending span: bold only if opening was at start (content after opening IS inside)
+                if (pending.openBoldAfterRemove) {
+                    spans[pending.fromIdx] = spans[pending.fromIdx].copy(
+                        bold = spans[pending.fromIdx].bold || bold,
+                        strikethrough = spans[pending.fromIdx].strikethrough || !bold
+                    )
+                }
+                // intermediate spans (LaTeX): always inside bold
+                for (j in (pending.fromIdx + 1) until idx) {
                     val old = spans[j]
                     spans[j] = old.copy(bold = old.bold || bold, strikethrough = old.strikethrough || !bold)
                 }
+                // closing span: bold (marker at end → content before it is inside)
+                spans[idx] = spans[idx].copy(
+                    bold = spans[idx].bold || bold,
+                    strikethrough = spans[idx].strikethrough || !bold
+                )
                 spans[pending.fromIdx] = spans[pending.fromIdx].copy(content = spans[pending.fromIdx].content.removePrefix(m))
                 spans[idx] = spans[idx].copy(content = s.removeSuffix(m))
                 resolved = true
@@ -275,12 +301,12 @@ fun parseLatexSpans(text: String): List<LatexSpan> {
         for (m in markers) {
             val t = spans[idx].content
             if (t.startsWith(m)) {
-                stack.add(Pending(m, idx))
+                stack.add(Pending(m, idx, openBoldAfterRemove = true))
                 spans[idx] = spans[idx].copy(content = t.removePrefix(m))
                 break
             }
             if (t.endsWith(m)) {
-                stack.add(Pending(m, idx))
+                stack.add(Pending(m, idx, openBoldAfterRemove = false))
                 spans[idx] = spans[idx].copy(content = t.removeSuffix(m))
                 break
             }
