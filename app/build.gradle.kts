@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.newoether.agora"
+    namespace = "com.nabd.app"
     compileSdk {
         version = release(36)
     }
@@ -22,7 +22,7 @@ android {
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "com.newoether.agora"
+        applicationId = "com.nabd.app"
         minSdk = 24
         targetSdk = 36
         versionCode = 16

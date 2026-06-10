@@ -15,12 +15,12 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Agora.Starting">
+        android:theme="@style/Theme.Nabd.Starting">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Agora"
+            android:theme="@style/Theme.Nabd"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -40,7 +40,7 @@
         </provider>
 
         <service
-            android:name=".service.AgoraForegroundService"
+            android:name=".service.NabdForegroundService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
     </application>
