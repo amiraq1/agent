@@ -658,4 +658,39 @@
     <string name="documentation">Documentation</string>
     <string name="show_documentation_links">Show Documentation Links</string>
     <string name="show_documentation_links_desc">Display documentation button on settings pages</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to Agora</string>
+    <string name="onboarding_welcome_desc">A BYOK app that takes back your data sovereignty.</string>
+    <string name="onboarding_byok_title">Bring Your Own Key</string>
+    <string name="onboarding_byok_desc">Set up your API keys or import a GGUF model to unlock on-device inference.</string>
+    <string name="onboarding_provider_title">Select Provider</string>
+    <string name="onboarding_provider_desc">Choose an AI provider to get started.</string>
+    <string name="onboarding_api_key_title">API Key</string>
+    <string name="onboarding_api_key_desc">Enter your API key to connect.</string>
+    <string name="onboarding_model_video_title">Choose Your Model</string>
+    <string name="onboarding_model_video_desc">Connect to 8+ AI providers or run models locally with llama.cpp.</string>
+    <string name="onboarding_model_select_title">Select Model</string>
+    <string name="onboarding_model_select_desc">Pick the model you want to chat with.</string>
+    <string name="onboarding_done_title">You\'re All Set!</string>
+    <string name="onboarding_done_desc">Start chatting with full control over your data and privacy.</string>
+    <string name="onboarding_gguf_title">GGUF Model</string>
+    <string name="onboarding_server_url_title">Server URL</string>
+    <string name="onboarding_gguf_desc">Import a GGUF model for on-device inference.</string>
+    <string name="onboarding_ollama_desc">Enter your Ollama server URL.</string>
+    <string name="onboarding_api_key_for">Enter your API key for %1$s.</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_skip_for_now">Skip for now</string>
+    <string name="onboarding_api_key_hint">Enter your API key…</string>
+    <string name="onboarding_ollama_hint">http://localhost:11434</string>
+    <string name="onboarding_import_gguf">Import GGUF Model</string>
+    <string name="onboarding_importing">Importing…</string>
+    <string name="onboarding_no_provider">No provider selected.</string>
+    <string name="onboarding_no_models">No models loaded.</string>
+    <string name="onboarding_invalid_gguf_title">Invalid GGUF File</string>
+    <string name="onboarding_invalid_gguf_desc">The selected file does not appear to be a valid GGUF model.</string>
+    <string name="onboarding_hide_key">Hide key</string>
+    <string name="onboarding_show_key">Show key</string>
 </resources>

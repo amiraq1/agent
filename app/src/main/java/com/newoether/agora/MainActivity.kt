@@ -154,6 +154,11 @@ class MainActivity : ComponentActivity() {
                         showOnboarding = !settingsManager.onboardingCompleted.first()
                     }
 
+                    // Create ViewModel early — WelcomeScreen may need it for onboarding config
+                    val database = remember { ChatDatabase.build(this@MainActivity) }
+                    val factory = remember { ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity) }
+                    val viewModel: ChatViewModel = viewModel(factory = factory)
+
                     when (showOnboarding) {
                         null -> { /* loading — splash screen covers this */ }
                         true -> {
@@ -164,13 +169,11 @@ class MainActivity : ComponentActivity() {
                                     }
                                     showOnboarding = false
                                 },
-                                isDarkTheme = isDark
+                                isDarkTheme = isDark,
+                                viewModel = viewModel
                             )
                         }
                         false -> {
-                            val database = ChatDatabase.build(this)
-                            val factory = ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity)
-                            val viewModel: ChatViewModel = viewModel(factory = factory)
                             MainNavigation(viewModel, settingsManager)
                         }
                     }

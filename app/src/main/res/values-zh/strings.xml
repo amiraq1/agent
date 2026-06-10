@@ -662,4 +662,39 @@
     <string name="documentation">查看文档</string>
     <string name="show_documentation_links">显示文档链接</string>
     <string name="show_documentation_links_desc">在设置页面显示文档按钮</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">欢迎来到 Agora</string>
+    <string name="onboarding_welcome_desc">一款 BYOK 应用，帮你夺回数据主权。</string>
+    <string name="onboarding_byok_title">自带密钥</string>
+    <string name="onboarding_byok_desc">配置 API 密钥或导入 GGUF 模型，解锁本地推理。</string>
+    <string name="onboarding_provider_title">选择提供商</string>
+    <string name="onboarding_provider_desc">选择一个 AI 服务商开始使用。</string>
+    <string name="onboarding_api_key_title">API 密钥</string>
+    <string name="onboarding_api_key_desc">输入你的 API 密钥以连接。</string>
+    <string name="onboarding_model_video_title">选择模型</string>
+    <string name="onboarding_model_video_desc">连接 8+ 个 AI 服务商，或通过 llama.cpp 本地运行模型。</string>
+    <string name="onboarding_model_select_title">选择模型</string>
+    <string name="onboarding_model_select_desc">选择你要使用的模型。</string>
+    <string name="onboarding_done_title">一切就绪！</string>
+    <string name="onboarding_done_desc">开始聊天，完全掌控你的数据和隐私。</string>
+    <string name="onboarding_gguf_title">GGUF 模型</string>
+    <string name="onboarding_server_url_title">服务器地址</string>
+    <string name="onboarding_gguf_desc">导入 GGUF 模型以进行本地推理。</string>
+    <string name="onboarding_ollama_desc">输入 Ollama 服务器地址。</string>
+    <string name="onboarding_api_key_for">输入 %1$s 的 API 密钥。</string>
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_continue">继续</string>
+    <string name="onboarding_get_started">开始使用</string>
+    <string name="onboarding_skip_for_now">以后再说</string>
+    <string name="onboarding_api_key_hint">输入 API 密钥…</string>
+    <string name="onboarding_ollama_hint">http://localhost:11434</string>
+    <string name="onboarding_import_gguf">导入 GGUF 模型</string>
+    <string name="onboarding_importing">导入中…</string>
+    <string name="onboarding_no_provider">未选择提供商。</string>
+    <string name="onboarding_no_models">暂无可用模型。</string>
+    <string name="onboarding_invalid_gguf_title">无效的 GGUF 文件</string>
+    <string name="onboarding_invalid_gguf_desc">所选文件不是有效的 GGUF 模型。</string>
+    <string name="onboarding_hide_key">隐藏密钥</string>
+    <string name="onboarding_show_key">显示密钥</string>
 </resources>
