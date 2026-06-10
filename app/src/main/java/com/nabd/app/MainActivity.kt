@@ -1,478 +1,97 @@
-﻿package com.nabd.app
+package com.nabd.app
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import com.nabd.app.ui.settings.RatingForm
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nabd.app.data.MemoryManager
 import com.nabd.app.data.SettingsManager
-import com.nabd.app.service.NabdForegroundService
-import com.nabd.app.service.AppForegroundTracker
 import com.nabd.app.data.local.ChatDatabase
+import com.nabd.app.service.NabdForegroundService
 import com.nabd.app.ui.chat.ChatApp
-import com.nabd.app.ui.chat.FullScreenMediaViewer
-import com.nabd.app.ui.onboarding.WelcomeScreen
-import com.nabd.app.ui.settings.SettingsScreen
 import com.nabd.app.ui.theme.NabdTheme
 import com.nabd.app.viewmodel.ChatViewModel
 import com.nabd.app.viewmodel.ChatViewModelFactory
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.first
+import androidx.lifecycle.viewmodel.compose.viewModel
+import java.util.Locale
 
+/**
+ * النشاط الرئيسي لتطبيق "نبض".
+ * تم تعديله لفرض اللغة العربية واتجاه RTL بشكل كامل ودائم.
+ */
 class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val locale = java.util.Locale("ar")
-        java.util.Locale.setDefault(locale)
-        val config = android.content.res.Configuration(newBase.resources.configuration)
+        // 1. فرض اللغة العربية على مستوى موارد النظام (Configuration)
+        val locale = Locale("ar")
+        Locale.setDefault(locale)
+        
+        val config = Configuration(newBase.resources.configuration)
         config.setLocale(locale)
-        super.attachBaseContext(newBase.createConfigurationContext(config))
+        config.setLayoutDirection(locale)
+        
+        // إنشاء سياق جديد يحتوي على الإعدادات العربية
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // إعدادات الخدمات والبيانات (من الكود الأصلي لـ Agora)
         com.nabd.app.util.DebugLog.init(this)
         NabdForegroundService.createChannel(this)
 
+        // طلب تصاريح الإشعارات لنظام أندرويد 13 فما فوق
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
             }
         }
 
-        val storedVersion = ChatDatabase.getStoredVersion(this)
-        val needsErrorDialog = storedVersion > ChatDatabase.CURRENT_VERSION
-
-        val memoryManager = MemoryManager(applicationContext)
-        val settingsManager = SettingsManager(applicationContext)
+        // فرض اتجاه الـ View الرئيسي ليكون RTL (لضمان عمل الـ Dialogs والـ System UI بشكل صحيح)
+        window.decorView.layoutDirection = View.LAYOUT_DIRECTION_RTL
 
         enableEdgeToEdge()
-        // Remove navigation bar scrim so it blends with app content
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
+
         setContent {
-            val themeMode by settingsManager.themeMode.collectAsState(initial = "FOLLOW_DEVICE")
-            val colorSchemeName by settingsManager.colorScheme.collectAsState(initial = "DEFAULT")
-            val schemeStyleName by settingsManager.schemeStyle.collectAsState(initial = "TONAL_SPOT")
-            val dynamicColor by settingsManager.dynamicColor.collectAsState(initial = true)
-
-            val themeModeEnum = try { com.nabd.app.ui.theme.ThemeMode.valueOf(themeMode) } catch (_: Exception) { com.nabd.app.ui.theme.ThemeMode.FOLLOW_DEVICE }
-            val colorSchemePreset = try { com.nabd.app.ui.theme.ColorSchemePreset.valueOf(colorSchemeName) } catch (_: Exception) { com.nabd.app.ui.theme.ColorSchemePreset.MIDNIGHT }
-            val schemeStyle = try { com.nabd.app.ui.theme.SchemeStyle.valueOf(schemeStyleName) } catch (_: Exception) { com.nabd.app.ui.theme.SchemeStyle.TONAL_SPOT }
-
-            val systemDark = isSystemInDarkTheme()
-            val isDark = when (themeModeEnum) {
-                com.nabd.app.ui.theme.ThemeMode.LIGHT -> false
-                com.nabd.app.ui.theme.ThemeMode.DARK -> true
-                com.nabd.app.ui.theme.ThemeMode.FOLLOW_DEVICE -> systemDark
-            }
-
-            SideEffect {
-                val window = this@MainActivity.window
-                val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-                insetsController.isAppearanceLightStatusBars = !isDark
-                insetsController.isAppearanceLightNavigationBars = !isDark
-            }
-
-            NabdTheme(
-                themeMode = themeModeEnum,
-                colorSchemePreset = colorSchemePreset,
-                schemeStyle = schemeStyle,
-                dynamicColor = dynamicColor
-            ) {
-                val activity = LocalActivity.current
-
-                if (needsErrorDialog) {
-                    AlertDialog(
-                        onDismissRequest = { activity?.finish() },
-                        title = { Text(stringResource(R.string.database_incompatible), fontWeight = FontWeight.Bold) },
-                        text = { Text(stringResource(R.string.database_incompatible_desc)) },
-                        dismissButton = {
-                            TextButton(onClick = { activity?.finish() }) { Text(stringResource(R.string.quit)) }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                applicationContext.deleteDatabase(ChatDatabase.DB_NAME)
-                                activity?.recreate()
-                            }) { Text(stringResource(R.string.clear_database)) }
-                        }
-                    )
-                } else {
-                    var showOnboarding by remember { mutableStateOf<Boolean?>(null) }
-                    val onboardingScope = rememberCoroutineScope()
-
-                    LaunchedEffect(Unit) {
-                        showOnboarding = !settingsManager.onboardingCompleted.first()
-                    }
-
-                    // Create ViewModel early — WelcomeScreen may need it for onboarding config
-                    val database = remember { ChatDatabase.build(this@MainActivity) }
-                    val factory = remember { ChatViewModelFactory(application, settingsManager, database.chatDao(), memoryManager, this@MainActivity) }
-                    val viewModel: ChatViewModel = viewModel(factory = factory)
-
-                    when (showOnboarding) {
-                        null -> { /* loading — splash screen covers this */ }
-                        true -> {
-                            WelcomeScreen(
-                                onComplete = {
-                                    onboardingScope.launch {
-                                        settingsManager.saveOnboardingCompleted(true)
-                                    }
-                                    showOnboarding = false
-                                },
-                                isDarkTheme = isDark,
-                                viewModel = viewModel
-                            )
-                        }
-                        false -> {
-                            MainNavigation(viewModel, settingsManager)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        AppForegroundTracker.isInForeground = true
-    }
-
-    override fun onPause() {
-        super.onPause()
-        AppForegroundTracker.isInForeground = false
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainNavigation(viewModel: ChatViewModel, settingsManager: SettingsManager) {
-    var showSettings by rememberSaveable { mutableStateOf(false) }
-    var fullScreenMediaUrls by remember { mutableStateOf<List<String>?>(null) }
-    var fullScreenMediaIndex by remember { mutableIntStateOf(0) }
-    var pdfViewerSelection by remember { mutableStateOf(setOf<Int>()) }
-    val onTogglePdfSelection: (Int) -> Unit = { page ->
-        pdfViewerSelection = if (page in pdfViewerSelection) pdfViewerSelection - page else pdfViewerSelection + page
-    }
-    val onInitPdfSelection: (Set<Int>) -> Unit = { selection ->
-        pdfViewerSelection = selection
-    }
-    var pdfPreviewFromDialog by remember { mutableStateOf(false) }
-    val pdfPages by viewModel.previewPdfPages.collectAsState()
-    val pdfIndex by viewModel.previewPdfIndex.collectAsState()
-    var savedPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
-    if (pdfPages.isNotEmpty()) { savedPdfPages = pdfPages } else { savedPdfPages = emptyList() }
-    val snackbarHostState = remember { SnackbarHostState() }
-    var chatSnackbarOffset by remember { mutableStateOf(0.dp) }
-    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val targetSnackbarPadding = if (showSettings) navBarPadding else chatSnackbarOffset
-    val snackbarBottomPadding by animateDpAsState(
-        targetValue = targetSnackbarPadding,
-        animationSpec = spring(dampingRatio = 1.0f, stiffness = 1000f),
-        label = "snackbarPadding"
-    )
-    val focusManager = LocalFocusManager.current
-    val ratingScope = rememberCoroutineScope()
-
-    // Update dialog
-    val updateDialogData by viewModel.updateDialogData.collectAsState()
-    if (updateDialogData != null) {
-        val info = updateDialogData!!
-        val ctx = LocalContext.current
-        AlertDialog(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            onDismissRequest = { viewModel.dismissUpdateDialog() },
-            icon = { Icon(Icons.Default.Download, null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary) },
-            title = {
-                Text(
-                    text = stringResource(R.string.about_update_available, info.version),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(modifier = Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
-                    Text(stringResource(R.string.about_available_body))
-                    if (info.body.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Column {
-                            info.body.split("\n").forEach { line ->
-                                val style = when {
-                                    line.startsWith("## ") -> MaterialTheme.typography.titleMedium
-                                    line.startsWith("- ") -> MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp)
-                                    line.isBlank() -> null
-                                    else -> MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp)
-                                }
-                                if (style != null) {
-                                    val text = when {
-                                        line.startsWith("- ") -> "• ${line.removePrefix("- ")}"
-                                        else -> line.removePrefix("## ")
-                                    }
-                                    Text(
-                                        text = text,
-                                        style = style,
-                                        modifier = Modifier.padding(top = when {
-                                            line.startsWith("## ") -> 12.dp
-                                            line.startsWith("- ") -> 1.dp
-                                            else -> 1.dp
-                                        })
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.url)))
-                    viewModel.dismissUpdateDialog()
-                }) { Text(stringResource(R.string.about_view_release)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
-                    Text(stringResource(R.string.about_later))
-                }
-            }
-        )
-    }
-
-    // Rating prompt — read from flow directly to avoid collectAsState initial-value race
-    var showRatingPrompt by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        val now = System.currentTimeMillis()
-        val firstLaunch = settingsManager.firstLaunchTime.first()
-        if (firstLaunch == null) {
-            settingsManager.saveFirstLaunchTime(now)
-        }
-
-        val submitted = settingsManager.ratingPromptSubmitted.first()
-        val dismissed = settingsManager.ratingPromptDismissed.first()
-        val msgCount = settingsManager.totalMessagesSent.first()
-        if (!submitted && !dismissed && firstLaunch != null && msgCount >= 3) {
-            val daysElapsed = (now - firstLaunch) / (1000 * 60 * 60 * 24)
-            if (daysElapsed >= 7) {
-                showRatingPrompt = true
-            }
-        }
-    }
-
-    if (showRatingPrompt) {
-        ModalBottomSheet(
-            onDismissRequest = {
-                showRatingPrompt = false
-                ratingScope.launch {
-                    settingsManager.saveRatingPromptDismissed(true)
-                }
-            },
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
-                    .navigationBarsPadding()
-            ) {
-                RatingForm(
-                    onSubmitted = {
-                        showRatingPrompt = false
-                        ratingScope.launch {
-                            settingsManager.saveRatingPromptSubmitted(true)
-                        }
-                    }
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        var snackbarJob: Job? = null
-        viewModel.snackbarMessage.collect { event ->
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarJob?.cancel()
-            snackbarJob = launch {
-                val result = snackbarHostState.showSnackbar(
-                    message = event.message,
-                    actionLabel = event.actionLabel,
-                    duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    event.onAction?.invoke()
-                }
-            }
-        }
-    }
-    
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            ChatApp(
-                viewModel = viewModel,
-                onOpenSettings = {
-                    showSettings = true
-                },
-                onMediaClick = { urls, index ->
-                    focusManager.clearFocus()
-                    fullScreenMediaUrls = urls
-                    fullScreenMediaIndex = index
-                },
-                onFileContentClick = { name, content ->
-                    focusManager.clearFocus()
-                    viewModel.showFilePreview(name, content)
-                },
-                onPdfPagesClick = { pages, idx ->
-                    focusManager.clearFocus()
-                    viewModel.showPdfPreview(pages, idx)
-                    fullScreenMediaUrls = pages
-                    fullScreenMediaIndex = idx
-                    pdfPreviewFromDialog = false
-                },
-                onPdfPreviewSelect = { pages, idx ->
-                    focusManager.clearFocus()
-                    viewModel.showPdfPreview(pages, idx)
-                    fullScreenMediaUrls = pages
-                    fullScreenMediaIndex = idx
-                    pdfPreviewFromDialog = true
-                },
-                pdfViewerSelection = pdfViewerSelection,
-                onTogglePdfSelection = onTogglePdfSelection,
-                onInitPdfSelection = onInitPdfSelection,
-                fullScreenViewerUrls = fullScreenMediaUrls,
-                onSnackbarOffsetChanged = { chatSnackbarOffset = it }
-            )
-
-            // Scrim that fades in behind the settings page
-            AnimatedVisibility(
-                visible = showSettings,
-                enter = fadeIn(animationSpec = tween(400)),
-                exit = fadeOut(animationSpec = tween(400))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.45f))
-                        .pointerInput(Unit) {
-                            detectTapGestures { showSettings = false }
-                        }
-                )
-            }
-
-            AnimatedVisibility(
-                visible = showSettings,
-                enter = slideInHorizontally(animationSpec = tween(400)) { it },
-                exit = slideOutHorizontally(animationSpec = tween(400)) { it }
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    SettingsScreen(
-                        viewModel = viewModel,
-                        onBack = {
-                            showSettings = false
-                        }
+            // 2. استخدام التنسيق المخصص لتطبيق نبض
+            NabdTheme {
+                // 3. فرض اتجاه اليمين إلى اليسار (RTL) داخل بيئة Compose
+                // هذا يضمن أن Scaffold, NavHost, و LazyColumn تعكس اتجاهها تلقائياً
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    
+                    val applicationContext = android.content.ContextWrapper(this).applicationContext
+                    val memoryManager = MemoryManager(applicationContext)
+                    val settingsManager = SettingsManager(applicationContext)
+                    
+                    // إعداد ViewModel باستخدام المصنع المخصص
+                    val chatViewModel: ChatViewModel = viewModel(
+                        factory = ChatViewModelFactory(
+                            ChatDatabase.getInstance(this),
+                            settingsManager,
+                            memoryManager
+                        )
                     )
 
+                    // المكون الرئيسي للتطبيق (يحتوي على الـ Navigation والـ UI)
+                    ChatApp(
+                        viewModel = chatViewModel,
+                        settingsManager = settingsManager
+                    )
                 }
             }
-
-            // Full screen image preview
-            AnimatedVisibility(
-                visible = fullScreenMediaUrls != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                // Keep the last values for the duration of the exit animation
-                var lastUrls by remember { mutableStateOf<List<String>?>(null) }
-                var lastIndex by remember { mutableIntStateOf(0) }
-                var lastPdfPages by remember { mutableStateOf<List<String>>(emptyList()) }
-                var lastPdfTogglePage by remember { mutableStateOf<((Int) -> Unit)?>(null) }
-                LaunchedEffect(fullScreenMediaUrls) {
-                    if (fullScreenMediaUrls != null) {
-                        lastUrls = fullScreenMediaUrls
-                        lastIndex = fullScreenMediaIndex
-                        lastPdfPages = savedPdfPages
-                        lastPdfTogglePage = if (pdfPreviewFromDialog) onTogglePdfSelection else null
-                    }
-                }
-
-                val urls = lastUrls ?: return@AnimatedVisibility
-                FullScreenMediaViewer(
-                    urls = urls,
-                    initialIndex = lastIndex,
-                    pdfPages = lastPdfPages,
-                    pdfSelectedPages = if (lastPdfPages.isNotEmpty() && pdfPreviewFromDialog) pdfViewerSelection else null,
-                    onTogglePdfPage = lastPdfTogglePage,
-                    onClose = { viewModel.clearPreviews(); fullScreenMediaUrls = null; pdfPreviewFromDialog = false },
-                    onNavigate = { idx -> fullScreenMediaIndex = idx }
-                )
-            }
-
-            // Text file viewer
-            val fileContent by viewModel.previewFileContent.collectAsState()
-            val fileName by viewModel.previewFileName.collectAsState()
-            var savedContent by remember { mutableStateOf(fileContent) }
-            var savedName by remember { mutableStateOf(fileName) }
-            if (fileContent != null) { savedContent = fileContent; savedName = fileName }
-            AnimatedVisibility(
-                visible = fileContent != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                if (savedContent != null && savedName != null) {
-                    com.nabd.app.ui.chat.TextFileViewer(content = savedContent!!, fileName = savedName!!, onClose = { viewModel.clearPreviews() })
-                }
-            }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = snackbarBottomPadding)
-            )
         }
     }
 }
